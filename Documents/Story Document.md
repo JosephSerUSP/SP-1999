@@ -44,7 +44,7 @@ It's possible to buy items, upgrade equipment and handle character progression f
 1. VELDT: The first dungeon, and the only one that remains available/replayable for the entirety of the game. It updates according to story and gameplay progression 
 (mechanically, this allows the player to interact with data that would be gated off by story otherwise.)
 Story-wise and visually, it's a "VR Simulation" at the org's facility that the agents use to train when not on mission.
-"Corrupted Simulation" is a corny theme I would not like to approach. Maybe it can be lampshaded or subverted. 
+"Corrupted Simulation" is a corny theme I would not like to approach. Maybe it can be Discussed, Teased, but is ultimately completely Averted. 
 
 2. ???
 
@@ -68,6 +68,9 @@ The final boss is 3., with 1. and 2. kill him and close the case.
 3. TRUE ending: 
 The player unfolds the mystery. The fight with 3. is relentless: 3. is unbeatable and wipes the party. 
 Control switches to 3., the game behaves as if the mission was a success. 
-3. Can still return to Base. The NPCs will note the abscence of 1. and 2.
+At this point, 3. Can still return to Base. The NPCs will note the abscence of 1. and 2.
 One TRUE final dungeon opens up, which the player plays as 3.
 During the dungeon, after a few floors, 1. and 2. rejoin him in preparation for a climactic final battle. 
+
+4. JOKE Ending: 
+Only attainable on a NG+. 
