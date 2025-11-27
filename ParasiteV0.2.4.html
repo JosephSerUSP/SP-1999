@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stillnight: Eve of the Stack</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --pe-dark: #050505;
+            --pe-panel-bg: linear-gradient(180deg, #1a1a1a 0%, #080808 100%);
+            --pe-teal-header: linear-gradient(90deg, #004d4d, #000); 
+            --pe-gold: #fbbf24;
+            --pe-text-gray: #9ca3af;
+            --pe-green: #10b981;
+            --pe-red: #ef4444;
+            --pe-cyan: #00ffff;
+            --font-ui: 'Share Tech Mono', monospace;
+        }
+
+        body {
+            background-color: #000;
+            margin: 0;
+            overflow: hidden;
+            font-family: var(--font-ui);
+            user-select: none;
+            color: var(--pe-text-gray);
+            cursor: default;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16/9;
+            max-height: 100vh;
+            position: relative;
+            background: black;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        #screen-fx {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(circle, transparent 50%, black 120%),
+                linear-gradient(rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.2) 50%);
+            background-size: 100% 100%, 100% 4px;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.6;
+            mix-blend-mode: overlay;
+        }
+
+        /* --- UI SYSTEM --- */
+        .pe-window {
+            position: absolute;
+            background: var(--pe-panel-bg);
+            border: 1px solid #444;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            padding: 2px;
+            pointer-events: auto;
+        }
+
+        .pe-header {
+            background: var(--pe-teal-header);
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .pe-content {
+            flex: 1;
+            padding: 6px;
+            overflow: hidden; 
+            font-size: 12px;
+        }
+        
+        .pe-content::-webkit-scrollbar { width: 4px; }
+        .pe-content::-webkit-scrollbar-thumb { background: var(--pe-gold); }
+
+        #floating-text-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 50;
+        }
+        
+        .float-text-container {
+            position: absolute;
+            display: flex;
+            gap: 1px;
+            pointer-events: none;
+        }
+        
+        .float-digit {
+            font-weight: bold;
+            font-size: 20px;
+            text-shadow: 2px 2px 0 #000;
+            color: white;
+            display: inline-block;
+            opacity: 0;
+            animation: bounce-digit 0.8s forwards cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes bounce-digit {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            30% { transform: translateY(-30px) scale(1.4); opacity: 1; }
+            60% { transform: translateY(0) scale(1); }
+            85% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-10px) scale(1); opacity: 0; }
+        }
+
+        .item-row {
+            padding: 4px 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.3);
+            margin-bottom: 2px;
+        }
+        .item-row:hover {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--pe-gold);
+            color: white;
+        }
+
+        .party-slot {
+            display: flex; gap: 4px; margin-bottom: 6px; padding: 4px;
+            border: 1px solid #333; transition: all 0.2s;
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+        .party-slot:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: #666;
+        }
+        .party-slot.active {
+            border-color: var(--pe-gold);
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), transparent);
+            transform: translateX(4px);
+        }
+
+        .cmd-btn {
+            padding: 8px; margin-bottom: 4px;
+            cursor: pointer; color: #aaa; border-left: 3px solid transparent;
+            background: rgba(0,0,0,0.2);
+            display: flex; justify-content: space-between;
+            align-items: center;
+        }
+        .cmd-btn:hover { background: #222; color: #fff; border-left-color: var(--pe-gold); }
+        .cmd-btn.disabled { opacity: 0.5; pointer-events: none; border-left-color: #333; }
+
+        .stat-label { color: var(--pe-gold); font-weight: bold; }
+        .stat-val { color: white; float: right; }
+
+        #tooltip {
+            position: absolute; pointer-events: none; 
+            background: rgba(0,0,0,0.9); border: 1px solid var(--pe-gold);
+            padding: 8px; z-index: 100; display: none; max-width: 200px;
+            font-size: 11px; box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+        }
+
+        #cutscene-overlay {
+            position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
+            width: 50%; background: rgba(0,0,0,0.9); border: 1px solid #555;
+            padding: 15px; color: white; display: none; text-align: center;
+            font-family: var(--font-ui); z-index: 200;
+            box-shadow: 0 0 20px rgba(0,255,255,0.1);
+        }
+
+        #game-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+        
+        #minimap-canvas { width: 100%; height: 100%; image-rendering: pixelated; background: #000; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="screen-fx"></div>
+    <div id="ui-root" class="w-full h-full relative">
+        <div id="floating-text-layer"></div>
+        <div id="cutscene-overlay"></div>
+        <div id="tooltip"></div>
+    </div>
+</div>
+
+<script>
+/**
+ * STILLNIGHT: EVE OF THE STACK (V10.3 - SEAMLESS & DRAMATIC)
+ */
+
+// ============================================================================
+// [1] DATA
+// ============================================================================
+const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
+
+const $dataSkills = {
+    "rapid": { name: "Rapid Fire", cost: 10, range: 6, type: "target", power: 1.2, count: 2, desc: (a) => `2x shots. Est: ${Math.floor(a.atk * 1.2) * 2} DMG.` },
+    "scan": { name: "Scan", cost: 5, range: 0, type: "self", power: 0, desc: () => "Map Intel. Reveals sector layout." },
+    "blast": { name: "Grenade", cost: 15, range: 100, type: "all_enemies", power: 15, fixed: true, desc: () => "AoE Blast. 15 DMG to all hostiles." },
+    "barrier": { name: "Barrier", cost: 20, range: 0, type: "self", power: 0, desc: () => "Nano-shield. DEF +2 temporarily." },
+    "combust": { name: "Combust", cost: 25, range: 100, type: "all_enemies", power: 25, fixed: true, desc: () => "Ignite Room. 25 Fire DMG to all." },
+    "drain": { name: "Drain", cost: 10, range: 2, type: "target", power: 10, fixed: true, desc: () => "Bio-leech. 10 DMG + Heal Self." },
+    "snipe": { name: "Snipe", cost: 15, range: 8, type: "target", power: 3.0, desc: (a) => `Precision shot. Est: ${Math.floor(a.atk * 3.0)} DMG.` },
+    "heal": { name: "Heal", cost: 15, range: 0, type: "self", power: 30, fixed: true, desc: () => "Restore 30 HP." },
+    "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", power: 1.0, desc: (a) => "Melee shock. Chance to stun." },
+    "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, desc: () => "Discharge all PE. 60 DMG." }
+};
+
+const $dataClasses = {
+    "Aya": { job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"] },
+    "Kyle": { job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"] },
+    "Eve": { job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"] }
+};
+
+const $dataEnemies = [
+    { id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter" },
+    { id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
+    { id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush" },
+    { id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret" },
+    { id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3, ai: "hunter" },
+    { id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter" },
+    { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" }
+];
+
+const $dataLootTable = {
+    prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
+    weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm." }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise." }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter." }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
+    armors: [ { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." }, { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." }, { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." }, { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." } ],
+    items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
+};
+
+const $dataFloors = {
+    1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro' },
+    2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8 },
+    3: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 12 },
+    default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15 }
+};
+
+const $dataCutscenes = {
+    'intro': [
+        { type: 'wait', time: 500 },
+        { type: 'dialog', text: "Target area reached. The stack goes deep.", speaker: "KYLE" },
+        { type: 'dialog', text: "My mitochondria... they're screaming.", speaker: "AYA" },
+        { type: 'log', text: "Mission Start." }
+    ]
+};
+
+// ============================================================================
+// [2] CORE SYSTEMS
+// ============================================================================
+
+class Game_System {
+    constructor() {
+        this.floor = 1;
+        this.logHistory = [];
+        this.isBusy = false;
+        this.isInputBlocked = false;
+    }
+    log(text) {
+        this.logHistory.unshift(text);
+        if(this.logHistory.length > 15) this.logHistory.pop();
+        if(typeof UI !== 'undefined' && UI && UI.refreshLog) UI.refreshLog();
+    }
+}
+
+class Sequencer {
+    static sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+}
+
+// DEFINED BEFORE USE
+class Game_Item { constructor(d) { this.name = d.name; this.type = d.type; this.val = d.val; this.category = "item"; this.icon = d.icon||"📦"; this.desc = d.desc||""; } }
+class Game_Weapon { constructor(b, p) { this.name = `${p.name} ${b.name}`; this.atk = b.baseAtk + (p.atk||0); this.color = p.color; this.category = "weapon"; this.icon = b.icon||"⚔️"; this.desc = b.desc||""; } }
+class Game_Armor { constructor(b) { this.name = b.name; this.def = b.baseDef; this.category = "armor"; this.icon = b.icon||"🛡️"; this.desc = b.desc||""; } }
+
+class Game_Enemy {
+    constructor(d, x, y, uid, hp) {
+        Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
+        this.def = 0; this.equip = {}; 
+    }
+    takeDamage(v) { this.hp -= v; if(this.hp < 0) this.hp = 0; }
+    isDead() { return this.hp <= 0; }
+    getAtk() { return this.atk; } 
+}
+
+class Game_Actor {
+    constructor(name) {
+        const d = $dataClasses[name];
+        Object.assign(this, d); this.name = name; this.mhp = d.hp; this.mpe = 100; this.pe = d.pe; 
+        this.equip = { weapon: null, armor: null }; this.level = 1; this.exp = 0; this.nextExp = 50; this.inventory = [];
+        if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
+        if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
+        this.uid = 'player';
+    }
+    isDead() { return this.hp <= 0; }
+    takeDamage(v) { this.hp = Math.max(0, this.hp - v); }
+    heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
+    regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
+    gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
+    getAtk() { return this.atk + (this.equip.weapon ? this.equip.weapon.atk : 0); }
+    getDef() { return this.def + (this.equip.armor ? this.equip.armor.def : 0); }
+    getAtkWith(i) { return this.atk + (i.category === 'weapon' ? i.atk : (this.equip.weapon ? this.equip.weapon.atk : 0)); }
+    getDefWith(i) { return this.def + (i.category === 'armor' ? i.def : (this.equip.armor ? this.equip.armor.def : 0)); }
+}
+
+class ItemManager {
+    static generateLoot(floor) {
+        const roll = Math.random();
+        if (roll < 0.4) {
+            const item = $dataLootTable.items[Math.floor(Math.random() * $dataLootTable.items.length)];
+            return new Game_Item(item);
+        } else if (roll < 0.7) {
+            const base = $dataLootTable.weapons[Math.floor(Math.random() * $dataLootTable.weapons.length)];
+            const pre = $dataLootTable.prefixes[Math.min(Math.floor(Math.random() * (floor + 2)), $dataLootTable.prefixes.length-1)];
+            return new Game_Weapon(base, pre);
+        } else {
+            const base = $dataLootTable.armors[Math.floor(Math.random() * $dataLootTable.armors.length)];
+            return new Game_Armor(base);
+        }
+    }
+}
+
+class CutsceneManager {
+    constructor() {
+        this.queue = [];
+        this.active = false;
+        this.dialogEl = document.getElementById('cutscene-overlay');
+    }
+
+    play(script) {
+        this.queue = [...script];
+        this.active = true;
+        $gameSystem.isInputBlocked = true;
+        this.next();
+    }
+
+    next() {
+        if(this.queue.length === 0) {
+            this.end();
+            return;
+        }
+        const cmd = this.queue.shift();
+        this.processCommand(cmd);
+    }
+
+    processCommand(cmd) {
+        switch(cmd.type) {
+            case 'dialog':
+                this.dialogEl.innerHTML = `
+                    <div style="border-bottom:1px solid #444; margin-bottom:5px; padding-bottom:2px; font-weight:bold; color:${cmd.color || '#0ff'}">${cmd.speaker || 'SYSTEM'}</div>
+                    <div style="font-size:14px; margin-bottom:10px;">${cmd.text}</div>
+                    <div style="font-size:10px; color:#666;">[CLICK TO CONTINUE]</div>
+                `;
+                this.dialogEl.style.display = 'block';
+                const clickHandler = () => {
+                    this.dialogEl.style.display = 'none';
+                    document.removeEventListener('click', clickHandler);
+                    this.next();
+                };
+                setTimeout(() => document.addEventListener('click', clickHandler), 100);
+                break;
+            case 'wait':
+                setTimeout(() => this.next(), cmd.time);
+                break;
+            case 'log':
+                $gameSystem.log(cmd.text);
+                this.next();
+                break;
+        }
+    }
+
+    end() {
+        this.active = false;
+        $gameSystem.isInputBlocked = false;
+        $gameSystem.log("Command restored.");
+    }
+}
+
+class BattleManager {
+    static calcDamage(source, target) {
+        let atk = source.getAtk ? source.getAtk() : source.atk;
+        let def = target.getDef ? target.getDef() : (target.def || 0);
+        const variation = 0.8 + Math.random() * 0.4;
+        let dmg = Math.floor((atk * 2 - def) * variation);
+        return Math.max(1, dmg);
+    }
+    static async executeSkill(a, k) {
+        const s = $dataSkills[k];
+        if(a.pe < s.cost) { $gameSystem.log("No PE."); return false; }
+        a.pe -= s.cost; $gameSystem.log(`${a.name} uses ${s.name}!`);
+        Renderer.playAnimation('flash', { color: a.color });
+        await Sequencer.sleep(300);
+        const baseDmg = s.fixed ? s.power : Math.floor(a.getAtk() * s.power);
+
+        if(k === 'rapid') {
+            const tgts = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) < s.range);
+            if(tgts.length > 0) {
+                for(let i=0; i<2; i++) {
+                    const t = tgts[Math.floor(Math.random()*tgts.length)];
+                    t.takeDamage(baseDmg);
+                    Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
+                    await Sequencer.sleep(200);
+                    UI.floatText(baseDmg, t.x, t.y, "#fff");
+                    Renderer.playAnimation('hit', { uid: t.uid });
+                    if(t.hp <= 0) await $gameMap.killEnemy(t);
+                    await Sequencer.sleep(300);
+                }
+            }
+        } else if(s.type === 'all_enemies') {
+            $gameMap.enemies.forEach(e => {
+                e.takeDamage(baseDmg); UI.floatText(baseDmg, e.x, e.y, "#f40");
+                Renderer.playAnimation('hit', { uid: e.uid });
+                if(e.hp <= 0) $gameMap.killEnemy(e);
+            });
+            Renderer.playAnimation('shake');
+        } else if(s.type === 'target') {
+            const tgts = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) < s.range);
+            if(tgts.length > 0) {
+                const t = tgts[0]; t.takeDamage(baseDmg);
+                Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
+                UI.floatText(baseDmg, t.x, t.y, "#f00");
+                if(k==='drain') { a.heal(baseDmg); UI.floatText("+"+baseDmg, $gameMap.playerX, $gameMap.playerY, "#0f0"); }
+                if(t.hp <= 0) await $gameMap.killEnemy(t);
+            }
+        }
+        await Sequencer.sleep(500); return true;
+    }
+}
+
+class Game_Party {
+    constructor() { this.members = [new Game_Actor("Aya"), new Game_Actor("Kyle"), new Game_Actor("Eve")]; this.index = 0; this.inventory = []; this.maxInventory = 20; }
+    active() { return this.members[this.index]; }
+    nextActive() { return this.members[(this.index + 1) % 3]; }
+    rotate() {
+        let s = 3; do { this.index = (this.index + 1) % 3; s--; } while(this.active().isDead() && s > 0);
+        if(this.active().isDead()) SceneManager.gameOver();
+    }
+    distributeExp(a) { const k = this.active(); this.members.forEach(m => !m.isDead() && m.gainExp(m===k ? a : Math.floor(a*0.5))); }
+    gainItem(i) { if(this.inventory.length < this.maxInventory) { this.inventory.push(i); $gameSystem.log(`Got ${i.icon}${i.name}`); } else { $gameSystem.log("Inv Full!"); } }
+}
+
+class Game_Map {
+    constructor() { this.width = 20; this.height = 20; this.tiles = []; this.enemies = []; this.loot = []; this.playerX = 1; this.playerY = 1; this.enemyIdCounter = 0; }
+    setup(floor) {
+        $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`);
+        const c = $dataFloors[floor] || $dataFloors.default;
+        this.width = c.width; this.height = c.height;
+        this.tiles = Array(this.width).fill(0).map(()=>Array(this.height).fill(1));
+        const rooms = [];
+        for(let i=0; i<c.rooms; i++) {
+            const w = 4+Math.floor(Math.random()*5), h = 4+Math.floor(Math.random()*5);
+            const x = Math.floor(Math.random()*(this.width-w-2))+1, y = Math.floor(Math.random()*(this.height-h-2))+1;
+            let ov = false;
+            for(let r of rooms) if(x<r.x+r.w+1 && x+w+1>r.x && y<r.y+r.h+1 && y+h+1>r.y) { ov = true; break; }
+            if(!ov) {
+                rooms.push({x,y,w,h,cx:Math.floor(x+w/2), cy:Math.floor(y+h/2)});
+                for(let rx=x; rx<x+w; rx++) for(let ry=y; ry<y+h; ry++) this.tiles[rx][ry] = 0;
+                if(rooms.length > 1) this.carveTunnel(rooms[rooms.length-2].cx, rooms[rooms.length-2].cy, rooms[rooms.length-1].cx, rooms[rooms.length-1].cy);
+            }
+        }
+        if(rooms.length > 0) {
+            this.playerX = rooms[0].cx; this.playerY = rooms[0].cy;
+            this.stairsX = rooms[rooms.length-1].cx; this.stairsY = rooms[rooms.length-1].cy;
+            this.tiles[this.stairsX][this.stairsY] = 3;
+        }
+        this.enemies = []; this.loot = [];
+        for(let i=0; i<c.enemies+floor; i++) {
+            const pt = this.getRandomPoint();
+            if(pt) this.enemies.push(new Game_Enemy($dataEnemies[Math.floor(Math.random()*$dataEnemies.length)], pt.x, pt.y, this.enemyIdCounter++, 10+floor*2));
+        }
+        for(let i=0; i<c.loot; i++) {
+            const pt = this.getRandomPoint();
+            if(pt) this.loot.push({x: pt.x, y: pt.y, item: ItemManager.generateLoot(floor)});
+        }
+        Renderer.rebuildLevel();
+        if(c.cutscene) Cutscene.play($dataCutscenes[c.cutscene]);
+        UI.refreshMinimap();
+    }
+    getRandomPoint() {
+        for(let i=0; i<200; i++) {
+            const x = Math.floor(Math.random()*this.width), y = Math.floor(Math.random()*this.height);
+            if(this.tiles[x][y] === 0 && (x!==this.playerX || y!==this.playerY) && (x!==this.stairsX || y!==this.stairsY)) return {x,y};
+        }
+        return null;
+    }
+    carveTunnel(x1,y1,x2,y2) {
+        if(Math.random()<0.5) { this.hTunnel(x1,x2,y1); this.vTunnel(y1,y2,x2); } else { this.vTunnel(y1,y2,x1); this.hTunnel(x1,x2,y2); }
+    }
+    hTunnel(x1,x2,y) { for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) if(this.isValid(x,y)) this.tiles[x][y]=0; }
+    vTunnel(y1,y2,x) { for(let y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) if(this.isValid(x,y)) this.tiles[x][y]=0; }
+    isValid(x,y) { return x>=0 && x<this.width && y>=0 && y<this.height && this.tiles[x] !== undefined; }
+
+    async processTurn(dx, dy) {
+        if($gameSystem.isInputBlocked) return;
+        
+        // Check Renderer state for Seamless Movement Throttling
+        if(Renderer && Renderer.isAnimating) return;
+
+        const nx = this.playerX + dx; const ny = this.playerY + dy;
+        if(this.tiles[nx][ny] === 1) return;
+        
+        const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
+        if(enemy) {
+            if($gameSystem.isBusy) return; 
+            $gameSystem.isBusy = true;
+            const actor = $gameParty.active();
+            const dmg = BattleManager.calcDamage(actor, enemy);
+            enemy.takeDamage(dmg);
+            Renderer.playAnimation('lunge', { tx: nx, ty: ny });
+            await Sequencer.sleep(150);
+            UI.floatText(dmg, nx, ny, "#fff");
+            Renderer.playAnimation('hit', { uid: enemy.uid });
+            await Sequencer.sleep(200);
+            $gameSystem.log(`Hit ${enemy.name} for ${dmg}.`);
+            if(enemy.hp <= 0) await this.killEnemy(enemy);
+            $gameParty.rotate();
+            UI.refresh();
+            await this.updateEnemies();
+            $gameSystem.isBusy = false;
+        } else {
+            // TRIGGER VISUAL SWAP
+            Renderer.playAnimation('move_switch', { 
+                fromX: this.playerX, fromY: this.playerY, 
+                toX: nx, toY: ny, 
+                nextColor: $gameParty.nextActive().color 
+            });
+            this.playerX = nx; this.playerY = ny;
+            
+            // NO SLEEP - allow continuous input buffer via Renderer flag
+            
+            const itemIdx = this.loot.findIndex(i => i.x === nx && i.y === ny);
+            if(itemIdx > -1) {
+                $gameParty.gainItem(this.loot[itemIdx].item);
+                Renderer.playAnimation('itemGet', { x: nx, y: ny });
+                this.loot.splice(itemIdx, 1);
+                Renderer.syncLoot();
+            }
+            
+            if(this.tiles[nx][ny] === 3) {
+                $gameSystem.log("Ascending...");
+                Renderer.playAnimation('ascend'); 
+                $gameSystem.isInputBlocked = true; 
+                // Wait slightly more for dramatic effect before logic switch
+                await Sequencer.sleep(4000); 
+                $gameSystem.isInputBlocked = false;
+                this.setup($gameSystem.floor + 1);
+                return;
+            }
+
+            $gameParty.rotate();
+            UI.refresh();
+            this.updateEnemies(); 
+        }
+    }
+
+    async updateEnemies() {
+        for(const e of this.enemies) {
+            const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
+            if(dist < 7) e.alerted = true;
+            if(e.alerted) {
+                let dx = 0, dy = 0;
+                if(e.ai === "hunter" || e.ai === "ambush") {
+                    dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                    if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
+                }
+                const nx = e.x + dx; const ny = e.y + dy;
+                if(nx === this.playerX && ny === this.playerY) {
+                    const target = $gameParty.active();
+                    const dmg = BattleManager.calcDamage(e, target);
+                    target.takeDamage(dmg);
+                    Renderer.playAnimation('enemyLunge', { uid: e.uid, tx: nx, ty: ny });
+                    UI.floatText(dmg, this.playerX, this.playerY, "#f00");
+                    Renderer.playAnimation('hit', { uid: 'player' });
+                } else if(this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
+                    e.x = nx; e.y = ny;
+                    Renderer.syncEnemies();
+                }
+            }
+        }
+    }
+
+    async killEnemy(enemy) {
+        Renderer.playAnimation('die', { uid: enemy.uid });
+        await Sequencer.sleep(300);
+        this.enemies = this.enemies.filter(e => e !== enemy);
+        $gameParty.distributeExp(enemy.exp);
+        $gameSystem.log(`${enemy.name} dissolved.`);
+        Renderer.syncEnemies();
+    }
+}
+
+// ============================================================================
+// [5] RENDERER
+// ============================================================================
+class ParticleSystem {
+    constructor(scene) {
+        this.scene = scene; this.particles = [];
+        const geo = new THREE.PlaneGeometry(0.1, 0.1);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true });
+        for(let i=0; i<50; i++) {
+            const p = new THREE.Mesh(geo, mat.clone()); p.visible = false; scene.add(p);
+            this.particles.push({ mesh: p, life: 0, velocity: new THREE.Vector3() });
+        }
+    }
+    spawnBurst(x, y, color, count=10) {
+        let spawned = 0;
+        for(let p of this.particles) {
+            if(p.life <= 0 && spawned < count) {
+                p.mesh.visible = true; p.mesh.position.set(x, 0.5, y);
+                p.mesh.material.color.setHex(color); p.mesh.material.opacity = 1;
+                const angle = Math.random() * Math.PI * 2; const speed = 0.05 + Math.random() * 0.05;
+                p.velocity.set(Math.cos(angle) * speed, (Math.random() * 0.1), Math.sin(angle) * speed);
+                p.life = 1.0; spawned++;
+            }
+        }
+    }
+    spawnSparkle(x, y) {
+        let count = 5; let spawned = 0;
+        for(let p of this.particles) {
+             if(p.life <= 0 && spawned < count) {
+                p.mesh.visible = true;
+                p.mesh.position.set(x + (Math.random()-0.5)*0.5, 0.2, y + (Math.random()-0.5)*0.5);
+                p.mesh.material.color.setHex(0xffff00); p.mesh.material.opacity = 1;
+                p.life = 1.5; p.velocity.set(0, 0.03 + Math.random()*0.02, 0);
+                spawned++;
+             }
+        }
+    }
+    update() {
+        for(let p of this.particles) {
+            if(p.life > 0) {
+                p.life -= 0.02; p.mesh.position.add(p.velocity);
+                p.mesh.material.opacity = Math.min(1, p.life); p.mesh.rotation.z += 0.1;
+                if(p.life <= 0) p.mesh.visible = false;
+            }
+        }
+    }
+}
+
+class Renderer3D {
+    constructor() {
+        this.scene = null; this.camera = null; this.renderer = null;
+        this.meshes = { map: [], enemies: [], loot: [] };
+        this.playerTarget = new THREE.Vector3();
+        this.lungeTarget = null;
+        this.enemyTargets = new Map(); 
+        this.enemyLunges = new Map(); 
+        this.shakeTargets = new Map(); 
+        this.rangeGroup = new THREE.Group();
+        this.cameraLookCurrent = new THREE.Vector3();
+        this.particles = null;
+        this.moveLerpStart = new THREE.Vector3();
+        this.moveLerpEnd = new THREE.Vector3();
+        this.moveLerpProgress = 1; 
+        this.nextColor = null;
+        this.spinProgress = 0;
+        this.isSpinning = false;
+        this.isAscending = false;
+        this.ascendProgress = 0;
+        this.zoomProgress = 0;
+        this.isAnimating = false;
+        this.instancedFloor = null;
+        this.instancedWalls = null;
+    }
+
+    init(container) {
+        if(!container) return;
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(CONFIG.colors.bg);
+        this.scene.fog = new THREE.FogExp2(CONFIG.colors.fog, 0.05);
+        this.camera = new THREE.PerspectiveCamera(50, 16/9, 0.1, 100);
+        this.renderer = new THREE.WebGLRenderer({ antialias: false });
+        this.renderer.setSize(320, 180, false); 
+        this.renderer.domElement.id = 'game-canvas';
+        container.innerHTML = ''; 
+        const wrapper = document.createElement('div');
+        wrapper.id = 'game-view-wrapper'; wrapper.style.width = '100%'; wrapper.style.height = '100%';
+        wrapper.appendChild(this.renderer.domElement); container.appendChild(wrapper);
+
+        this.scene.add(new THREE.AmbientLight(0x222222));
+        const dirLight = new THREE.DirectionalLight(0x555555, 0.6); dirLight.position.set(10, 20, 10); this.scene.add(dirLight);
+        this.playerLight = new THREE.PointLight(0x004444, 1.5, 15); this.scene.add(this.playerLight);
+
+        const geo = new THREE.OctahedronGeometry(0.35);
+        this.matPlayer = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x001133 });
+        this.playerMesh = new THREE.Mesh(geo, this.matPlayer);
+        this.playerMesh.userData.uid = 'player'; 
+        this.scene.add(this.playerMesh);
+
+        this.mapGroup = new THREE.Group(); this.enemyGroup = new THREE.Group(); this.lootGroup = new THREE.Group(); this.rangeGroup = new THREE.Group();
+        this.scene.add(this.mapGroup); this.scene.add(this.enemyGroup); this.scene.add(this.lootGroup); this.scene.add(this.rangeGroup);
+        this.particles = new ParticleSystem(this.scene);
+        this.animate();
+    }
+
+    rebuildLevel() {
+        this.mapGroup.clear();
+        const count = $gameMap.width * $gameMap.height;
+        const geoFloor = new THREE.PlaneGeometry(0.95, 0.95);
+        const matFloor = new THREE.MeshLambertMaterial({ color: CONFIG.colors.floor });
+        this.instancedFloor = new THREE.InstancedMesh(geoFloor, matFloor, count);
+        const geoBlock = new THREE.BoxGeometry(0.95, 1, 0.95);
+        const matWall = new THREE.MeshLambertMaterial({ color: CONFIG.colors.wall });
+        this.instancedWalls = new THREE.InstancedMesh(geoBlock, matWall, count);
+        const dummy = new THREE.Object3D();
+        let fIdx = 0, wIdx = 0;
+        
+        for(let x=0; x<$gameMap.width; x++) {
+            for(let y=0; y<$gameMap.height; y++) {
+                if($gameMap.tiles[x][y] === 0 || $gameMap.tiles[x][y] === 3) {
+                    dummy.position.set(x, 0, y); dummy.rotation.set(-Math.PI/2, 0, 0); dummy.scale.set(1,1,1); dummy.updateMatrix();
+                    this.instancedFloor.setMatrixAt(fIdx++, dummy.matrix);
+                    if($gameMap.tiles[x][y] === 3) {
+                        const numSteps = 5; const maxH = 0.4; const sliceW = 0.8 / numSteps; 
+                        for(let s=0; s<numSteps; s++) {
+                            const h = maxH * (numSteps - s) / numSteps;
+                            const yPos = h / 2; const zPos = y - 0.4 + (s * sliceW) + (sliceW / 2); 
+                            const step = new THREE.Mesh(new THREE.BoxGeometry(0.8, h, sliceW * 0.9), new THREE.MeshPhongMaterial({ color: 0x00ffaa, flatShading: true }));
+                            step.position.set(x, yPos, zPos); this.mapGroup.add(step);
+                        }
+                    }
+                } else if ($gameMap.tiles[x][y] === 1) {
+                     if(this.hasFloorNeighbor(x,y)) {
+                        dummy.position.set(x, 0.5, y); dummy.rotation.set(0,0,0); dummy.scale.set(1,1,1); dummy.updateMatrix();
+                        this.instancedWalls.setMatrixAt(wIdx++, dummy.matrix);
+                     }
+                }
+            }
+        }
+        this.instancedFloor.count = fIdx; this.instancedWalls.count = wIdx;
+        this.instancedFloor.instanceMatrix.needsUpdate = true; this.instancedWalls.instanceMatrix.needsUpdate = true;
+        this.mapGroup.add(this.instancedFloor); this.mapGroup.add(this.instancedWalls);
+        
+        this.playerMesh.position.set($gameMap.playerX, 0.5, $gameMap.playerY);
+        this.playerTarget.set($gameMap.playerX, 0.5, $gameMap.playerY);
+        this.cameraLookCurrent.set($gameMap.playerX, 0, $gameMap.playerY); 
+        this.isAscending = false; this.ascendProgress = 0; this.zoomProgress = 0; this.playerMesh.visible = true;
+        this.syncEnemies(); this.syncLoot();
+    }
+
+    hasFloorNeighbor(x,y) {
+        const t = $gameMap.tiles;
+        const check = (nx, ny) => nx>=0 && nx<$gameMap.width && ny>=0 && ny<$gameMap.height && t[nx][ny] !== 1;
+        return check(x+1,y) || check(x-1,y) || check(x,y+1) || check(x,y-1);
+    }
+
+    syncEnemies() {
+        const cIds = new Set($gameMap.enemies.map(e => e.uid));
+        for(let i = this.enemyGroup.children.length - 1; i >= 0; i--) {
+            const c = this.enemyGroup.children[i];
+            if(!cIds.has(c.userData.uid)) { this.enemyGroup.remove(c); this.enemyTargets.delete(c.userData.uid); }
+        }
+        $gameMap.enemies.forEach(e => {
+            let mesh = this.enemyGroup.children.find(c => c.userData.uid === e.uid);
+            if(!mesh) {
+                const geo = new THREE.ConeGeometry(0.3 * e.scale, 0.8 * e.scale, 4);
+                const mat = new THREE.MeshPhongMaterial({ color: e.color, flatShading: true });
+                mesh = new THREE.Mesh(geo, mat);
+                mesh.userData = { uid: e.uid, scaleBase: e.scale };
+                mesh.position.set(e.x, 0.4, e.y);
+                this.enemyGroup.add(mesh);
+                this.enemyTargets.set(e.uid, new THREE.Vector3(e.x, 0.4, e.y));
+            } else {
+                const target = this.enemyTargets.get(e.uid); if(target) target.set(e.x, 0.4, e.y);
+            }
+        });
+    }
+
+    syncLoot() {
+        this.lootGroup.clear();
+        $gameMap.loot.forEach(l => {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshPhongMaterial({ color: 0xffd700, wireframe: true }));
+            m.position.set(l.x, 0.25, l.y);
+            this.lootGroup.add(m);
+        });
+    }
+
+    playAnimation(type, data) {
+        if (type === 'move_switch') {
+            this.moveLerpStart.copy(this.playerMesh.position);
+            this.moveLerpEnd.set(data.toX, 0.5, data.toY);
+            this.nextColor = data.nextColor;
+            this.moveLerpProgress = 0;
+            this.playerTarget.set(data.toX, 0.5, data.toY);
+            this.isAnimating = true; // Lock input during move
+        } else if (type === 'ascend') {
+            this.isAscending = true;
+            this.ascendProgress = 0;
+            this.zoomProgress = 0;
+        } else if (type === 'lunge') {
+            this.lungeTarget = new THREE.Vector3(data.tx, 0.5, data.ty);
+            setTimeout(() => { this.lungeTarget = null; }, 150);
+        } else if (type === 'enemyLunge') {
+            this.enemyLunges.set(data.uid, new THREE.Vector3(data.tx, 0.4, data.ty));
+            setTimeout(() => { this.enemyLunges.delete(data.uid); }, 150);
+        } else if (type === 'shake') {
+            const el = document.getElementById('game-view-wrapper');
+            el.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+            setTimeout(() => el.style.transform = 'none', 50);
+        } else if (type === 'hit') {
+            if (data.uid !== undefined) {
+                this.shakeTargets.set(data.uid, 5); 
+                const pos = data.uid==='player' ? this.playerMesh.position : this.enemyGroup.children.find(c=>c.userData.uid===data.uid)?.position;
+                if(pos) this.particles.spawnBurst(pos.x, pos.z, 0xff0000, 5);
+            }
+        } else if (type === 'itemGet') {
+            this.particles.spawnSparkle(data.x, data.y);
+        } else if (type === 'flash') {
+            this.flash(data.color);
+        } else if (type === 'die') {
+            const target = this.enemyGroup.children.find(c => c.userData.uid === data.uid);
+            if(target) this.particles.spawnBurst(target.position.x, target.position.z, 0xaaaaaa, 10);
+        }
+    }
+
+    projectToScreen(x, y, z) {
+        const container = document.getElementById('app-container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        const vec = new THREE.Vector3(x, y, z);
+        vec.project(this.camera);
+        return { x: (vec.x * width/2) + width/2, y: -(vec.y * height/2) + height/2 };
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        if (this.isAscending) {
+            // 1. ZOOM PHASE
+            if(this.zoomProgress < 1) {
+                this.zoomProgress += 0.02; // Slower Zoom
+                // Dolly In
+                const lx = this.playerTarget.x; const lz = this.playerTarget.z;
+                this.cameraLookCurrent.x += (lx - this.cameraLookCurrent.x) * 0.1;
+                this.cameraLookCurrent.z += (lz - this.cameraLookCurrent.z) * 0.1;
+                
+                const targetX = this.playerTarget.x; 
+                const targetZ = this.playerTarget.z + 3; // Closer
+                const targetY = 3; // Lower
+                this.camera.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.05);
+                this.camera.lookAt(this.playerTarget.x, 0, this.playerTarget.z); // Look at stair base
+            }
+
+            // 2. FLY PHASE (Triggered after zoom is mostly done)
+            if(this.zoomProgress > 0.8) {
+                this.ascendProgress += 0.015;
+                const y = 0.5 + (this.ascendProgress * this.ascendProgress * this.ascendProgress * 50); 
+                this.playerMesh.position.y = y;
+                // Light STAYS DOWN (don't update playerLight pos)
+            }
+        } else {
+             // --- CUSTOM MOVE & SWAP LOGIC ---
+            if (this.moveLerpProgress < 1) {
+                this.moveLerpProgress += 0.06; // SLOWER VISUALS (approx 16 frames)
+                
+                // EARLY UNLOCK FOR SEAMLESS INPUT
+                if(this.moveLerpProgress > 0.85) {
+                     this.isAnimating = false; 
+                }
+                
+                if(this.moveLerpProgress >= 1) this.moveLerpProgress = 1;
+                
+                this.playerMesh.position.lerpVectors(this.moveLerpStart, this.moveLerpEnd, this.moveLerpProgress);
+                
+                if (this.moveLerpProgress >= 0.5 && this.matPlayer.color.getHex() !== this.nextColor) {
+                    this.matPlayer.color.setHex(this.nextColor);
+                }
+                this.playerMesh.rotation.y = this.moveLerpProgress * Math.PI * 2;
+            } else {
+                this.playerMesh.rotation.y = 0; 
+                if (this.lungeTarget) this.playerMesh.position.lerp(this.lungeTarget, 0.3);
+                else this.playerMesh.position.lerp(this.playerTarget, 0.3); 
+            }
+
+            if(!this.isAscending) {
+                this.playerMesh.position.y = 0.5 + Math.sin(Date.now()*0.005)*0.05;
+                this.playerLight.position.copy(this.playerMesh.position).add(new THREE.Vector3(0, 1, 0));
+                
+                if(this.camera) {
+                    const lx = this.playerTarget.x; const lz = this.playerTarget.z;
+                    this.cameraLookCurrent.x += (lx - this.cameraLookCurrent.x) * 0.1;
+                    this.cameraLookCurrent.z += (lz - this.cameraLookCurrent.z) * 0.1;
+                    const tx = this.playerTarget.x; const tz = this.playerTarget.z + 6; const ty = 6; 
+                    this.camera.position.x += (tx - this.camera.position.x) * 0.1;
+                    this.camera.position.z += (tz - this.camera.position.z) * 0.1;
+                    this.camera.position.y += (ty - this.camera.position.y) * 0.1;
+                    this.camera.lookAt(this.cameraLookCurrent.x, 0, this.cameraLookCurrent.z - 2);
+                }
+            }
+        }
+
+        if (this.shakeTargets.has('player')) {
+            const f = this.shakeTargets.get('player');
+            if (f > 0) {
+                this.playerMesh.position.x += (Math.random()-0.5)*0.2; this.playerMesh.position.z += (Math.random()-0.5)*0.2;
+                this.shakeTargets.set('player', f - 1);
+            } else this.shakeTargets.delete('player');
+        }
+        
+        this.enemyGroup.children.forEach(mesh => {
+            const uid = mesh.userData.uid;
+            if (this.enemyLunges.has(uid)) mesh.position.lerp(this.enemyLunges.get(uid), 0.3);
+            else {
+                const t = this.enemyTargets.get(uid); if(t) mesh.position.lerp(t, 0.15);
+            }
+            if (this.shakeTargets.has(uid)) {
+                const f = this.shakeTargets.get(uid);
+                if (f > 0) {
+                    mesh.position.x += (Math.random()-0.5)*0.15; mesh.position.z += (Math.random()-0.5)*0.15;
+                    this.shakeTargets.set(uid, f - 1);
+                } else this.shakeTargets.delete(uid);
+            }
+            const s = mesh.userData.scaleBase || 1.0;
+            const pulse = s * (1 + Math.sin(Date.now() * 0.008 + uid) * 0.1);
+            mesh.scale.set(1, pulse, 1); mesh.rotation.y += 0.02;
+        });
+
+        this.lootGroup.children.forEach(l => { l.rotation.y += 0.02; l.rotation.x += 0.01; });
+        this.particles.update();
+
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    showRange(skill) {
+        if (!this.rangeGroup) return; 
+        this.rangeGroup.clear();
+        if (!skill) return; 
+        const geo = new THREE.PlaneGeometry(0.9, 0.9);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+        const px = $gameMap.playerX; const py = $gameMap.playerY; const coords = [];
+        if (skill.type === 'all_enemies') { $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y})); }
+        else if (skill.range > 0) {
+            for(let x = px - skill.range; x <= px + skill.range; x++) {
+                for(let y = py - skill.range; y <= py + skill.range; y++) {
+                    if (Math.abs(x - px) + Math.abs(y - py) <= skill.range && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] === 0) coords.push({x, y});
+                }
+            }
+        }
+        coords.forEach(c => {
+            const m = new THREE.Mesh(geo, mat);
+            m.rotation.x = -Math.PI / 2;
+            m.position.set(c.x, 0.02, c.y);
+            this.rangeGroup.add(m);
+        });
+    }
+    clearRange() { if (this.rangeGroup) this.rangeGroup.clear(); }
+    shake() {
+        const el = document.getElementById('game-view-wrapper');
+        el.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+        setTimeout(() => el.style.transform = 'none', 50);
+    }
+    flash(color) {
+        const fx = document.getElementById('screen-fx');
+        fx.style.backgroundColor = '#' + color.toString(16).padStart(6,'0');
+        fx.style.opacity = 0.5;
+        setTimeout(() => { fx.style.backgroundColor = 'transparent'; fx.style.opacity = 0.6; }, 100);
+    }
+}
+
+// ============================================================================
+// [6] UI MANAGER
+// ============================================================================
+class UI_Window {
+    constructor(id, rect, title) {
+        this.el = document.createElement('div'); this.el.className = 'pe-window';
+        Object.assign(this.el.style, rect);
+        if(title) { const h = document.createElement('div'); h.className = 'pe-header'; h.innerText = title; this.el.appendChild(h); }
+        this.content = document.createElement('div'); this.content.className = 'pe-content';
+        this.el.appendChild(this.content); document.getElementById('ui-root').appendChild(this.el);
+    }
+    clear() { this.content.innerHTML = ''; }
+}
+
+class UIManager {
+    constructor() { this.windows = {}; this.createLayout(); }
+    createLayout() {
+        this.windows.status = new UI_Window('status', {top:'2%', left:'2%', width:'20%', height:'50%'}, "SQUADRON");
+        this.windows.cmd = new UI_Window('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%'}, "TACTICS");
+        this.windows.minimap = new UI_Window('minimap', {top:'2%', right:'2%', width:'20%', height:'0'}, "MINIMAP");
+        const mmW = this.windows.minimap.el.clientWidth;
+        this.windows.minimap.el.style.height = mmW + 'px';
+        const cvs = document.createElement('canvas'); cvs.id = 'minimap-canvas'; cvs.width = 128; cvs.height = 128;
+        this.windows.minimap.content.appendChild(cvs); this.windows.minimap.content.style.padding = '0';
+        
+        this.windows.log = new UI_Window('log', {top:`calc(2% + ${mmW + 8}px)`, right:'2%', width:'20%', bottom:'2%'}, "SYSTEM LOG");
+        this.windows.view = new UI_Window('view', {top:'2%', left:'23%', width:'54%', height:'96%'}, "OPTICAL FEED");
+        this.windows.view.content.id = 'game-view-container';
+        this.windows.view.content.style.padding = '0'; 
+        this.windows.view.content.style.background = '#000';
+        this.windows.view.content.style.display = 'flex';
+        this.windows.view.content.style.alignItems = 'center';
+        this.windows.view.content.style.justifyContent = 'center';
+    }
+    refresh() { this.refreshStatus(); this.refreshCmd(); this.refreshLog(); this.refreshMinimap(); }
+    refreshMinimap() {
+        const c = document.getElementById('minimap-canvas');
+        if(!c) return;
+        const ctx = c.getContext('2d');
+        const w = c.width, h = c.height;
+        const mapW = $gameMap.width, mapH = $gameMap.height;
+        const tw = w / mapW, th = h / mapH;
+        ctx.fillStyle = "#000"; ctx.fillRect(0,0,w,h);
+        for(let x=0; x<mapW; x++) {
+            for(let y=0; y<mapH; y++) {
+                if(!$gameMap.tiles[x]) continue;
+                const t = $gameMap.tiles[x][y];
+                if(t === 1) { ctx.fillStyle = "#444"; ctx.fillRect(x*tw, y*th, tw, th); }
+                else if(t === 3) { ctx.fillStyle = "#0f0"; ctx.fillRect(x*tw, y*th, tw, th); }
+            }
+        }
+        $gameMap.enemies.forEach(e => { ctx.fillStyle = "#f00"; ctx.fillRect(e.x*tw, e.y*th, tw, th); });
+        ctx.fillStyle = "#0ff"; ctx.fillRect($gameMap.playerX*tw, $gameMap.playerY*th, tw, th);
+    }
+    refreshStatus() {
+        const w = this.windows.status; w.clear();
+        $gameParty.members.forEach((m, i) => {
+            const active = i === $gameParty.index;
+            const div = document.createElement('div'); div.className = `party-slot ${active ? 'active' : ''}`;
+            div.onclick = () => { if(!$gameSystem.isBusy && !$gameSystem.isInputBlocked) this.showStatusModal(m); };
+            const pct = (m.hp / m.mhp) * 100;
+            const pePct = (m.pe / m.mpe) * 100;
+            const expPct = (m.exp / m.nextExp) * 100;
+            const clr = pct < 30 ? 'var(--pe-red)' : pct < 60 ? 'var(--pe-gold)' : 'var(--pe-green)';
+            div.innerHTML = `<div style="color:#${m.color.toString(16)}; width:20px; font-weight:bold;">${m.name[0]}</div>
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between;"><span>${m.name}</span><span style="color:${clr}">${m.hp}/${m.mhp}</span></div>
+                    <div style="height:4px; bg:#333; margin-top:2px;"><div style="width:${pct}%; height:100%; background:${clr};"></div></div>
+                    <div style="height:2px; bg:#222; margin-top:2px;"><div style="width:${pePct}%; height:100%; background:var(--pe-cyan);"></div></div>
+                    <div style="height:1px; bg:#111; margin-top:2px; width:100%; display:flex;"><div style="width:${expPct}%; height:100%; background:#888;"></div></div>
+                </div>`;
+            w.content.appendChild(div);
+        });
+    }
+    refreshCmd() {
+        const w = this.windows.cmd; w.clear();
+        const actor = $gameParty.active();
+        const btn = (t, s, cb, dis, sk) => {
+            const b = document.createElement('div'); b.className = `cmd-btn ${dis?'disabled':''}`;
+            b.innerHTML = `<span>${t}</span><span style="font-size:10px; color:#666;">${s}</span>`;
+            b.onclick = () => { if(!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !dis) cb(); };
+            if(sk) {
+                b.onmouseenter = (e) => { Renderer.showRange(sk); this.showTooltip(e, `<b>${sk.name}</b><br>${sk.desc(actor)}`); };
+                b.onmouseleave = () => { Renderer.clearRange(); this.hideTooltip(); };
+            }
+            w.content.appendChild(b);
+        };
+        btn("WAIT", "", () => $gameMap.processTurn(0,0));
+        btn("ITEM", "", () => this.showInventoryModal());
+        w.content.appendChild(document.createElement('hr'));
+        actor.skills.forEach(k => {
+            const s = $dataSkills[k];
+            btn(s.name, `${s.cost}PE`, () => {
+                if(!$gameSystem.isBusy) $gameMap.processTurn(0,0,()=>BattleManager.executeSkill(actor, k));
+                BattleManager.executeSkill(actor, k);
+            }, actor.pe < s.cost, s);
+        });
+    }
+    showTooltip(e, html) {
+        const el = document.getElementById('tooltip'); el.innerHTML = html; el.style.display = 'block';
+        el.style.left = (e.clientX + 10) + 'px'; el.style.top = (e.clientY) + 'px';
+    }
+    hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+    refreshLog() {
+        const w = this.windows.log; w.clear();
+        const h = w.content.clientHeight;
+        const lineH = 16; 
+        const lines = Math.floor(h / lineH) - 1;
+        $gameSystem.logHistory.slice(0,lines).forEach((t,i) => {
+            const d = document.createElement('div'); d.innerText = `> ${t}`;
+            d.style.opacity = 1 - i*0.1; d.style.marginBottom='4px'; if(i===0) d.style.color='#fff';
+            w.content.appendChild(d);
+        });
+    }
+    floatText(t, x, y, c) {
+        const pos = Renderer.projectToScreen(x, 0.5, y);
+        const container = document.createElement('div');
+        container.className = 'float-text-container';
+        container.style.left = pos.x + 'px'; 
+        container.style.top = pos.y + 'px';
+        const chars = t.toString().split('');
+        chars.forEach((char, i) => {
+            const s = document.createElement('span');
+            s.className = 'float-digit';
+            s.style.animationDelay = (i * 30) + 'ms';
+            s.style.color = c;
+            s.innerText = char;
+            container.appendChild(s);
+        });
+        document.getElementById('floating-text-layer').appendChild(container);
+        setTimeout(()=>container.remove(), 1200);
+    }
+    showInventoryModal() {
+        $gameSystem.isInputBlocked = true;
+        const render = (c) => {
+            c.innerHTML = '';
+            c.style.display = "flex"; c.style.gap = "10px"; c.style.height = "100%";
+            const desc = document.createElement('div');
+            desc.style.height = "60px"; desc.style.borderBottom = "1px solid #444"; desc.style.marginBottom = "5px"; desc.style.padding = "5px"; desc.style.fontSize = "12px"; desc.style.color = "#aaa"; desc.style.fontStyle = "italic";
+            desc.innerText = "Select an item...";
+            c.appendChild(desc);
+            const body = document.createElement('div');
+            body.style.flex = "1"; body.style.display = "flex"; body.style.gap = "10px"; body.style.overflow = "hidden";
+            const leftCol = document.createElement('div');
+            leftCol.style.flex = "1"; leftCol.style.borderRight = "1px solid #444"; leftCol.style.paddingRight = "5px"; leftCol.style.overflowY = "auto";
+            if($gameParty.inventory.length === 0) leftCol.innerHTML = "<div style='color:#666; text-align:center; padding-top:20px;'>Empty</div>";
+            $gameParty.inventory.forEach((i, idx) => {
+                const r = document.createElement('div'); r.className = 'item-row';
+                r.innerHTML = `<span>${i.icon} ${i.name}</span><span style="font-size:10px;color:#666">${i.category.toUpperCase()}</span>`;
+                r.onmouseenter = () => desc.innerText = i.desc || "No description.";
+                r.onclick = () => { 
+                    if(i.category === 'item') {
+                        this.showTargetSelectModal((t) => {
+                            this.showConfirmModal(`Use ${i.name} on ${t.name}?`, () => this.useConsumable(t, i, idx));
+                        });
+                    } else {
+                        this.showTargetSelectModal((t) => { this.equipGear(t, i, idx, () => { render(c); this.refresh(); }); }, i);
+                    }
+                };
+                leftCol.appendChild(r);
+            });
+            const rightCol = document.createElement('div');
+            rightCol.style.flex = "1"; rightCol.style.display = "flex"; rightCol.style.flexDirection = "column"; rightCol.style.gap = "5px"; rightCol.style.overflowY = "auto";
+            rightCol.innerHTML = "<div style='text-align:center; color:var(--pe-gold); font-size:10px; margin-bottom:5px;'>SQUAD STATUS</div>";
+            $gameParty.members.forEach(m => {
+                const box = document.createElement('div');
+                box.style.border = "1px solid #333"; box.style.padding = "4px";
+                box.innerHTML = `<div style="font-weight:bold; color:#${m.color.toString(16)}; border-bottom:1px solid #222; margin-bottom:2px; display:flex; justify-content:space-between;"><span>${m.name}</span><span style="font-size:9px; color:#999">ATK:${m.getAtk()} DEF:${m.getDef()}</span></div>`;
+                const renderEquip = (slot, item) => {
+                    const row = document.createElement('div');
+                    row.style.fontSize = "10px"; row.style.display = "flex"; row.style.justifyContent = "space-between";
+                    row.style.cursor = item ? "pointer" : "default";
+                    if(item) {
+                        row.innerHTML = `<span>${slot}: ${item.icon} ${item.name}</span>`;
+                        row.onclick = () => {
+                            if($gameParty.inventory.length < $gameParty.maxInventory) {
+                                $gameParty.gainItem(item); m.equip[slot] = null; render(c); this.refresh();
+                            } else { alert("Inventory Full!"); }
+                        };
+                        row.onmouseover = () => row.style.color = "var(--pe-red)"; row.onmouseout = () => row.style.color = "";
+                    } else { row.innerHTML = `<span style="color:#444">${slot}: ---</span>`; }
+                    return row;
+                };
+                box.appendChild(renderEquip('weapon', m.equip.weapon)); box.appendChild(renderEquip('armor', m.equip.armor)); rightCol.appendChild(box);
+            });
+            body.appendChild(leftCol); body.appendChild(rightCol);
+            c.appendChild(body);
+        };
+        this.createModal(`SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`, render, () => $gameSystem.isInputBlocked=false);
+    }
+    useConsumable(actor, i, idx) {
+        if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
+        if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
+        $gameParty.inventory.splice(idx, 1);
+        this.closeModal(); $gameSystem.isInputBlocked = false; this.refresh(); $gameMap.processTurn(0,0);
+    }
+    equipGear(actor, i, idx, cb) {
+        const type = i.category; const current = actor.equip[type];
+        actor.equip[type] = i; $gameParty.inventory.splice(idx, 1);
+        if(current) $gameParty.gainItem(current);
+        $gameSystem.log(`${actor.name} equipped ${i.name}.`);
+        cb();
+    }
+    showTargetSelectModal(callback, itemPreview = null) {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute'; overlay.style.top = '20%'; overlay.style.left = '30%'; overlay.style.width = '40%'; overlay.style.background = 'var(--pe-panel-bg)'; overlay.style.border = '1px solid #444'; overlay.style.zIndex = '150'; overlay.style.padding = '10px';
+        overlay.innerHTML = "<div style='color:white; text-align:center; margin-bottom:10px;'>SELECT TARGET</div>";
+        $gameParty.members.forEach(m => {
+            const btn = document.createElement('div');
+            let txt = m.name;
+            if(itemPreview) {
+                if(itemPreview.category === 'weapon') {
+                    const currentAtk = m.getAtk(); const newAtk = m.getAtkWith(itemPreview); const diff = newAtk - currentAtk;
+                    const color = diff > 0 ? '#0f0' : (diff < 0 ? '#f00' : '#888');
+                    txt += ` (ATK: ${currentAtk} -> <span style='color:${color}'>${newAtk}</span>)`;
+                } else if(itemPreview.category === 'armor') {
+                    const currentDef = m.getDef(); const newDef = m.getDefWith(itemPreview); const diff = newDef - currentDef;
+                    const color = diff > 0 ? '#0f0' : (diff < 0 ? '#f00' : '#888');
+                    txt += ` (DEF: ${currentDef} -> <span style='color:${color}'>${newDef}</span>)`;
+                }
+            }
+            btn.innerHTML = txt;
+            btn.style.padding = '5px'; btn.style.border = '1px solid #333'; btn.style.marginBottom = '5px'; btn.style.cursor = 'pointer'; btn.style.color = '#'+m.color.toString(16);
+            btn.onmouseover = () => btn.style.background = '#333'; btn.onmouseout = () => btn.style.background = '';
+            btn.onclick = () => { callback(m); overlay.remove(); };
+            overlay.appendChild(btn);
+        });
+        const cancel = document.createElement('div');
+        cancel.innerText = "CANCEL"; cancel.style.color = "#888"; cancel.style.textAlign = "center"; cancel.style.cursor = "pointer"; cancel.style.fontSize = "10px";
+        cancel.onclick = () => overlay.remove();
+        overlay.appendChild(cancel);
+        document.getElementById('ui-root').appendChild(overlay);
+    }
+    showConfirmModal(text, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute'; overlay.style.top = '40%'; overlay.style.left = '35%'; overlay.style.width = '30%'; overlay.style.background = 'var(--pe-panel-bg)'; overlay.style.border = '1px solid #444'; overlay.style.zIndex = '160'; overlay.style.padding = '10px'; overlay.style.textAlign = 'center';
+        overlay.innerHTML = `<div style='color:white; margin-bottom:10px;'>${text}</div>`;
+        const yes = document.createElement('button'); yes.innerText = "YES"; yes.className = "cmd-btn"; yes.style.display = "inline-block"; yes.style.width = "40%"; yes.style.marginRight = "10px";
+        yes.onclick = () => { onConfirm(); overlay.remove(); };
+        const no = document.createElement('button'); no.innerText = "NO"; no.className = "cmd-btn"; no.style.display = "inline-block"; no.style.width = "40%";
+        no.onclick = () => overlay.remove();
+        overlay.appendChild(yes); overlay.appendChild(no);
+        document.getElementById('ui-root').appendChild(overlay);
+    }
+    showStatusModal(a) {
+        $gameSystem.isInputBlocked = true;
+        this.createModal(`STATUS: ${a.name}`, (c) => {
+            c.innerHTML = `<div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="width:60px; height:60px; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-size:30px; color:#${a.color.toString(16)}">${a.name[0]}</div>
+                <div style="flex:1"><div class="stat-label">JOB: <span class="stat-val">${a.job}</span></div>
+                <div class="stat-label">HP: <span class="stat-val" style="color:var(--pe-green)">${a.hp}/${a.mhp}</span></div>
+                <div class="stat-label">PE: <span class="stat-val" style="color:var(--pe-red)">${a.pe}/${a.mpe}</span></div></div></div>
+                <hr style="border-color:#333; margin:10px 0;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
+                <div><div class="stat-label">ATK</div><div style="color:white">${a.getAtk()}</div></div>
+                <div><div class="stat-label">DEF</div><div style="color:white">${a.getDef()}</div></div>
+                <div><div class="stat-label">EXP</div><div style="color:white">${a.exp}/${a.nextExp}</div></div>
+                <div><div class="stat-label">LVL</div><div style="color:white">${a.level}</div></div></div>`;
+        }, () => $gameSystem.isInputBlocked=false);
+    }
+    createModal(t, build, close) {
+        if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove();
+        const m = document.createElement('div'); m.id='temp-modal'; m.className='pe-window';
+        Object.assign(m.style, {left:'20%', top:'10%', width:'60%', height:'80%', zIndex:100});
+        m.innerHTML = `<div class="pe-header" style="display:flex; justify-content:space-between;">${t}<span style="cursor:pointer" id="modal-close">X</span></div><div class="pe-content"></div>`;
+        build(m.querySelector('.pe-content'));
+        document.getElementById('ui-root').appendChild(m);
+        m.querySelector('#modal-close').onclick = () => { this.closeModal(); if(close) close(); };
+    }
+    closeModal() { if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove(); }
+}
+
+let $gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene;
+class SceneManager {
+    static init() {
+        $gameSystem = new Game_System(); $gameParty = new Game_Party(); $gameMap = new Game_Map();
+        UI = new UIManager(); Renderer = new Renderer3D(); Cutscene = new CutsceneManager();
+        Renderer.init(UI.windows.view.content); $gameMap.setup(1); UI.refresh();
+        $gameSystem.log("System initialized.");
+        
+        // INPUT POLLING
+        this.keys = {};
+        document.addEventListener('keydown', e => this.keys[e.key] = true);
+        document.addEventListener('keyup', e => this.keys[e.key] = false);
+        
+        this.loop();
+    }
+    static loop() {
+        requestAnimationFrame(() => this.loop());
+        // Input Logic
+        if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !Renderer.isAnimating) {
+             if(this.keys["ArrowUp"]||this.keys["w"]) $gameMap.processTurn(0,-1);
+             else if(this.keys["ArrowDown"]||this.keys["s"]) $gameMap.processTurn(0,1);
+             else if(this.keys["ArrowLeft"]||this.keys["a"]) $gameMap.processTurn(-1,0);
+             else if(this.keys["ArrowRight"]||this.keys["d"]) $gameMap.processTurn(1,0);
+             else if(this.keys[" "]) $gameMap.processTurn(0,0);
+        }
+    }
+    static gameOver() { alert("FAILURE."); location.reload(); }
+}
+window.onload = () => SceneManager.init();
+</script>
+</body>
+</html>
