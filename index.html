@@ -208,8 +208,18 @@
 // ============================================================================
 // [1] DATA
 // ============================================================================
+/**
+ * Configuration for game colors.
+ * @constant
+ * @type {Object}
+ */
 const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
 
+/**
+ * Data definitions for all available skills.
+ * @constant
+ * @type {Object}
+ */
 const $dataSkills = {
     "rapid": { name: "Rapid Fire", cost: 10, range: 6, type: "target", power: 1.2, count: 2, desc: (a) => `2x shots. Est: ${Math.floor(a.atk * 1.2) * 2} DMG.` },
     "scan": { name: "Scan", cost: 5, range: 0, type: "self", power: 0, desc: () => "Map Intel. Reveals sector layout." },
@@ -223,12 +233,22 @@ const $dataSkills = {
     "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, desc: () => "Discharge all PE. 60 DMG." }
 };
 
+/**
+ * Data definitions for player classes/characters.
+ * @constant
+ * @type {Object}
+ */
 const $dataClasses = {
     "Aya": { job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"] },
     "Kyle": { job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"] },
     "Eve": { job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"] }
 };
 
+/**
+ * Data definitions for enemies.
+ * @constant
+ * @type {Array<Object>}
+ */
 const $dataEnemies = [
     { id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter" },
     { id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
@@ -239,6 +259,11 @@ const $dataEnemies = [
     { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" }
 ];
 
+/**
+ * Loot table for generating random items.
+ * @constant
+ * @type {Object}
+ */
 const $dataLootTable = {
     prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
     weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm." }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise." }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter." }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
@@ -246,6 +271,11 @@ const $dataLootTable = {
     items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
 };
 
+/**
+ * Configuration for floor generation.
+ * @constant
+ * @type {Object}
+ */
 const $dataFloors = {
     1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro' },
     2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8 },
@@ -253,6 +283,11 @@ const $dataFloors = {
     default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15 }
 };
 
+/**
+ * Data for cutscenes.
+ * @constant
+ * @type {Object}
+ */
 const $dataCutscenes = {
     'intro': [
         { type: 'wait', time: 500 },
@@ -266,13 +301,40 @@ const $dataCutscenes = {
 // [2] CORE SYSTEMS
 // ============================================================================
 
+/**
+ * Manages global game state, such as floor level and logs.
+ */
 class Game_System {
+    /**
+     * Creates an instance of Game_System.
+     */
     constructor() {
+        /**
+         * The current floor level.
+         * @type {number}
+         */
         this.floor = 1;
+        /**
+         * History of game logs.
+         * @type {Array<string>}
+         */
         this.logHistory = [];
+        /**
+         * Indicates if the system is busy processing an action.
+         * @type {boolean}
+         */
         this.isBusy = false;
+        /**
+         * Indicates if player input is blocked.
+         * @type {boolean}
+         */
         this.isInputBlocked = false;
     }
+
+    /**
+     * Adds a message to the game log.
+     * @param {string} text - The text to log.
+     */
     log(text) {
         this.logHistory.unshift(text);
         if(this.logHistory.length > 15) this.logHistory.pop();
@@ -280,26 +342,102 @@ class Game_System {
     }
 }
 
+/**
+ * Utility class for sequencing async operations.
+ */
 class Sequencer {
+    /**
+     * Pauses execution for a specified duration.
+     * @param {number} ms - The number of milliseconds to sleep.
+     * @returns {Promise<void>} A promise that resolves after the delay.
+     */
     static sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 }
 
 // DEFINED BEFORE USE
-class Game_Item { constructor(d) { this.name = d.name; this.type = d.type; this.val = d.val; this.category = "item"; this.icon = d.icon||"📦"; this.desc = d.desc||""; } }
-class Game_Weapon { constructor(b, p) { this.name = `${p.name} ${b.name}`; this.atk = b.baseAtk + (p.atk||0); this.color = p.color; this.category = "weapon"; this.icon = b.icon||"⚔️"; this.desc = b.desc||""; } }
-class Game_Armor { constructor(b) { this.name = b.name; this.def = b.baseDef; this.category = "armor"; this.icon = b.icon||"🛡️"; this.desc = b.desc||""; } }
+/**
+ * Represents a generic item in the game.
+ */
+class Game_Item {
+    /**
+     * Creates a new Game_Item.
+     * @param {Object} d - The data object for the item.
+     * @param {string} d.name - The name of the item.
+     * @param {string} d.type - The type of the item (e.g., 'heal').
+     * @param {number} d.val - The value associated with the item (e.g., heal amount).
+     * @param {string} [d.icon] - The icon for the item.
+     * @param {string} [d.desc] - The description of the item.
+     */
+    constructor(d) { this.name = d.name; this.type = d.type; this.val = d.val; this.category = "item"; this.icon = d.icon||"📦"; this.desc = d.desc||""; }
+}
 
+/**
+ * Represents a weapon.
+ */
+class Game_Weapon {
+    /**
+     * Creates a new Game_Weapon.
+     * @param {Object} b - The base weapon data.
+     * @param {Object} p - The prefix data modifying the weapon.
+     */
+    constructor(b, p) { this.name = `${p.name} ${b.name}`; this.atk = b.baseAtk + (p.atk||0); this.color = p.color; this.category = "weapon"; this.icon = b.icon||"⚔️"; this.desc = b.desc||""; }
+}
+
+/**
+ * Represents armor.
+ */
+class Game_Armor {
+    /**
+     * Creates a new Game_Armor.
+     * @param {Object} b - The base armor data.
+     */
+    constructor(b) { this.name = b.name; this.def = b.baseDef; this.category = "armor"; this.icon = b.icon||"🛡️"; this.desc = b.desc||""; }
+}
+
+/**
+ * Represents an enemy in the game.
+ */
 class Game_Enemy {
+    /**
+     * Creates a new Game_Enemy.
+     * @param {Object} d - The enemy data template.
+     * @param {number} x - The x-coordinate on the map.
+     * @param {number} y - The y-coordinate on the map.
+     * @param {string|number} uid - Unique identifier for the enemy instance.
+     * @param {number} hp - The hit points of the enemy.
+     */
     constructor(d, x, y, uid, hp) {
         Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
         this.def = 0; this.equip = {}; 
     }
+
+    /**
+     * Reduces the enemy's HP.
+     * @param {number} v - The amount of damage to take.
+     */
     takeDamage(v) { this.hp -= v; if(this.hp < 0) this.hp = 0; }
+
+    /**
+     * Checks if the enemy is dead.
+     * @returns {boolean} True if HP <= 0.
+     */
     isDead() { return this.hp <= 0; }
+
+    /**
+     * Gets the enemy's attack value.
+     * @returns {number} The attack value.
+     */
     getAtk() { return this.atk; } 
 }
 
+/**
+ * Represents a player character (actor).
+ */
 class Game_Actor {
+    /**
+     * Creates a new Game_Actor.
+     * @param {string} name - The name of the character (must match a key in $dataClasses).
+     */
     constructor(name) {
         const d = $dataClasses[name];
         Object.assign(this, d); this.name = name; this.mhp = d.hp; this.mpe = 100; this.pe = d.pe; 
@@ -308,18 +446,72 @@ class Game_Actor {
         if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
         this.uid = 'player';
     }
+
+    /**
+     * Checks if the actor is dead.
+     * @returns {boolean} True if HP <= 0.
+     */
     isDead() { return this.hp <= 0; }
+
+    /**
+     * Reduces the actor's HP.
+     * @param {number} v - The amount of damage to take.
+     */
     takeDamage(v) { this.hp = Math.max(0, this.hp - v); }
+
+    /**
+     * Restores the actor's HP.
+     * @param {number} v - The amount of HP to heal.
+     */
     heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
+
+    /**
+     * Regenerates a small amount of PE (Power Energy).
+     */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
+
+    /**
+     * Adds experience points and handles leveling up.
+     * @param {number} v - The amount of experience to gain.
+     */
     gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
+
+    /**
+     * Gets the actor's total attack value including equipment.
+     * @returns {number} Total attack.
+     */
     getAtk() { return this.atk + (this.equip.weapon ? this.equip.weapon.atk : 0); }
+
+    /**
+     * Gets the actor's total defense value including equipment.
+     * @returns {number} Total defense.
+     */
     getDef() { return this.def + (this.equip.armor ? this.equip.armor.def : 0); }
+
+    /**
+     * Calculates what the attack would be with a specific item equipped.
+     * @param {Game_Weapon} i - The item to check.
+     * @returns {number} The hypothetical attack value.
+     */
     getAtkWith(i) { return this.atk + (i.category === 'weapon' ? i.atk : (this.equip.weapon ? this.equip.weapon.atk : 0)); }
+
+    /**
+     * Calculates what the defense would be with a specific item equipped.
+     * @param {Game_Armor} i - The item to check.
+     * @returns {number} The hypothetical defense value.
+     */
     getDefWith(i) { return this.def + (i.category === 'armor' ? i.def : (this.equip.armor ? this.equip.armor.def : 0)); }
 }
 
+/**
+ * Manages item generation and handling.
+ */
 class ItemManager {
+    /**
+     * Generates a random piece of loot based on the current floor.
+     * @param {number} floor - The current floor level.
+     * @returns {Game_Item|Game_Weapon|Game_Armor} The generated item.
+     */
     static generateLoot(floor) {
         const roll = Math.random();
         if (roll < 0.4) {
@@ -336,13 +528,23 @@ class ItemManager {
     }
 }
 
+/**
+ * Manages cutscene playback.
+ */
 class CutsceneManager {
+    /**
+     * Creates an instance of CutsceneManager.
+     */
     constructor() {
         this.queue = [];
         this.active = false;
         this.dialogEl = document.getElementById('cutscene-overlay');
     }
 
+    /**
+     * Starts playing a cutscene script.
+     * @param {Array<Object>} script - The list of cutscene commands.
+     */
     play(script) {
         this.queue = [...script];
         this.active = true;
@@ -350,6 +552,9 @@ class CutsceneManager {
         this.next();
     }
 
+    /**
+     * Advances to the next command in the cutscene queue.
+     */
     next() {
         if(this.queue.length === 0) {
             this.end();
@@ -359,6 +564,10 @@ class CutsceneManager {
         this.processCommand(cmd);
     }
 
+    /**
+     * Processes a single cutscene command.
+     * @param {Object} cmd - The command object.
+     */
     processCommand(cmd) {
         switch(cmd.type) {
             case 'dialog':
@@ -385,6 +594,9 @@ class CutsceneManager {
         }
     }
 
+    /**
+     * Ends the cutscene and restores control.
+     */
     end() {
         this.active = false;
         $gameSystem.isInputBlocked = false;
@@ -392,7 +604,16 @@ class CutsceneManager {
     }
 }
 
+/**
+ * Manages battle mechanics and skill execution.
+ */
 class BattleManager {
+    /**
+     * Calculates damage between a source and a target.
+     * @param {Object} source - The attacker.
+     * @param {Object} target - The defender.
+     * @returns {number} The calculated damage.
+     */
     static calcDamage(source, target) {
         let atk = source.getAtk ? source.getAtk() : source.atk;
         let def = target.getDef ? target.getDef() : (target.def || 0);
@@ -400,6 +621,13 @@ class BattleManager {
         let dmg = Math.floor((atk * 2 - def) * variation);
         return Math.max(1, dmg);
     }
+
+    /**
+     * Executes a skill by an actor.
+     * @param {Game_Actor} a - The actor using the skill.
+     * @param {string} k - The key/ID of the skill.
+     * @returns {Promise<boolean>} Resolves to true if skill was executed successfully, false otherwise.
+     */
     static async executeSkill(a, k) {
         const s = $dataSkills[k];
         if(a.pe < s.cost) { $gameSystem.log("No PE."); return false; }
@@ -443,20 +671,61 @@ class BattleManager {
     }
 }
 
+/**
+ * Manages the party of actors.
+ */
 class Game_Party {
+    /**
+     * Creates an instance of Game_Party.
+     */
     constructor() { this.members = [new Game_Actor("Aya"), new Game_Actor("Kyle"), new Game_Actor("Eve")]; this.index = 0; this.inventory = []; this.maxInventory = 20; }
+
+    /**
+     * Gets the currently active party member.
+     * @returns {Game_Actor} The active actor.
+     */
     active() { return this.members[this.index]; }
+
+    /**
+     * Gets the next party member in the rotation.
+     * @returns {Game_Actor} The next actor.
+     */
     nextActive() { return this.members[(this.index + 1) % 3]; }
+
+    /**
+     * Rotates to the next living party member.
+     */
     rotate() {
         let s = 3; do { this.index = (this.index + 1) % 3; s--; } while(this.active().isDead() && s > 0);
         if(this.active().isDead()) SceneManager.gameOver();
     }
+
+    /**
+     * Distributes experience points to the party.
+     * @param {number} a - The base amount of experience.
+     */
     distributeExp(a) { const k = this.active(); this.members.forEach(m => !m.isDead() && m.gainExp(m===k ? a : Math.floor(a*0.5))); }
+
+    /**
+     * Adds an item to the party's inventory.
+     * @param {Game_Item|Game_Weapon|Game_Armor} i - The item to gain.
+     */
     gainItem(i) { if(this.inventory.length < this.maxInventory) { this.inventory.push(i); $gameSystem.log(`Got ${i.icon}${i.name}`); } else { $gameSystem.log("Inv Full!"); } }
 }
 
+/**
+ * Manages the game map, level generation, and entity placement.
+ */
 class Game_Map {
+    /**
+     * Creates an instance of Game_Map.
+     */
     constructor() { this.width = 20; this.height = 20; this.tiles = []; this.enemies = []; this.loot = []; this.playerX = 1; this.playerY = 1; this.enemyIdCounter = 0; }
+
+    /**
+     * Sets up a new floor.
+     * @param {number} floor - The floor level to generate.
+     */
     setup(floor) {
         $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`);
         const c = $dataFloors[floor] || $dataFloors.default;
@@ -492,6 +761,11 @@ class Game_Map {
         if(c.cutscene) Cutscene.play($dataCutscenes[c.cutscene]);
         UI.refreshMinimap();
     }
+
+    /**
+     * Gets a random empty point on the map.
+     * @returns {Object|null} An object with x and y coordinates, or null if failed.
+     */
     getRandomPoint() {
         for(let i=0; i<200; i++) {
             const x = Math.floor(Math.random()*this.width), y = Math.floor(Math.random()*this.height);
@@ -499,13 +773,48 @@ class Game_Map {
         }
         return null;
     }
+
+    /**
+     * Carves a tunnel between two points.
+     * @param {number} x1 - Start x.
+     * @param {number} y1 - Start y.
+     * @param {number} x2 - End x.
+     * @param {number} y2 - End y.
+     */
     carveTunnel(x1,y1,x2,y2) {
         if(Math.random()<0.5) { this.hTunnel(x1,x2,y1); this.vTunnel(y1,y2,x2); } else { this.vTunnel(y1,y2,x1); this.hTunnel(x1,x2,y2); }
     }
+
+    /**
+     * Carves a horizontal tunnel.
+     * @param {number} x1 - Start x.
+     * @param {number} x2 - End x.
+     * @param {number} y - Y coordinate.
+     */
     hTunnel(x1,x2,y) { for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) if(this.isValid(x,y)) this.tiles[x][y]=0; }
+
+    /**
+     * Carves a vertical tunnel.
+     * @param {number} y1 - Start y.
+     * @param {number} y2 - End y.
+     * @param {number} x - X coordinate.
+     */
     vTunnel(y1,y2,x) { for(let y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) if(this.isValid(x,y)) this.tiles[x][y]=0; }
+
+    /**
+     * Checks if a coordinate is valid.
+     * @param {number} x - X coordinate.
+     * @param {number} y - Y coordinate.
+     * @returns {boolean} True if valid.
+     */
     isValid(x,y) { return x>=0 && x<this.width && y>=0 && y<this.height && this.tiles[x] !== undefined; }
 
+    /**
+     * Processes a game turn based on player movement.
+     * @param {number} dx - Change in x.
+     * @param {number} dy - Change in y.
+     * @param {Function} [action] - Optional action to execute.
+     */
     async processTurn(dx, dy) {
         if($gameSystem.isInputBlocked) return;
         
@@ -569,6 +878,9 @@ class Game_Map {
         }
     }
 
+    /**
+     * Updates enemy positions and actions.
+     */
     async updateEnemies() {
         for(const e of this.enemies) {
             const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
@@ -595,6 +907,10 @@ class Game_Map {
         }
     }
 
+    /**
+     * Handles the death of an enemy.
+     * @param {Game_Enemy} enemy - The enemy to kill.
+     */
     async killEnemy(enemy) {
         Renderer.playAnimation('die', { uid: enemy.uid });
         await Sequencer.sleep(300);
@@ -608,7 +924,14 @@ class Game_Map {
 // ============================================================================
 // [5] RENDERER
 // ============================================================================
+/**
+ * System for handling particle effects in the 3D scene.
+ */
 class ParticleSystem {
+    /**
+     * Creates an instance of ParticleSystem.
+     * @param {THREE.Scene} scene - The Three.js scene to add particles to.
+     */
     constructor(scene) {
         this.scene = scene; this.particles = [];
         const geo = new THREE.PlaneGeometry(0.1, 0.1);
@@ -618,6 +941,14 @@ class ParticleSystem {
             this.particles.push({ mesh: p, life: 0, velocity: new THREE.Vector3() });
         }
     }
+
+    /**
+     * Spawns a burst of particles.
+     * @param {number} x - X coordinate.
+     * @param {number} y - Z coordinate.
+     * @param {number} color - Hex color.
+     * @param {number} [count=10] - Number of particles.
+     */
     spawnBurst(x, y, color, count=10) {
         let spawned = 0;
         for(let p of this.particles) {
@@ -630,6 +961,12 @@ class ParticleSystem {
             }
         }
     }
+
+    /**
+     * Spawns sparkle effects.
+     * @param {number} x - X coordinate.
+     * @param {number} y - Z coordinate.
+     */
     spawnSparkle(x, y) {
         let count = 5; let spawned = 0;
         for(let p of this.particles) {
@@ -642,6 +979,10 @@ class ParticleSystem {
              }
         }
     }
+
+    /**
+     * Updates all active particles.
+     */
     update() {
         for(let p of this.particles) {
             if(p.life > 0) {
@@ -653,7 +994,13 @@ class ParticleSystem {
     }
 }
 
+/**
+ * Main 3D renderer using Three.js.
+ */
 class Renderer3D {
+    /**
+     * Creates an instance of Renderer3D.
+     */
     constructor() {
         this.scene = null; this.camera = null; this.renderer = null;
         this.meshes = { map: [], enemies: [], loot: [] };
@@ -679,6 +1026,10 @@ class Renderer3D {
         this.instancedWalls = null;
     }
 
+    /**
+     * Initializes the Three.js scene.
+     * @param {HTMLElement} container - The DOM element to append the canvas to.
+     */
     init(container) {
         if(!container) return;
         this.scene = new THREE.Scene();
@@ -709,6 +1060,9 @@ class Renderer3D {
         this.animate();
     }
 
+    /**
+     * Rebuilds the level geometry based on map data.
+     */
     rebuildLevel() {
         this.mapGroup.clear();
         const count = $gameMap.width * $gameMap.height;
@@ -754,12 +1108,21 @@ class Renderer3D {
         this.syncEnemies(); this.syncLoot();
     }
 
+    /**
+     * Checks if a wall has a floor neighbor, for optimization.
+     * @param {number} x - X coordinate.
+     * @param {number} y - Y coordinate.
+     * @returns {boolean} True if a floor neighbor exists.
+     */
     hasFloorNeighbor(x,y) {
         const t = $gameMap.tiles;
         const check = (nx, ny) => nx>=0 && nx<$gameMap.width && ny>=0 && ny<$gameMap.height && t[nx][ny] !== 1;
         return check(x+1,y) || check(x-1,y) || check(x,y+1) || check(x,y-1);
     }
 
+    /**
+     * Synchronizes 3D enemy representations with game data.
+     */
     syncEnemies() {
         const cIds = new Set($gameMap.enemies.map(e => e.uid));
         for(let i = this.enemyGroup.children.length - 1; i >= 0; i--) {
@@ -782,6 +1145,9 @@ class Renderer3D {
         });
     }
 
+    /**
+     * Synchronizes 3D loot representations with game data.
+     */
     syncLoot() {
         this.lootGroup.clear();
         $gameMap.loot.forEach(l => {
@@ -791,6 +1157,11 @@ class Renderer3D {
         });
     }
 
+    /**
+     * Plays a visual animation.
+     * @param {string} type - The type of animation (e.g., 'move_switch', 'lunge').
+     * @param {Object} data - Data required for the animation.
+     */
     playAnimation(type, data) {
         if (type === 'move_switch') {
             this.moveLerpStart.copy(this.playerMesh.position);
@@ -829,6 +1200,13 @@ class Renderer3D {
         }
     }
 
+    /**
+     * Projects a 3D coordinate to screen space.
+     * @param {number} x - 3D x.
+     * @param {number} y - 3D y.
+     * @param {number} z - 3D z.
+     * @returns {Object} Screen coordinates {x, y}.
+     */
     projectToScreen(x, y, z) {
         const container = document.getElementById('app-container');
         const width = container.clientWidth;
@@ -838,6 +1216,9 @@ class Renderer3D {
         return { x: (vec.x * width/2) + width/2, y: -(vec.y * height/2) + height/2 };
     }
 
+    /**
+     * Main animation loop.
+     */
     animate() {
         requestAnimationFrame(() => this.animate());
         
@@ -937,6 +1318,10 @@ class Renderer3D {
         this.renderer.render(this.scene, this.camera);
     }
 
+    /**
+     * Displays a range indicator for a skill.
+     * @param {Object} skill - The skill object.
+     */
     showRange(skill) {
         if (!this.rangeGroup) return; 
         this.rangeGroup.clear();
@@ -959,12 +1344,25 @@ class Renderer3D {
             this.rangeGroup.add(m);
         });
     }
+
+    /**
+     * Clears the range indicator.
+     */
     clearRange() { if (this.rangeGroup) this.rangeGroup.clear(); }
+
+    /**
+     * Triggers a screen shake effect.
+     */
     shake() {
         const el = document.getElementById('game-view-wrapper');
         el.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
         setTimeout(() => el.style.transform = 'none', 50);
     }
+
+    /**
+     * Flashes the screen with a color.
+     * @param {number} color - Hex color.
+     */
     flash(color) {
         const fx = document.getElementById('screen-fx');
         fx.style.backgroundColor = '#' + color.toString(16).padStart(6,'0');
@@ -976,7 +1374,16 @@ class Renderer3D {
 // ============================================================================
 // [6] UI MANAGER
 // ============================================================================
+/**
+ * Represents a single UI window.
+ */
 class UI_Window {
+    /**
+     * Creates a new UI Window.
+     * @param {string} id - HTML ID for the window.
+     * @param {Object} rect - Style object defining position and size.
+     * @param {string} [title] - Optional title for the header.
+     */
     constructor(id, rect, title) {
         this.el = document.createElement('div'); this.el.className = 'pe-window';
         Object.assign(this.el.style, rect);
@@ -984,11 +1391,25 @@ class UI_Window {
         this.content = document.createElement('div'); this.content.className = 'pe-content';
         this.el.appendChild(this.content); document.getElementById('ui-root').appendChild(this.el);
     }
+
+    /**
+     * Clears the content of the window.
+     */
     clear() { this.content.innerHTML = ''; }
 }
 
+/**
+ * Manages all UI windows and interactions.
+ */
 class UIManager {
+    /**
+     * Creates an instance of UIManager.
+     */
     constructor() { this.windows = {}; this.createLayout(); }
+
+    /**
+     * Creates the initial UI layout.
+     */
     createLayout() {
         this.windows.status = new UI_Window('status', {top:'2%', left:'2%', width:'20%', height:'50%'}, "SQUADRON");
         this.windows.cmd = new UI_Window('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%'}, "TACTICS");
@@ -1007,7 +1428,15 @@ class UIManager {
         this.windows.view.content.style.alignItems = 'center';
         this.windows.view.content.style.justifyContent = 'center';
     }
+
+    /**
+     * Refreshes all UI components.
+     */
     refresh() { this.refreshStatus(); this.refreshCmd(); this.refreshLog(); this.refreshMinimap(); }
+
+    /**
+     * Redraws the minimap.
+     */
     refreshMinimap() {
         const c = document.getElementById('minimap-canvas');
         if(!c) return;
@@ -1027,6 +1456,10 @@ class UIManager {
         $gameMap.enemies.forEach(e => { ctx.fillStyle = "#f00"; ctx.fillRect(e.x*tw, e.y*th, tw, th); });
         ctx.fillStyle = "#0ff"; ctx.fillRect($gameMap.playerX*tw, $gameMap.playerY*th, tw, th);
     }
+
+    /**
+     * Refreshes the squad status window.
+     */
     refreshStatus() {
         const w = this.windows.status; w.clear();
         $gameParty.members.forEach((m, i) => {
@@ -1047,6 +1480,10 @@ class UIManager {
             w.content.appendChild(div);
         });
     }
+
+    /**
+     * Refreshes the command window.
+     */
     refreshCmd() {
         const w = this.windows.cmd; w.clear();
         const actor = $gameParty.active();
@@ -1071,11 +1508,25 @@ class UIManager {
             }, actor.pe < s.cost, s);
         });
     }
+
+    /**
+     * Shows a tooltip.
+     * @param {Event} e - The mouse event.
+     * @param {string} html - HTML content for tooltip.
+     */
     showTooltip(e, html) {
         const el = document.getElementById('tooltip'); el.innerHTML = html; el.style.display = 'block';
         el.style.left = (e.clientX + 10) + 'px'; el.style.top = (e.clientY) + 'px';
     }
+
+    /**
+     * Hides the tooltip.
+     */
     hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+
+    /**
+     * Refreshes the system log window.
+     */
     refreshLog() {
         const w = this.windows.log; w.clear();
         const h = w.content.clientHeight;
@@ -1087,6 +1538,14 @@ class UIManager {
             w.content.appendChild(d);
         });
     }
+
+    /**
+     * Displays floating text at a screen location.
+     * @param {string|number} t - The text to display.
+     * @param {number} x - The map x coordinate.
+     * @param {number} y - The map y coordinate.
+     * @param {string} c - CSS color string.
+     */
     floatText(t, x, y, c) {
         const pos = Renderer.projectToScreen(x, 0.5, y);
         const container = document.createElement('div');
@@ -1105,6 +1564,10 @@ class UIManager {
         document.getElementById('floating-text-layer').appendChild(container);
         setTimeout(()=>container.remove(), 1200);
     }
+
+    /**
+     * Shows the inventory modal window.
+     */
     showInventoryModal() {
         $gameSystem.isInputBlocked = true;
         const render = (c) => {
@@ -1163,12 +1626,27 @@ class UIManager {
         };
         this.createModal(`SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`, render, () => $gameSystem.isInputBlocked=false);
     }
+
+    /**
+     * Uses a consumable item on a target.
+     * @param {Game_Actor} actor - The target actor.
+     * @param {Game_Item} i - The item to use.
+     * @param {number} idx - The index of the item in inventory.
+     */
     useConsumable(actor, i, idx) {
         if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
         if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
         $gameParty.inventory.splice(idx, 1);
         this.closeModal(); $gameSystem.isInputBlocked = false; this.refresh(); $gameMap.processTurn(0,0);
     }
+
+    /**
+     * Equips gear to an actor.
+     * @param {Game_Actor} actor - The target actor.
+     * @param {Game_Weapon|Game_Armor} i - The item to equip.
+     * @param {number} idx - The index of the item in inventory.
+     * @param {Function} cb - Callback to run after equipping.
+     */
     equipGear(actor, i, idx, cb) {
         const type = i.category; const current = actor.equip[type];
         actor.equip[type] = i; $gameParty.inventory.splice(idx, 1);
@@ -1176,6 +1654,12 @@ class UIManager {
         $gameSystem.log(`${actor.name} equipped ${i.name}.`);
         cb();
     }
+
+    /**
+     * Shows a modal to select a target for an item or skill.
+     * @param {Function} callback - Function called with selected actor.
+     * @param {Object} [itemPreview] - Optional item for stats preview.
+     */
     showTargetSelectModal(callback, itemPreview = null) {
         const overlay = document.createElement('div');
         overlay.style.position = 'absolute'; overlay.style.top = '20%'; overlay.style.left = '30%'; overlay.style.width = '40%'; overlay.style.background = 'var(--pe-panel-bg)'; overlay.style.border = '1px solid #444'; overlay.style.zIndex = '150'; overlay.style.padding = '10px';
@@ -1206,6 +1690,12 @@ class UIManager {
         overlay.appendChild(cancel);
         document.getElementById('ui-root').appendChild(overlay);
     }
+
+    /**
+     * Shows a confirmation modal.
+     * @param {string} text - The prompt text.
+     * @param {Function} onConfirm - Callback if confirmed.
+     */
     showConfirmModal(text, onConfirm) {
         const overlay = document.createElement('div');
         overlay.style.position = 'absolute'; overlay.style.top = '40%'; overlay.style.left = '35%'; overlay.style.width = '30%'; overlay.style.background = 'var(--pe-panel-bg)'; overlay.style.border = '1px solid #444'; overlay.style.zIndex = '160'; overlay.style.padding = '10px'; overlay.style.textAlign = 'center';
@@ -1217,6 +1707,11 @@ class UIManager {
         overlay.appendChild(yes); overlay.appendChild(no);
         document.getElementById('ui-root').appendChild(overlay);
     }
+
+    /**
+     * Shows a modal with actor status details.
+     * @param {Game_Actor} a - The actor to show.
+     */
     showStatusModal(a) {
         $gameSystem.isInputBlocked = true;
         this.createModal(`STATUS: ${a.name}`, (c) => {
@@ -1233,6 +1728,13 @@ class UIManager {
                 <div><div class="stat-label">LVL</div><div style="color:white">${a.level}</div></div></div>`;
         }, () => $gameSystem.isInputBlocked=false);
     }
+
+    /**
+     * Creates a generic modal window.
+     * @param {string} t - Title of the modal.
+     * @param {Function} build - Function to build content into the provided element.
+     * @param {Function} close - Callback when modal is closed.
+     */
     createModal(t, build, close) {
         if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove();
         const m = document.createElement('div'); m.id='temp-modal'; m.className='pe-window';
@@ -1242,11 +1744,21 @@ class UIManager {
         document.getElementById('ui-root').appendChild(m);
         m.querySelector('#modal-close').onclick = () => { this.closeModal(); if(close) close(); };
     }
+
+    /**
+     * Closes the temporary modal window.
+     */
     closeModal() { if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove(); }
 }
 
 let $gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene;
+/**
+ * Static class that manages the main game loop and initialization.
+ */
 class SceneManager {
+    /**
+     * Initializes the game.
+     */
     static init() {
         $gameSystem = new Game_System(); $gameParty = new Game_Party(); $gameMap = new Game_Map();
         UI = new UIManager(); Renderer = new Renderer3D(); Cutscene = new CutsceneManager();
@@ -1260,6 +1772,10 @@ class SceneManager {
         
         this.loop();
     }
+
+    /**
+     * Main game loop.
+     */
     static loop() {
         requestAnimationFrame(() => this.loop());
         // Input Logic
@@ -1271,6 +1787,10 @@ class SceneManager {
              else if(this.keys[" "]) $gameMap.processTurn(0,0);
         }
     }
+
+    /**
+     * Triggers game over state.
+     */
     static gameOver() { alert("FAILURE."); location.reload(); }
 }
 window.onload = () => SceneManager.init();
