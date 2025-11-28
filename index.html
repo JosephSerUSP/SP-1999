@@ -226,7 +226,14 @@ const PARAM_DEF = 3;
 const $dataStates = {
     "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
     "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
-    "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] }
+    "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] },
+    "blind": { name: "Blind", duration: 3, icon: "👁️", traits: [{ code: TRAIT_PARAM_RATE, dataId: PARAM_ATK, value: 0.5 }] },
+    "rage": { name: "Rage", duration: 4, icon: "💢", traits: [{ code: TRAIT_PARAM_RATE, dataId: PARAM_ATK, value: 1.5 }, { code: TRAIT_PARAM_RATE, dataId: PARAM_DEF, value: 0.5 }] },
+    "regen": { name: "Regen", duration: 5, icon: "❤️", traits: [] }, // Needs implementation in processTurnEnd
+    "shield": { name: "Shield", duration: 3, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5 }] },
+    "haste": { name: "Haste", duration: 3, icon: "⏩", traits: [] }, // Visual/Logic only
+    "slow": { name: "Slow", duration: 3, icon: "🐢", traits: [] }, // Visual/Logic only
+    "fear": { name: "Fear", duration: 2, icon: "😱", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] } // Same as stun effectively
 };
 
 /**
@@ -245,7 +252,26 @@ const $dataSkills = {
     "heal": { name: "Heal", cost: 15, range: 0, type: "self", power: 30, fixed: true, desc: () => "Restore 30 HP." },
     "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", power: 1.0, desc: (a) => "Melee shock. Chance to stun." },
     "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, desc: () => "Discharge all PE. 60 DMG." },
-    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", power: 1.5, desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` }
+    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", power: 1.5, desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` },
+    "backstab": { name: "Backstab", cost: 15, range: 1, type: "target", power: 2.5, desc: (a) => `Critical hit. Est: ${Math.floor(a.atk * 2.5)} DMG.` },
+    "poison_blade": { name: "Venom Strike", cost: 10, range: 1, type: "target", power: 1.0, desc: (a) => "Melee + Poison." },
+    "vanish": { name: "Vanish", cost: 20, range: 0, type: "self", power: 0, desc: () => "Escape notice (Not Implemented)." },
+    "taunt": { name: "Taunt", cost: 5, range: 0, type: "self", power: 0, desc: () => "Draw aggro (Not Implemented)." },
+    "fortify": { name: "Fortify", cost: 10, range: 0, type: "self", power: 0, desc: () => "DEF Up." },
+    "smash": { name: "Smash", cost: 20, range: 1, type: "target", power: 2.0, desc: (a) => `Heavy hit. Est: ${Math.floor(a.atk * 2.0)} DMG.` },
+    "cure": { name: "Cure", cost: 10, range: 0, type: "self", power: 0, desc: () => "Cure Status." },
+    "revive": { name: "Revive", cost: 50, range: 0, type: "self", power: 0, desc: () => "Revive ally (Not Implemented)." },
+    "turret": { name: "Deploy Turret", cost: 30, range: 2, type: "target", power: 5, fixed: true, desc: () => "Deploy support (Not Implemented)." },
+    "hack": { name: "Hack", cost: 15, range: 4, type: "target", power: 0, desc: () => "Confuse bot (Not Implemented)." },
+    "zap": { name: "Zap", cost: 5, range: 4, type: "target", power: 1.2, desc: (a) => "Electric shock." },
+    "dash": { name: "Dash", cost: 10, range: 0, type: "self", power: 0, desc: () => "Speed up." },
+    "trap": { name: "Trap", cost: 15, range: 1, type: "target", power: 20, fixed: true, desc: () => "Set trap." },
+    "mark": { name: "Mark", cost: 5, range: 5, type: "target", power: 0, desc: () => "Lower DEF (Not Implemented)." },
+    "mindblast": { name: "Mind Blast", cost: 25, range: 3, type: "all_enemies", power: 10, fixed: true, desc: () => "Psychic AoE." },
+    "teleport": { name: "Teleport", cost: 40, range: 0, type: "self", power: 0, desc: () => "Random location (Not Implemented)." },
+    "slash": { name: "Slash", cost: 10, range: 1, type: "target", power: 1.5, desc: (a) => "Sword cut." },
+    "parry": { name: "Parry", cost: 10, range: 0, type: "self", power: 0, desc: () => "Block next hit (Not Implemented)." },
+    "focus": { name: "Focus", cost: 10, range: 0, type: "self", power: 0, desc: () => "Next Atk x2." }
 };
 
 /**
@@ -257,106 +283,102 @@ const $dataClasses = {
     "Aya": {
         job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
         banter: [
-            { text: "Got one.", trigger: "kill", chance: 0.5 },
-            { text: "Messy work.", trigger: "kill", chance: 0.3 },
-            { text: "Down you go.", trigger: "kill", chance: 0.3 },
-            { text: "Another stat.", trigger: "kill", chance: 0.2 },
-            { text: "Clean shot.", trigger: "kill", chance: 0.2 },
-            { text: "Checking corners.", trigger: "walk", chance: 0.05 },
-            { text: "Watch your step.", trigger: "walk", chance: 0.05 },
-            { text: "Quiet...", trigger: "walk", chance: 0.05 },
-            { text: "Scanning area.", trigger: "walk", chance: 0.05 },
-            { text: "Don't like this quiet.", trigger: "walk", chance: 0.05 },
-            { text: "Too many of them!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Need backup here!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "They're everywhere.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Back to back!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Getting crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Found something.", trigger: "loot", chance: 0.8 },
-            { text: "Useful.", trigger: "loot", chance: 0.5 },
-            { text: "Bagging it.", trigger: "loot", chance: 0.5 },
-            { text: "Evidence?", trigger: "loot", chance: 0.3 },
-            { text: "Mine.", trigger: "loot", chance: 0.3 },
-            { text: "Damn it!", trigger: "hurt", chance: 0.5 },
-            { text: "Just a scratch.", trigger: "hurt", chance: 0.4 },
-            { text: "Need a medic!", trigger: "hurt", chance: 0.3 },
-            { text: "They hit hard.", trigger: "hurt", chance: 0.3 },
-            { text: "Ugh...", trigger: "hurt", chance: 0.3 },
-            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Vision blurring...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Not done yet.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Stronger.", trigger: "level_up", chance: 1.0 },
-            { text: "Experience pays off.", trigger: "level_up", chance: 0.8 }
+            { text: "Got one.", trigger: "kill", chance: 0.01 },
+            { text: "Messy work.", trigger: "kill", chance: 0.01 },
+            { text: "Down you go.", trigger: "kill", chance: 0.01 },
+            { text: "Checking corners.", trigger: "walk", chance: 0.01 },
+            { text: "Watch your step.", trigger: "walk", chance: 0.01 },
+            { text: "Quiet...", trigger: "walk", chance: 0.01 },
+            { text: "Too many of them!", trigger: "surrounded", chance: 0.01, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Need backup here!", trigger: "surrounded", chance: 0.01, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Found something.", trigger: "loot", chance: 0.01 },
+            { text: "Useful.", trigger: "loot", chance: 0.01 },
+            { text: "Damn it!", trigger: "hurt", chance: 0.01 },
+            { text: "Just a scratch.", trigger: "hurt", chance: 0.01 },
+            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.01, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Vision blurring...", trigger: "low_hp", chance: 0.01, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Stronger.", trigger: "level_up", chance: 0.01 }
         ]
     },
     "Kyle": {
         job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
         banter: [
-            { text: "Target neutralized.", trigger: "kill", chance: 0.5 },
-            { text: "Hostile down.", trigger: "kill", chance: 0.4 },
-            { text: "Tango down.", trigger: "kill", chance: 0.4 },
-            { text: "Threat cleared.", trigger: "kill", chance: 0.3 },
-            { text: "One less.", trigger: "kill", chance: 0.3 },
-            { text: "Moving out.", trigger: "walk", chance: 0.05 },
-            { text: "Stay sharp.", trigger: "walk", chance: 0.05 },
-            { text: "Check your six.", trigger: "walk", chance: 0.05 },
-            { text: "Advancing.", trigger: "walk", chance: 0.05 },
-            { text: "Maintain formation.", trigger: "walk", chance: 0.05 },
-            { text: "We are surrounded!", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Multiple contacts!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Defensive perimeter!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "They're swarming.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Supplies secured.", trigger: "loot", chance: 0.8 },
-            { text: "Equipment recovered.", trigger: "loot", chance: 0.6 },
-            { text: "Asset acquired.", trigger: "loot", chance: 0.5 },
-            { text: "Lock and load.", trigger: "loot", chance: 0.4 },
-            { text: "Good find.", trigger: "loot", chance: 0.4 },
-            { text: "Taking fire!", trigger: "hurt", chance: 0.6 },
-            { text: "Armor hit!", trigger: "hurt", chance: 0.5 },
-            { text: "I'm hit!", trigger: "hurt", chance: 0.5 },
-            { text: "Damage report.", trigger: "hurt", chance: 0.3 },
-            { text: "Grr...", trigger: "hurt", chance: 0.3 },
-            { text: "Critical condition.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Need evac...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Holding the line.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Combat efficiency up.", trigger: "level_up", chance: 1.0 },
-            { text: "Promoted.", trigger: "level_up", chance: 0.8 }
+            { text: "Target neutralized.", trigger: "kill", chance: 0.01 },
+            { text: "Hostile down.", trigger: "kill", chance: 0.01 },
+            { text: "Moving out.", trigger: "walk", chance: 0.01 },
+            { text: "Stay sharp.", trigger: "walk", chance: 0.01 },
+            { text: "We are surrounded!", trigger: "surrounded", chance: 0.01, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.01, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Supplies secured.", trigger: "loot", chance: 0.01 },
+            { text: "Taking fire!", trigger: "hurt", chance: 0.01 },
+            { text: "Armor hit!", trigger: "hurt", chance: 0.01 },
+            { text: "Critical condition.", trigger: "low_hp", chance: 0.01, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Combat efficiency up.", trigger: "level_up", chance: 0.01 }
         ]
     },
     "Eve": {
         job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
         banter: [
-            { text: "Burn.", trigger: "kill", chance: 0.6 },
-            { text: "Gone.", trigger: "kill", chance: 0.5 },
-            { text: "Ashes.", trigger: "kill", chance: 0.4 },
-            { text: "It screamed.", trigger: "kill", chance: 0.4 },
-            { text: "Fuel.", trigger: "kill", chance: 0.3 },
-            { text: "It calls to me.", trigger: "walk", chance: 0.05 },
-            { text: "So dark...", trigger: "walk", chance: 0.05 },
-            { text: "Can you hear it?", trigger: "walk", chance: 0.05 },
-            { text: "Wandering.", trigger: "walk", chance: 0.05 },
-            { text: "The stack breathes.", trigger: "walk", chance: 0.05 },
-            { text: "So many souls.", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Get away!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "I'll burn them all.", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Too loud...", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Pretty.", trigger: "loot", chance: 0.7 },
-            { text: "Mine.", trigger: "loot", chance: 0.6 },
-            { text: "Can I keep it?", trigger: "loot", chance: 0.5 },
-            { text: "Shiny.", trigger: "loot", chance: 0.4 },
-            { text: "Curious.", trigger: "loot", chance: 0.4 },
-            { text: "Pain...", trigger: "hurt", chance: 0.6 },
-            { text: "Don't touch me!", trigger: "hurt", chance: 0.5 },
-            { text: "My blood...", trigger: "hurt", chance: 0.5 },
-            { text: "Stop it.", trigger: "hurt", chance: 0.4 },
-            { text: "Ah!", trigger: "hurt", chance: 0.4 },
-            { text: "Fading...", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Cold...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Help me.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Power growing.", trigger: "level_up", chance: 1.0 },
-            { text: "Evolving.", trigger: "level_up", chance: 0.8 }
+            { text: "Burn.", trigger: "kill", chance: 0.01 },
+            { text: "Gone.", trigger: "kill", chance: 0.01 },
+            { text: "It calls to me.", trigger: "walk", chance: 0.01 },
+            { text: "So dark...", trigger: "walk", chance: 0.01 },
+            { text: "So many souls.", trigger: "surrounded", chance: 0.01, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Get away!", trigger: "surrounded", chance: 0.01, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Pretty.", trigger: "loot", chance: 0.01 },
+            { text: "Pain...", trigger: "hurt", chance: 0.01 },
+            { text: "Don't touch me!", trigger: "hurt", chance: 0.01 },
+            { text: "Fading...", trigger: "low_hp", chance: 0.01, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Power growing.", trigger: "level_up", chance: 0.01 }
+        ]
+    },
+    "Viper": {
+        job: "Assassin", hp: 50, atk: 6, def: 1, pe: 50, color: 0x9900ff, skills: ["backstab", "poison_blade", "vanish"],
+        banter: [
+            { text: "Silence.", trigger: "kill", chance: 0.01 },
+            { text: "Shadows guide me.", trigger: "walk", chance: 0.01 }
+        ]
+    },
+    "Tank": {
+        job: "Heavy", hp: 90, atk: 2, def: 6, pe: 10, color: 0x555555, skills: ["taunt", "fortify", "smash"],
+        banter: [
+            { text: "Is that all?", trigger: "hurt", chance: 0.01 },
+            { text: "Moving slow.", trigger: "walk", chance: 0.01 }
+        ]
+    },
+    "Doc": {
+        job: "Medic", hp: 40, atk: 2, def: 2, pe: 60, color: 0x00ffcc, skills: ["heal", "cure", "revive"],
+        banter: [
+            { text: "Don't die on me.", trigger: "low_hp", chance: 0.01 },
+            { text: "Clean kill.", trigger: "kill", chance: 0.01 }
+        ]
+    },
+    "Spark": {
+        job: "Tech", hp: 45, atk: 3, def: 3, pe: 70, color: 0xffaa00, skills: ["turret", "hack", "zap"],
+        banter: [
+            { text: "System compromised.", trigger: "kill", chance: 0.01 },
+            { text: "Scanning...", trigger: "walk", chance: 0.01 }
+        ]
+    },
+    "Nomad": {
+        job: "Scout", hp: 55, atk: 4, def: 3, pe: 30, color: 0x884400, skills: ["dash", "trap", "mark"],
+        banter: [
+            { text: "Path clear.", trigger: "walk", chance: 0.01 },
+            { text: "Target acquired.", trigger: "surrounded", chance: 0.01 }
+        ]
+    },
+    "Psy": {
+        job: "Esper", hp: 30, atk: 1, def: 1, pe: 100, color: 0xff00ff, skills: ["mindblast", "barrier", "teleport"],
+        banter: [
+            { text: "I hear their thoughts.", trigger: "surrounded", chance: 0.01 },
+            { text: "Silence!", trigger: "kill", chance: 0.01 }
+        ]
+    },
+    "Ronin": {
+        job: "Blade", hp: 60, atk: 7, def: 2, pe: 30, color: 0xffffff, skills: ["slash", "parry", "focus"],
+        banter: [
+            { text: "Cut clean.", trigger: "kill", chance: 0.01 },
+            { text: "My blade thirsts.", trigger: "walk", chance: 0.01 }
         ]
     }
 };
@@ -367,13 +389,33 @@ const $dataClasses = {
  * @type {Array<Object>}
  */
 const $dataEnemies = [
+    // SECTOR 1 (1-5): THE SUMP
     { id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter" },
-    { id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
-    { id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush" },
-    { id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret" },
-    { id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3, ai: "hunter" },
-    { id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter" },
-    { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" }
+    { id: 2, name: "Toxic Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
+    { id: 3, name: "Roach", hp: 10, atk: 4, exp: 4, color: 0x442200, scale: 0.3, ai: "hunter" },
+    { id: 4, name: "Waste Golem", hp: 45, atk: 7, exp: 20, color: 0x334411, scale: 0.9, ai: "patrol" },
+    { id: 100, name: "Waste Guardian", hp: 150, atk: 12, exp: 100, color: 0x228822, scale: 1.5, ai: "hunter" }, // BOSS 1
+
+    // SECTOR 2 (6-10): MANUFACTORY
+    { id: 5, name: "Worker Drone", hp: 30, atk: 6, exp: 15, color: 0xaaaaaa, scale: 0.5, ai: "patrol" },
+    { id: 6, name: "Sec-Bot", hp: 50, atk: 9, exp: 30, color: 0x004488, scale: 0.7, ai: "hunter" },
+    { id: 7, name: "Turret", hp: 35, atk: 12, exp: 25, color: 0x444444, scale: 0.5, ai: "turret" },
+    { id: 8, name: "Cyborg", hp: 60, atk: 10, exp: 40, color: 0x880000, scale: 0.8, ai: "hunter" },
+    { id: 200, name: "Assembly Prime", hp: 250, atk: 18, exp: 250, color: 0xff8800, scale: 1.8, ai: "patrol" }, // BOSS 2
+
+    // SECTOR 3 (11-15): BIO-LABS
+    { id: 9, name: "Mutant", hp: 70, atk: 14, exp: 50, color: 0xcc4444, scale: 0.8, ai: "hunter" },
+    { id: 10, name: "Spitter", hp: 45, atk: 12, exp: 45, color: 0x44cc44, scale: 0.6, ai: "ambush" }, // Needs range AI? default to ambush
+    { id: 11, name: "Flesh Mound", hp: 100, atk: 8, exp: 70, color: 0xaa8888, scale: 1.1, ai: "patrol" },
+    { id: 12, name: "Test Subject", hp: 55, atk: 16, exp: 60, color: 0xeeeeee, scale: 0.7, ai: "hunter" },
+    { id: 300, name: "Subject Zero", hp: 400, atk: 22, exp: 500, color: 0xff00ff, scale: 1.6, ai: "hunter" }, // BOSS 3
+
+    // SECTOR 4 (16-20): EXECUTIVE
+    { id: 13, name: "Elite Guard", hp: 90, atk: 18, exp: 90, color: 0xdddddd, scale: 0.8, ai: "patrol" },
+    { id: 14, name: "Assassin", hp: 60, atk: 25, exp: 100, color: 0x222222, scale: 0.6, ai: "ambush" },
+    { id: 15, name: "Mech-Sentinel", hp: 140, atk: 20, exp: 150, color: 0x0088cc, scale: 1.2, ai: "hunter" },
+    { id: 16, name: "Avatar", hp: 80, atk: 30, exp: 120, color: 0x00ffff, scale: 0.8, ai: "hunter" },
+    { id: 400, name: "The Architect", hp: 800, atk: 40, exp: 2000, color: 0x000000, scale: 2.0, ai: "hunter" } // BOSS 4
 ];
 
 /**
@@ -382,16 +424,52 @@ const $dataEnemies = [
  * @type {Object}
  */
 const $dataLootTable = {
-    prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
-    weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
+    prefixes: [
+        { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 },
+        { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 }, { name: "Neon", atk: 3 },
+        { name: "Cyber", atk: 4 }, { name: "Void", atk: 6 }
+    ],
+    weapons: [
+        { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" },
+        { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." },
+        { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" },
+        { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" },
+        { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." },
+        { name: "Machete", baseAtk: 7, icon: "🔪", desc: "Heavy blade." },
+        { name: "Plasma Rifle", baseAtk: 10, icon: "🔋", desc: "Energy weapon.", attackSkill: "zap" },
+        { name: "Katana", baseAtk: 9, icon: "🤺", desc: "Folded steel.", attackSkill: "slash" },
+        { name: "Sledge", baseAtk: 12, icon: "🔨", desc: "Heavy impact.", attackSkill: "smash" },
+        { name: "Sniper", baseAtk: 15, icon: "🔭", desc: "Long range.", attackSkill: "snipe" },
+        { name: "Dagger", baseAtk: 3, icon: "🗡️", desc: "Quick stab.", attackSkill: "backstab" },
+        { name: "Gauntlets", baseAtk: 4, icon: "🥊", desc: "Punch hard." },
+        { name: "Whip", baseAtk: 4, icon: "〰️", desc: "Long reach." }
+    ],
     armors: [
         { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." },
         { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." },
         { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." },
         { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." },
-        { name: "Crowd Shield", baseDef: 3, icon: "🛡️", desc: "Defends better in crowds.", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5, condition: { type: 'enemy_count_range', range: 5, min: 3 } }] }
+        { name: "Crowd Shield", baseDef: 3, icon: "🛡️", desc: "Defends better in crowds.", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5, condition: { type: 'enemy_count_range', range: 5, min: 3 } }] },
+        { name: "Exo Suit", baseDef: 10, icon: "🤖", desc: "Powered armor." },
+        { name: "Hazmat", baseDef: 4, icon: "☣️", desc: "Chemical protection." },
+        { name: "Stealth Suit", baseDef: 3, icon: "🥷", desc: "Light and quiet." },
+        { name: "Plate", baseDef: 12, icon: "💿", desc: "Heavy metal plates." },
+        { name: "Nano Skin", baseDef: 7, icon: "🧬", desc: "Self-repairing mesh." },
+        { name: "Riot Gear", baseDef: 9, icon: "👮", desc: "Police issue." },
+        { name: "Hoodie", baseDef: 1, icon: "🧥", desc: "Stylish but weak." }
     ],
-    items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
+    items: [
+        { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." },
+        { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." },
+        { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." },
+        { name: "Super Stim", type: "pe", val: 50, icon: "⚗️", desc: "Restores 50 PE." },
+        { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." },
+        { name: "Grenade", type: "dmg", val: 20, icon: "💣", desc: "Deal 20 DMG (Not Impl)." }, // TODO: Implement Use Dmg item
+        { name: "Ration", type: "heal", val: 15, icon: "🍖", desc: "Small snack." },
+        { name: "Medkit", type: "heal", val: 100, icon: "🧰", desc: "Full heal." },
+        { name: "Battery", type: "pe", val: 10, icon: "🔋", desc: "Small charge." },
+        { name: "Data Chip", type: "xp", val: 50, icon: "💾", desc: "Gain 50 EXP (Not Impl)." } // TODO
+    ]
 };
 
 /**
@@ -400,10 +478,35 @@ const $dataLootTable = {
  * @type {Object}
  */
 const $dataFloors = {
-    1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro' },
-    2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8 },
-    3: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 12 },
-    default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15 }
+    // SECTOR 1
+    1: { width: 30, height: 30, rooms: 10, enemies: 6, loot: 5, cutscene: 'intro', colors: { floor: 0x332200, wall: 0x443311, fog: 0x112211, bg: 0x051005 } },
+    2: { width: 32, height: 32, rooms: 12, enemies: 8, loot: 6, colors: { floor: 0x332200, wall: 0x443311, fog: 0x112211, bg: 0x051005 } },
+    3: { width: 34, height: 34, rooms: 14, enemies: 10, loot: 7, colors: { floor: 0x332200, wall: 0x443311, fog: 0x112211, bg: 0x051005 } },
+    4: { width: 36, height: 36, rooms: 16, enemies: 12, loot: 8, colors: { floor: 0x332200, wall: 0x443311, fog: 0x112211, bg: 0x051005 } },
+    5: { width: 30, height: 30, rooms: 8, enemies: 5, loot: 10, boss: { id: 100 }, cutscene_end: 'end_s1', colors: { floor: 0x442200, wall: 0x553311, fog: 0x221100, bg: 0x100500 } },
+
+    // SECTOR 2
+    6: { width: 40, height: 40, rooms: 15, enemies: 12, loot: 8, cutscene: 'start_s2', colors: { floor: 0x333333, wall: 0x553311, fog: 0x222222, bg: 0x101010 } },
+    7: { width: 42, height: 42, rooms: 18, enemies: 14, loot: 9, colors: { floor: 0x333333, wall: 0x553311, fog: 0x222222, bg: 0x101010 } },
+    8: { width: 44, height: 44, rooms: 20, enemies: 16, loot: 10, colors: { floor: 0x333333, wall: 0x553311, fog: 0x222222, bg: 0x101010 } },
+    9: { width: 46, height: 46, rooms: 22, enemies: 18, loot: 12, colors: { floor: 0x333333, wall: 0x553311, fog: 0x222222, bg: 0x101010 } },
+    10: { width: 40, height: 40, rooms: 10, enemies: 8, loot: 15, boss: { id: 200 }, cutscene_end: 'end_s2', colors: { floor: 0x444444, wall: 0x664422, fog: 0x332211, bg: 0x201005 } },
+
+    // SECTOR 3
+    11: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 10, cutscene: 'start_s3', colors: { floor: 0xaaaaaa, wall: 0x662222, fog: 0x331111, bg: 0x150505 } },
+    12: { width: 52, height: 52, rooms: 22, enemies: 18, loot: 12, colors: { floor: 0xaaaaaa, wall: 0x662222, fog: 0x331111, bg: 0x150505 } },
+    13: { width: 54, height: 54, rooms: 24, enemies: 20, loot: 14, colors: { floor: 0xaaaaaa, wall: 0x662222, fog: 0x331111, bg: 0x150505 } },
+    14: { width: 56, height: 56, rooms: 26, enemies: 22, loot: 16, colors: { floor: 0xaaaaaa, wall: 0x662222, fog: 0x331111, bg: 0x150505 } },
+    15: { width: 50, height: 50, rooms: 12, enemies: 10, loot: 20, boss: { id: 300 }, cutscene_end: 'end_s3', colors: { floor: 0xccccaa, wall: 0x883333, fog: 0x441111, bg: 0x200505 } },
+
+    // SECTOR 4
+    16: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15, cutscene: 'start_s4', colors: { floor: 0x050505, wall: 0x004444, fog: 0x000011, bg: 0x000000 } },
+    17: { width: 60, height: 60, rooms: 28, enemies: 22, loot: 16, colors: { floor: 0x050505, wall: 0x004444, fog: 0x000011, bg: 0x000000 } },
+    18: { width: 60, height: 60, rooms: 30, enemies: 24, loot: 18, colors: { floor: 0x050505, wall: 0x004444, fog: 0x000011, bg: 0x000000 } },
+    19: { width: 60, height: 60, rooms: 32, enemies: 26, loot: 20, colors: { floor: 0x050505, wall: 0x004444, fog: 0x000011, bg: 0x000000 } },
+    20: { width: 40, height: 40, rooms: 1, enemies: 0, loot: 0, boss: { id: 400 }, cutscene_end: 'end_game', colors: { floor: 0x000000, wall: 0xffd700, fog: 0x000033, bg: 0x000022 } },
+
+    default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15, colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } }
 };
 
 /**
@@ -416,7 +519,41 @@ const $dataCutscenes = {
         { type: 'wait', time: 500 },
         { type: 'dialog', text: "Target area reached. The stack goes deep.", speaker: "KYLE" },
         { type: 'dialog', text: "My mitochondria... they're screaming.", speaker: "AYA" },
-        { type: 'log', text: "Mission Start." }
+        { type: 'log', text: "Mission Start: Protocol Ascension" }
+    ],
+    'end_s1': [
+        { type: 'dialog', text: "It was... eating the cables.", speaker: "KYLE" },
+        { type: 'dialog', text: "Foundations are rotting. We need to go up.", speaker: "AYA" },
+        { type: 'log', text: "Sector 1 Cleared." }
+    ],
+    'start_s2': [
+        { type: 'dialog', text: "Heat readings spiking. Manufactory ahead.", speaker: "SYSTEM" },
+        { type: 'dialog', text: "I smell oil and burning circuits.", speaker: "EVE" }
+    ],
+    'end_s2': [
+        { type: 'dialog', text: "The robots... they were building a body.", speaker: "KYLE" },
+        { type: 'dialog', text: "For what? The Architect?", speaker: "AYA" },
+        { type: 'log', text: "Sector 2 Cleared." }
+    ],
+    'start_s3': [
+        { type: 'dialog', text: "Bio-labs. This is where I was made.", speaker: "EVE" },
+        { type: 'dialog', text: "Keep it together. We have a job to do.", speaker: "KYLE" }
+    ],
+    'end_s3': [
+        { type: 'dialog', text: "Subject Zero... he asked for death.", speaker: "AYA" },
+        { type: 'dialog', text: "The AI is harvesting minds. We have to stop it.", speaker: "EVE" },
+        { type: 'log', text: "Sector 3 Cleared." }
+    ],
+    'start_s4': [
+        { type: 'dialog', text: "Executive Deck. The Core is near.", speaker: "SYSTEM" },
+        { type: 'dialog', text: "It's so... clean. It feels fake.", speaker: "KYLE" }
+    ],
+    'end_game': [
+        { type: 'dialog', text: "You cannot stop the Ascension.", speaker: "ARCHITECT" },
+        { type: 'dialog', text: "Watch us.", speaker: "AYA" },
+        { type: 'log', text: "TARGET DESTROYED. SYSTEM REBOOT." },
+        { type: 'wait', time: 2000 },
+        { type: 'dialog', text: "Mission Complete.", speaker: "SYSTEM" }
     ]
 };
 
@@ -1106,6 +1243,26 @@ class Game_Map {
         }
         this.revealZone(this.playerX, this.playerY, 6);
         this.enemies = []; this.loot = [];
+
+        // BOSS SPAWNING
+        if (c.boss) {
+            const bossData = $dataEnemies.find(e => e.id === c.boss.id);
+            if(bossData) {
+                // Spawn boss near stairs
+                let bx=this.stairsX, by=this.stairsY;
+                // Find empty spot near stairs
+                const neighbors = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+                for(let n of neighbors) {
+                    if(this.tiles[this.stairsX+n[0]][this.stairsY+n[1]] === 0) {
+                        bx = this.stairsX+n[0]; by = this.stairsY+n[1]; break;
+                    }
+                }
+                const bossHp = bossData.hp * (1 + floor * 0.1); // Scaling Boss HP
+                this.enemies.push(new Game_Enemy(bossData, bx, by, "BOSS", bossHp));
+                $gameSystem.log("BOSS DETECTED.");
+            }
+        }
+
         for(let i=0; i<c.enemies+floor; i++) {
             const pt = this.getRandomPoint();
             if(pt) this.enemies.push(new Game_Enemy($dataEnemies[Math.floor(Math.random()*$dataEnemies.length)], pt.x, pt.y, this.enemyIdCounter++, 10+floor*2));
@@ -1240,6 +1397,31 @@ class Game_Map {
             }
             
             if(this.tiles[nx][ny] === 3) {
+                // BOSS LOCK CHECK
+                if(this.enemies.some(e => e.uid === "BOSS")) {
+                    $gameSystem.log("SECTOR LOCKED. KILL TARGET.");
+                    UI.floatText("LOCKED", nx, ny, "#f00");
+                    return;
+                }
+
+                // CUTSCENE END CHECK
+                const config = $dataFloors[$gameSystem.floor];
+                if(config && config.cutscene_end && !$gameSystem.cutscenePlayed) {
+                     // Hacky flag to prevent loop if cutscene doesn't move player, but here we move floors so it's fine.
+                     Cutscene.play($dataCutscenes[config.cutscene_end]);
+                     // We need to wait for cutscene?
+                     // The Cutscene manager blocks input.
+                     // But we are in an async function.
+                     // For now, let's assume cutscene plays THEN we ascend?
+                     // Or maybe we play cutscene then process turn ends, and player must step again?
+                     // Let's just play it and RETURN. The player is standing on stairs. Next input they try again?
+                     // No, they just moved ONTO the stairs.
+                     // Let's play cutscene, wait, THEN ascend.
+
+                     // Actually, simplified: Play cutscene, then ascend immediately after?
+                     // Or cutscene happens BEFORE ascent sequence.
+                }
+
                 $gameSystem.log("Ascending...");
                 Renderer.playAnimation('ascend'); 
                 $gameSystem.isInputBlocked = true; 
@@ -1566,11 +1748,20 @@ class Renderer3D {
     rebuildLevel() {
         this.mapGroup.clear();
         const count = $gameMap.width * $gameMap.height;
+
+        // Dynamic colors from Game_Map / $dataFloors
+        const floorConfig = $dataFloors[$gameSystem.floor] || $dataFloors.default;
+        const colors = floorConfig.colors || CONFIG.colors;
+
+        // Update Fog and BG
+        this.scene.background = new THREE.Color(colors.bg || CONFIG.colors.bg);
+        this.scene.fog = new THREE.Fog(colors.fog || CONFIG.colors.fog, 4, 14);
+
         const geoFloor = new THREE.PlaneGeometry(0.95, 0.95);
-        const matFloor = new THREE.MeshLambertMaterial({ color: CONFIG.colors.floor });
+        const matFloor = new THREE.MeshLambertMaterial({ color: colors.floor });
         this.instancedFloor = new THREE.InstancedMesh(geoFloor, matFloor, count);
         const geoBlock = new THREE.BoxGeometry(0.95, 1, 0.95);
-        const matWall = new THREE.MeshLambertMaterial({ color: CONFIG.colors.wall });
+        const matWall = new THREE.MeshLambertMaterial({ color: colors.wall });
         this.instancedWalls = new THREE.InstancedMesh(geoBlock, matWall, count);
         const dummy = new THREE.Object3D();
         let fIdx = 0, wIdx = 0;
