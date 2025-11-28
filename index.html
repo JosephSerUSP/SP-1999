@@ -184,7 +184,7 @@
 
         #game-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
         
-        #minimap-canvas { width: 100%; height: 100%; image-rendering: pixelated; background: #000; }
+        #minimap-canvas { image-rendering: pixelated; background: #000; }
     </style>
 </head>
 <body>
@@ -769,9 +769,8 @@ class BattleManager {
                 a.addState("barrier");
                 UI.floatText("BARRIER", $gameMap.playerX, $gameMap.playerY, "#0ff");
             } else if (k === 'scan') {
-                // Already handled in description? Or maybe logic needed here if scan does something active
-                // For now, Scan just "Reveals sector layout" which might be minimap reveal
-                // But minimap is already fully revealed in this game version.
+                $gameMap.revealZone($gameMap.width/2, $gameMap.height/2, 100);
+                UI.refreshMinimap();
                 UI.floatText("SCAN", $gameMap.playerX, $gameMap.playerY, "#0ff");
             }
         }
@@ -828,7 +827,7 @@ class Game_Map {
     /**
      * Creates an instance of Game_Map.
      */
-    constructor() { this.width = 20; this.height = 20; this.tiles = []; this.enemies = []; this.loot = []; this.playerX = 1; this.playerY = 1; this.enemyIdCounter = 0; }
+    constructor() { this.width = 20; this.height = 20; this.tiles = []; this.visited = []; this.enemies = []; this.loot = []; this.playerX = 1; this.playerY = 1; this.enemyIdCounter = 0; }
 
     /**
      * Sets up a new floor.
@@ -839,6 +838,7 @@ class Game_Map {
         const c = $dataFloors[floor] || $dataFloors.default;
         this.width = c.width; this.height = c.height;
         this.tiles = Array(this.width).fill(0).map(()=>Array(this.height).fill(1));
+        this.visited = Array(this.width).fill(0).map(()=>Array(this.height).fill(false));
         const rooms = [];
         for(let i=0; i<c.rooms; i++) {
             const w = 4+Math.floor(Math.random()*5), h = 4+Math.floor(Math.random()*5);
@@ -856,6 +856,7 @@ class Game_Map {
             this.stairsX = rooms[rooms.length-1].cx; this.stairsY = rooms[rooms.length-1].cy;
             this.tiles[this.stairsX][this.stairsY] = 3;
         }
+        this.revealZone(this.playerX, this.playerY, 6);
         this.enemies = []; this.loot = [];
         for(let i=0; i<c.enemies+floor; i++) {
             const pt = this.getRandomPoint();
@@ -918,6 +919,23 @@ class Game_Map {
     isValid(x,y) { return x>=0 && x<this.width && y>=0 && y<this.height && this.tiles[x] !== undefined; }
 
     /**
+     * Reveals a zone on the minimap.
+     * @param {number} cx - Center X.
+     * @param {number} cy - Center Y.
+     * @param {number} radius - Radius of the zone.
+     */
+    revealZone(cx, cy, radius) {
+        const r2 = radius * radius;
+        for(let x=cx-radius; x<=cx+radius; x++) {
+            for(let y=cy-radius; y<=cy+radius; y++) {
+                if(this.isValid(x, y) && ((x-cx)**2 + (y-cy)**2 <= r2)) {
+                    this.visited[x][y] = true;
+                }
+            }
+        }
+    }
+
+    /**
      * Processes a game turn based on player movement.
      * @param {number} dx - Change in x.
      * @param {number} dy - Change in y.
@@ -960,6 +978,7 @@ class Game_Map {
                 nextColor: $gameParty.nextActive().color 
             });
             this.playerX = nx; this.playerY = ny;
+            this.revealZone(this.playerX, this.playerY, 6);
             
             // NO SLEEP - allow continuous input buffer via Renderer flag
             
@@ -1257,12 +1276,12 @@ class Renderer3D {
         this.container = container;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(CONFIG.colors.bg);
-        this.scene.fog = new THREE.FogExp2(CONFIG.colors.fog, 0.05);
+        this.scene.fog = new THREE.Fog(CONFIG.colors.fog, 4, 14);
 
         const w = container.clientWidth;
         const h = container.clientHeight;
         // Aspect ratio based on actual container size
-        this.camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+        this.camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 16);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: false });
         // Viewport is half the size of the window, scaled up
@@ -1707,7 +1726,9 @@ class UIManager {
         const mmW = this.windows.minimap.el.clientWidth;
         this.windows.minimap.el.style.height = mmW + 'px';
         const cvs = document.createElement('canvas'); cvs.id = 'minimap-canvas'; cvs.width = 128; cvs.height = 128;
-        this.windows.minimap.content.appendChild(cvs); this.windows.minimap.content.style.padding = '0';
+        this.windows.minimap.content.appendChild(cvs);
+        this.windows.minimap.content.style.padding = '0';
+        this.windows.minimap.content.style.overflow = 'auto';
         
         this.windows.log = new UI_Window('log', {top:`calc(2% + ${mmW + 8}px)`, right:'2%', width:'20%', bottom:'2%'}, "SYSTEM LOG");
         this.windows.view = new UI_Window('view', {top:'2%', left:'23%', width:'54%', height:'96%'}, "OPTICAL FEED");
@@ -1730,21 +1751,41 @@ class UIManager {
     refreshMinimap() {
         const c = document.getElementById('minimap-canvas');
         if(!c) return;
+        const ts = 4; // Tile Size
+        c.width = $gameMap.width * ts;
+        c.height = $gameMap.height * ts;
+        c.style.width = c.width + "px";
+        c.style.height = c.height + "px";
+
         const ctx = c.getContext('2d');
-        const w = c.width, h = c.height;
-        const mapW = $gameMap.width, mapH = $gameMap.height;
-        const tw = w / mapW, th = h / mapH;
-        ctx.fillStyle = "#000"; ctx.fillRect(0,0,w,h);
-        for(let x=0; x<mapW; x++) {
-            for(let y=0; y<mapH; y++) {
-                if(!$gameMap.tiles[x]) continue;
+        ctx.fillStyle = "#000"; ctx.fillRect(0,0,c.width,c.height);
+
+        for(let x=0; x<$gameMap.width; x++) {
+            for(let y=0; y<$gameMap.height; y++) {
+                if(!$gameMap.visited || !$gameMap.visited[x] || !$gameMap.visited[x][y]) continue;
                 const t = $gameMap.tiles[x][y];
-                if(t === 1) { ctx.fillStyle = "#444"; ctx.fillRect(x*tw, y*th, tw, th); }
-                else if(t === 3) { ctx.fillStyle = "#0f0"; ctx.fillRect(x*tw, y*th, tw, th); }
+                if(t === 1) continue;
+                else if(t === 3) { ctx.fillStyle = "#0f0"; ctx.fillRect(x*ts, y*ts, ts, ts); }
+                else { ctx.fillStyle = "#222"; ctx.fillRect(x*ts, y*ts, ts, ts); }
             }
         }
-        $gameMap.enemies.forEach(e => { ctx.fillStyle = "#f00"; ctx.fillRect(e.x*tw, e.y*th, tw, th); });
-        ctx.fillStyle = "#0ff"; ctx.fillRect($gameMap.playerX*tw, $gameMap.playerY*th, tw, th);
+        $gameMap.enemies.forEach(e => {
+            const dist = Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY);
+            if(dist < 8) {
+                ctx.fillStyle = "#f00";
+                ctx.shadowColor = "#f00"; ctx.shadowBlur = 4;
+                ctx.fillRect(e.x*ts, e.y*ts, ts, ts);
+                ctx.shadowBlur = 0;
+            }
+        });
+        ctx.fillStyle = "#0ff"; ctx.fillRect($gameMap.playerX*ts, $gameMap.playerY*ts, ts, ts);
+
+        // Auto scroll to player
+        const mm = this.windows.minimap.content;
+        const px = $gameMap.playerX * ts;
+        const py = $gameMap.playerY * ts;
+        mm.scrollTop = py - mm.clientHeight / 2;
+        mm.scrollLeft = px - mm.clientWidth / 2;
     }
 
     /**
