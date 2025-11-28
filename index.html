@@ -216,6 +216,7 @@ const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0
 const TRAIT_PARAM_PLUS = 1;
 const TRAIT_PARAM_RATE = 2;
 const TRAIT_RESTRICTION = 3;
+const TRAIT_ATTACK_SKILL = 4;
 
 const PARAM_MHP = 0;
 const PARAM_MPE = 1;
@@ -243,7 +244,8 @@ const $dataSkills = {
     "snipe": { name: "Snipe", cost: 15, range: 8, type: "target", power: 3.0, desc: (a) => `Precision shot. Est: ${Math.floor(a.atk * 3.0)} DMG.` },
     "heal": { name: "Heal", cost: 15, range: 0, type: "self", power: 30, fixed: true, desc: () => "Restore 30 HP." },
     "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", power: 1.0, desc: (a) => "Melee shock. Chance to stun." },
-    "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, desc: () => "Discharge all PE. 60 DMG." }
+    "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, desc: () => "Discharge all PE. 60 DMG." },
+    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", power: 1.5, desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` }
 };
 
 /**
@@ -279,7 +281,7 @@ const $dataEnemies = [
  */
 const $dataLootTable = {
     prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
-    weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm." }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise." }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter." }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
+    weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
     armors: [ { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." }, { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." }, { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." }, { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." } ],
     items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
 };
@@ -401,6 +403,7 @@ class Game_Weapon {
         this.icon = b.icon||"⚔️";
         this.desc = b.desc||"";
         this.traits = [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_ATK, value: this.atk }];
+        if (b.attackSkill) this.traits.push({ code: TRAIT_ATTACK_SKILL, dataId: 0, value: b.attackSkill });
     }
 }
 
@@ -500,6 +503,7 @@ class Game_Actor {
         if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
         if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
         this.uid = 'player';
+        this.direction = {x:0, y:1};
     }
 
     isDead() { return this.hp <= 0; }
@@ -554,6 +558,11 @@ class Game_Actor {
     removeState(id) { this.states = this.states.filter(s => s.id !== id); }
     isStateAffected(id) { return this.states.some(s => s.id === id); }
     isRestricted() { return this.states.some(s => s.traits.some(t => t.code === TRAIT_RESTRICTION)); }
+
+    getAttackSkill() {
+        const t = this.traitObjects().flatMap(o => o.traits || []).find(t => t.code === TRAIT_ATTACK_SKILL);
+        return t ? t.value : null;
+    }
 
     /**
      * Calculates what the attack would be with a specific item equipped.
@@ -695,7 +704,7 @@ class BattleManager {
      * @param {string} k - The key/ID of the skill.
      * @returns {Promise<boolean>} Resolves to true if skill was executed successfully, false otherwise.
      */
-    static async executeSkill(a, k) {
+    static async executeSkill(a, k, target = null) {
         const s = $dataSkills[k];
         if(a.pe < s.cost) { $gameSystem.log("No PE."); return false; }
         a.pe -= s.cost; $gameSystem.log(`${a.name} uses ${s.name}!`);
@@ -703,7 +712,20 @@ class BattleManager {
         await Sequencer.sleep(300);
         const baseDmg = s.fixed ? s.power : Math.floor(a.getAtk() * s.power);
 
-        if(k === 'rapid') {
+        if (target) {
+            target.takeDamage(baseDmg);
+            Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: target.x, y2: target.y, color: a.color });
+            UI.floatText(baseDmg, target.x, target.y, "#f00");
+            Renderer.playAnimation('hit', { uid: target.uid });
+            if(k==='stun') {
+                if(Math.random() < 0.5) {
+                    target.addState("stun");
+                    UI.floatText("STUN", target.x, target.y, "#ff0");
+                }
+            }
+            if(target.hp <= 0) await $gameMap.killEnemy(target);
+            await Sequencer.sleep(500); return true;
+        } else if(k === 'rapid') {
             const tgts = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) < s.range);
             if(tgts.length > 0) {
                 for(let i=0; i<2; i++) {
@@ -909,6 +931,12 @@ class Game_Map {
 
         // Player State Logic
         const actor = $gameParty.active();
+
+        // Update Direction if moving
+        if (dx !== 0 || dy !== 0) {
+            $gameParty.members.forEach(m => m.direction = {x: dx, y: dy});
+        }
+
         if(actor.isRestricted()) {
              $gameSystem.log(`${actor.name} is stunned!`);
              // Skip movement but process turn end for states
@@ -921,25 +949,9 @@ class Game_Map {
         if(this.tiles[nx][ny] === 1) return;
         
         const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
+
         if(enemy) {
-            if($gameSystem.isBusy) return; 
-            $gameSystem.isBusy = true;
-            const actor = $gameParty.active();
-            const dmg = BattleManager.calcDamage(actor, enemy);
-            enemy.takeDamage(dmg);
-            Renderer.playAnimation('lunge', { tx: nx, ty: ny });
-            await Sequencer.sleep(150);
-            UI.floatText(dmg, nx, ny, "#fff");
-            Renderer.playAnimation('hit', { uid: enemy.uid });
-            await Sequencer.sleep(200);
-            $gameSystem.log(`Hit ${enemy.name} for ${dmg}.`);
-            if(enemy.hp <= 0) await this.killEnemy(enemy);
-            $gameParty.rotate();
-            UI.refresh();
-            await this.updateEnemies();
-            $gameSystem.isBusy = false;
-            // End of action
-            await this.processTurnEnd(actor);
+             this.playerAttack();
         } else {
             // TRIGGER VISUAL SWAP
             Renderer.playAnimation('move_switch', { 
@@ -1058,6 +1070,76 @@ class Game_Map {
         $gameSystem.log(`${enemy.name} dissolved.`);
         Renderer.syncEnemies();
     }
+
+    async playerAttack() {
+        if ($gameSystem.isBusy || $gameSystem.isInputBlocked || Renderer.isAnimating) return;
+        $gameSystem.isBusy = true;
+        const actor = $gameParty.active();
+
+        // Determine skill
+        const attackSkillId = actor.getAttackSkill();
+        const skill = attackSkillId ? $dataSkills[attackSkillId] : null;
+
+        let target = null;
+        let skillIdToExec = attackSkillId;
+
+        if (skill && skill.type === 'line') {
+            const dx = actor.direction.x; const dy = actor.direction.y;
+            for (let i=1; i<=skill.range; i++) {
+                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
+                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
+                 if (e) { target = e; break; }
+            }
+            // Execute even if no target (miss)
+        } else {
+            // Default melee range 1
+             const dx = actor.direction.x; const dy = actor.direction.y;
+             const tx = this.playerX + dx; const ty = this.playerY + dy;
+             target = this.enemies.find(en => en.x === tx && en.y === ty);
+             if (!skillIdToExec && target) {
+                 // Normal attack logic logic is inside processTurn, but here we want to force attack
+                 // Since we don't have a skill ID for normal attack, we can simulate it or wrap it.
+                 // Ideally standard attack is a skill too, but it isn't implemented as such fully.
+                 // If no custom skill, we do standard melee damage.
+             }
+        }
+
+        if (skillIdToExec) {
+            if (!target) {
+                // MISS VISUAL
+                $gameSystem.log(`${actor.name} attacks empty air.`);
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                Renderer.playAnimation('projectile', { x1: this.playerX, y1: this.playerY, x2: this.playerX + dx*5, y2: this.playerY + dy*5, color: actor.color });
+                await Sequencer.sleep(300);
+            } else {
+                await BattleManager.executeSkill(actor, skillIdToExec, target);
+            }
+        } else {
+            // Basic Attack (No skill override)
+            if (target) {
+                const dmg = BattleManager.calcDamage(actor, target);
+                target.takeDamage(dmg);
+                Renderer.playAnimation('lunge', { tx: target.x, ty: target.y });
+                await Sequencer.sleep(150);
+                UI.floatText(dmg, target.x, target.y, "#fff");
+                Renderer.playAnimation('hit', { uid: target.uid });
+                await Sequencer.sleep(200);
+                $gameSystem.log(`Hit ${target.name} for ${dmg}.`);
+                if(target.hp <= 0) await this.killEnemy(target);
+            } else {
+                $gameSystem.log(`${actor.name} swings at nothing.`);
+                Renderer.playAnimation('lunge', { tx: this.playerX + actor.direction.x, ty: this.playerY + actor.direction.y });
+                await Sequencer.sleep(300);
+            }
+        }
+
+        $gameParty.rotate();
+        UI.refresh();
+        await this.updateEnemies();
+        $gameSystem.isBusy = false;
+        await this.processTurnEnd(actor);
+    }
 }
 
 // ============================================================================
@@ -1163,6 +1245,7 @@ class Renderer3D {
         this.isAnimating = false;
         this.instancedFloor = null;
         this.instancedWalls = null;
+        this.currentRangeSkill = null;
     }
 
     /**
@@ -1483,6 +1566,18 @@ class Renderer3D {
         this.lootGroup.children.forEach(l => { l.rotation.y += 0.02; l.rotation.x += 0.01; });
         this.particles.update();
 
+        // Idle Range Display
+        if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !this.isAnimating) {
+            const actor = $gameParty.active();
+            const skillId = actor.getAttackSkill();
+
+            // Show range for skill OR default range 1
+            if (skillId) this.showRange($dataSkills[skillId]);
+            else this.showRange({range: 1, type: 'target'}); // Default melee range
+        } else {
+            this.clearRange();
+        }
+
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -1491,17 +1586,40 @@ class Renderer3D {
      * @param {Object} skill - The skill object.
      */
     showRange(skill) {
+        // Optimization check - check both skill ref and direction
+        const actor = $gameParty.active();
+        // Since we use direction now, we must clear if direction changed
+        if (this.currentRangeSkill === skill && this.lastRangeDir && this.lastRangeDir.x === actor.direction.x && this.lastRangeDir.y === actor.direction.y) return;
+
+        this.currentRangeSkill = skill;
+        this.lastRangeDir = { ...actor.direction };
+
         if (!this.rangeGroup) return; 
         this.rangeGroup.clear();
         if (!skill) return; 
         const geo = new THREE.PlaneGeometry(0.9, 0.9);
         const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
         const px = $gameMap.playerX; const py = $gameMap.playerY; const coords = [];
+
         if (skill.type === 'all_enemies') { $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y})); }
         else if (skill.range > 0) {
-            for(let x = px - skill.range; x <= px + skill.range; x++) {
-                for(let y = py - skill.range; y <= py + skill.range; y++) {
-                    if (Math.abs(x - px) + Math.abs(y - py) <= skill.range && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] === 0) coords.push({x, y});
+            if (skill.type === 'line') {
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                for(let i=1; i<=skill.range; i++) {
+                    const tx = px + dx*i; const ty = py + dy*i;
+                    if (!$gameMap.isValid(tx, ty) || $gameMap.tiles[tx][ty] === 1) break;
+                    coords.push({x: tx, y: ty});
+                }
+            } else if (skill.range === 1) {
+                // Directional melee indicator
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                const tx = px + dx; const ty = py + dy;
+                if ($gameMap.isValid(tx, ty) && $gameMap.tiles[tx][ty] !== 1) coords.push({x: tx, y: ty});
+            } else {
+                for(let x = px - skill.range; x <= px + skill.range; x++) {
+                    for(let y = py - skill.range; y <= py + skill.range; y++) {
+                        if (Math.abs(x - px) + Math.abs(y - py) <= skill.range && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] === 0) coords.push({x, y});
+                    }
                 }
             }
         }
@@ -1516,7 +1634,11 @@ class Renderer3D {
     /**
      * Clears the range indicator.
      */
-    clearRange() { if (this.rangeGroup) this.rangeGroup.clear(); }
+    clearRange() {
+        if (this.currentRangeSkill === null) return;
+        this.currentRangeSkill = null;
+        if (this.rangeGroup) this.rangeGroup.clear();
+    }
 
     /**
      * Triggers a screen shake effect.
@@ -1961,6 +2083,7 @@ class SceneManager {
              else if(this.keys["ArrowLeft"]||this.keys["a"]) $gameMap.processTurn(-1,0);
              else if(this.keys["ArrowRight"]||this.keys["d"]) $gameMap.processTurn(1,0);
              else if(this.keys[" "]) $gameMap.processTurn(0,0);
+             else if(this.keys["Enter"]) $gameMap.playerAttack();
         }
     }
 
