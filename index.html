@@ -254,9 +254,111 @@ const $dataSkills = {
  * @type {Object}
  */
 const $dataClasses = {
-    "Aya": { job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"] },
-    "Kyle": { job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"] },
-    "Eve": { job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"] }
+    "Aya": {
+        job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
+        banter: [
+            { text: "Got one.", trigger: "kill", chance: 0.5 },
+            { text: "Messy work.", trigger: "kill", chance: 0.3 },
+            { text: "Down you go.", trigger: "kill", chance: 0.3 },
+            { text: "Another stat.", trigger: "kill", chance: 0.2 },
+            { text: "Clean shot.", trigger: "kill", chance: 0.2 },
+            { text: "Checking corners.", trigger: "walk", chance: 0.05 },
+            { text: "Watch your step.", trigger: "walk", chance: 0.05 },
+            { text: "Quiet...", trigger: "walk", chance: 0.05 },
+            { text: "Scanning area.", trigger: "walk", chance: 0.05 },
+            { text: "Don't like this quiet.", trigger: "walk", chance: 0.05 },
+            { text: "Too many of them!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Need backup here!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "They're everywhere.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Back to back!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Getting crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Found something.", trigger: "loot", chance: 0.8 },
+            { text: "Useful.", trigger: "loot", chance: 0.5 },
+            { text: "Bagging it.", trigger: "loot", chance: 0.5 },
+            { text: "Evidence?", trigger: "loot", chance: 0.3 },
+            { text: "Mine.", trigger: "loot", chance: 0.3 },
+            { text: "Damn it!", trigger: "hurt", chance: 0.5 },
+            { text: "Just a scratch.", trigger: "hurt", chance: 0.4 },
+            { text: "Need a medic!", trigger: "hurt", chance: 0.3 },
+            { text: "They hit hard.", trigger: "hurt", chance: 0.3 },
+            { text: "Ugh...", trigger: "hurt", chance: 0.3 },
+            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Vision blurring...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Not done yet.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Stronger.", trigger: "level_up", chance: 1.0 },
+            { text: "Experience pays off.", trigger: "level_up", chance: 0.8 }
+        ]
+    },
+    "Kyle": {
+        job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
+        banter: [
+            { text: "Target neutralized.", trigger: "kill", chance: 0.5 },
+            { text: "Hostile down.", trigger: "kill", chance: 0.4 },
+            { text: "Tango down.", trigger: "kill", chance: 0.4 },
+            { text: "Threat cleared.", trigger: "kill", chance: 0.3 },
+            { text: "One less.", trigger: "kill", chance: 0.3 },
+            { text: "Moving out.", trigger: "walk", chance: 0.05 },
+            { text: "Stay sharp.", trigger: "walk", chance: 0.05 },
+            { text: "Check your six.", trigger: "walk", chance: 0.05 },
+            { text: "Advancing.", trigger: "walk", chance: 0.05 },
+            { text: "Maintain formation.", trigger: "walk", chance: 0.05 },
+            { text: "We are surrounded!", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Multiple contacts!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Defensive perimeter!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "They're swarming.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Supplies secured.", trigger: "loot", chance: 0.8 },
+            { text: "Equipment recovered.", trigger: "loot", chance: 0.6 },
+            { text: "Asset acquired.", trigger: "loot", chance: 0.5 },
+            { text: "Lock and load.", trigger: "loot", chance: 0.4 },
+            { text: "Good find.", trigger: "loot", chance: 0.4 },
+            { text: "Taking fire!", trigger: "hurt", chance: 0.6 },
+            { text: "Armor hit!", trigger: "hurt", chance: 0.5 },
+            { text: "I'm hit!", trigger: "hurt", chance: 0.5 },
+            { text: "Damage report.", trigger: "hurt", chance: 0.3 },
+            { text: "Grr...", trigger: "hurt", chance: 0.3 },
+            { text: "Critical condition.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Need evac...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Holding the line.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Combat efficiency up.", trigger: "level_up", chance: 1.0 },
+            { text: "Promoted.", trigger: "level_up", chance: 0.8 }
+        ]
+    },
+    "Eve": {
+        job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
+        banter: [
+            { text: "Burn.", trigger: "kill", chance: 0.6 },
+            { text: "Gone.", trigger: "kill", chance: 0.5 },
+            { text: "Ashes.", trigger: "kill", chance: 0.4 },
+            { text: "It screamed.", trigger: "kill", chance: 0.4 },
+            { text: "Fuel.", trigger: "kill", chance: 0.3 },
+            { text: "It calls to me.", trigger: "walk", chance: 0.05 },
+            { text: "So dark...", trigger: "walk", chance: 0.05 },
+            { text: "Can you hear it?", trigger: "walk", chance: 0.05 },
+            { text: "Wandering.", trigger: "walk", chance: 0.05 },
+            { text: "The stack breathes.", trigger: "walk", chance: 0.05 },
+            { text: "So many souls.", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Get away!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "I'll burn them all.", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Too loud...", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Pretty.", trigger: "loot", chance: 0.7 },
+            { text: "Mine.", trigger: "loot", chance: 0.6 },
+            { text: "Can I keep it?", trigger: "loot", chance: 0.5 },
+            { text: "Shiny.", trigger: "loot", chance: 0.4 },
+            { text: "Curious.", trigger: "loot", chance: 0.4 },
+            { text: "Pain...", trigger: "hurt", chance: 0.6 },
+            { text: "Don't touch me!", trigger: "hurt", chance: 0.5 },
+            { text: "My blood...", trigger: "hurt", chance: 0.5 },
+            { text: "Stop it.", trigger: "hurt", chance: 0.4 },
+            { text: "Ah!", trigger: "hurt", chance: 0.4 },
+            { text: "Fading...", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Cold...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Help me.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Power growing.", trigger: "level_up", chance: 1.0 },
+            { text: "Evolving.", trigger: "level_up", chance: 0.8 }
+        ]
+    }
 };
 
 /**
@@ -282,7 +384,13 @@ const $dataEnemies = [
 const $dataLootTable = {
     prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
     weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
-    armors: [ { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." }, { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." }, { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." }, { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." } ],
+    armors: [
+        { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." },
+        { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." },
+        { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." },
+        { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." },
+        { name: "Crowd Shield", baseDef: 3, icon: "🛡️", desc: "Defends better in crowds.", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5, condition: { type: 'enemy_count_range', range: 5, min: 3 } }] }
+    ],
     items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
 };
 
@@ -312,9 +420,120 @@ const $dataCutscenes = {
     ]
 };
 
+
 // ============================================================================
 // [2] CORE SYSTEMS
 // ============================================================================
+
+class ConditionSystem {
+    static check(condition, context) {
+        if (!condition) return true;
+        switch (condition.type) {
+            case 'enemy_count_range':
+                const range = condition.range || 5;
+                const min = condition.min || 1;
+                const px = context.x || $gameMap.playerX;
+                const py = context.y || $gameMap.playerY;
+                const count = $gameMap.enemies.filter(e => Math.abs(e.x - px) + Math.abs(e.y - py) <= range).length;
+                return count >= min;
+            case 'hp_below_pct':
+                if (!context.battler) return false;
+                return (context.battler.hp / context.battler.mhp) < condition.value;
+        }
+        return false;
+    }
+}
+
+class BanterManager {
+    constructor() {
+        this.activeLines = []; // { text, speaker, timer, element, xOffset }
+        this.container = null;
+    }
+
+    init(container) {
+        this.container = document.createElement('div');
+        this.container.id = 'banter-container';
+        this.container.style.position = 'absolute';
+        this.container.style.top = '58px'; // Moved down by 48px from original 10px
+        this.container.style.left = '10px';
+        this.container.style.display = 'flex';
+        this.container.style.flexDirection = 'column';
+        this.container.style.pointerEvents = 'none';
+        this.container.style.zIndex = '100';
+        container.appendChild(this.container);
+    }
+
+    update() {
+        if (!this.container) return;
+        for (let i = this.activeLines.length - 1; i >= 0; i--) {
+            const line = this.activeLines[i];
+            line.timer--;
+
+            // Fade and move left animation when expiring or pushed out
+            if (line.timer < 30) {
+                line.opacity = line.timer / 30;
+                line.xOffset -= 1.0;
+                line.element.style.opacity = line.opacity;
+                line.element.style.transform = `translateX(${line.xOffset}px)`;
+            }
+
+            if (line.timer <= 0) {
+                line.element.remove();
+                this.activeLines.splice(i, 1);
+            }
+        }
+    }
+
+    trigger(type, context = {}) {
+        $gameParty.members.forEach(actor => {
+            if (actor.isDead()) return;
+            const data = $dataClasses[actor.name];
+            if (!data || !data.banter) return;
+
+            // Filter for trigger match
+            const potential = data.banter.filter(b => b.trigger === type);
+            potential.forEach(b => {
+                if (Math.random() < b.chance) {
+                    // Inject battler into context for conditions like HP check
+                    const checkContext = Object.assign({ battler: actor, x: $gameMap.playerX, y: $gameMap.playerY }, context);
+                    if (!b.condition || ConditionSystem.check(b.condition, checkContext)) {
+                        this.addBanter(actor.name, b.text);
+                    }
+                }
+            });
+        });
+    }
+
+    addBanter(speaker, text) {
+        // If too many lines, force expire oldest by setting timer low
+        if (this.activeLines.length >= 5) {
+            this.activeLines[0].timer = Math.min(this.activeLines[0].timer, 30);
+        }
+
+        const el = document.createElement('div');
+        // Removed background color as requested
+        el.style.color = 'white';
+        el.style.padding = '2px 4px';
+        el.style.marginBottom = '2px';
+        // Kept border for readability, or should I remove it too?
+        // Request said "remove the darkened background". I'll keep the gold accent for speaker ID.
+        // But visual style might need shadow if no background.
+        el.style.textShadow = '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000';
+        el.style.fontSize = '12px';
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.2s';
+
+        const actor = $gameParty.members.find(m => m.name === speaker);
+        const color = actor ? '#' + actor.color.toString(16) : '#fff';
+
+        el.innerHTML = `<span style="color:${color}; font-weight:bold; margin-right:5px;">${speaker}</span> ${text}`;
+
+        this.container.appendChild(el);
+        requestAnimationFrame(() => el.style.opacity = '1');
+
+        this.activeLines.push({ text, speaker, timer: 120, element: el, opacity: 1, xOffset: 0 });
+    }
+}
 
 /**
  * Manages global game state, such as floor level and logs.
@@ -469,6 +688,12 @@ class Game_Battler {
 
     takeDamage(v) {
         this.hp = Math.max(0, this.hp - v);
+        if (this.uid === 'player' || this instanceof Game_Actor) {
+            $gameBanter.trigger('hurt');
+            if (this.hp < this.mhp * 0.3) {
+                $gameBanter.trigger('low_hp');
+            }
+        }
     }
 
     getAtk() {
@@ -489,8 +714,20 @@ class Game_Battler {
     }
 
     paramPlus(id) {
+        let context = { hp: this.hp, mhp: this.mhp, battler: this };
+        if (this.uid === 'player' || this instanceof Game_Actor) {
+            context.x = $gameMap.playerX;
+            context.y = $gameMap.playerY;
+        } else {
+            context.x = this.x;
+            context.y = this.y;
+        }
+
         return this.traitObjects().reduce((r, obj) => {
-            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
+            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => {
+                 if (t.condition && !ConditionSystem.check(t.condition, context)) return a;
+                 return a + t.value;
+            }, 0);
         }, 0);
     }
 
@@ -566,7 +803,14 @@ class Game_Actor extends Game_Battler {
 
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
 
-    gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
+    gainExp(v) {
+        this.exp += v;
+        if(this.exp >= this.nextExp) {
+            this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++;
+            $gameSystem.log(`${this.name} Lv.${this.level}!`);
+            $gameBanter.trigger('level_up');
+        }
+    }
 
     /**
      * Calculates what the attack would be with a specific item equipped.
@@ -992,6 +1236,7 @@ class Game_Map {
                 Renderer.playAnimation('itemGet', { x: nx, y: ny });
                 this.loot.splice(itemIdx, 1);
                 Renderer.syncLoot();
+                $gameBanter.trigger('loot');
             }
             
             if(this.tiles[nx][ny] === 3) {
@@ -1015,6 +1260,8 @@ class Game_Map {
             $gameParty.rotate();
             UI.refresh();
             this.updateEnemies(); 
+            $gameBanter.trigger('walk', {x: this.playerX, y: this.playerY});
+            $gameBanter.trigger('surrounded', {x: this.playerX, y: this.playerY});
         }
     }
 
@@ -1092,6 +1339,7 @@ class Game_Map {
         $gameParty.distributeExp(enemy.exp);
         $gameSystem.log(`${enemy.name} dissolved.`);
         Renderer.syncEnemies();
+        $gameBanter.trigger('kill', {x: this.playerX, y: this.playerY});
     }
 
     async playerAttack() {
@@ -2094,7 +2342,7 @@ class UIManager {
     closeModal() { if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove(); }
 }
 
-let $gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene;
+let $gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene, $gameBanter;
 /**
  * Static class that manages the main game loop and initialization.
  */
@@ -2105,7 +2353,9 @@ class SceneManager {
     static init() {
         $gameSystem = new Game_System(); $gameParty = new Game_Party(); $gameMap = new Game_Map();
         UI = new UIManager(); Renderer = new Renderer3D(); Cutscene = new CutsceneManager();
+        $gameBanter = new BanterManager();
         Renderer.init(UI.windows.view.content); $gameMap.setup(1); UI.refresh();
+        $gameBanter.init(UI.windows.view.content);
         $gameSystem.log("System initialized.");
         
         // INPUT POLLING
@@ -2121,6 +2371,7 @@ class SceneManager {
      */
     static loop() {
         requestAnimationFrame(() => this.loop());
+        $gameBanter.update();
         // Input Logic
         if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !Renderer.isAnimating) {
              if(this.keys["ArrowUp"]||this.keys["w"]) $gameMap.processTurn(0,-1);
