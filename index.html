@@ -213,21 +213,6 @@
  */
 const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
 
-const TRAIT_PARAM_PLUS = 1;
-const TRAIT_PARAM_RATE = 2;
-const TRAIT_RESTRICTION = 3;
-
-const PARAM_MHP = 0;
-const PARAM_MPE = 1;
-const PARAM_ATK = 2;
-const PARAM_DEF = 3;
-
-const $dataStates = {
-    "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
-    "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
-    "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] }
-};
-
 /**
  * Data definitions for all available skills.
  * @constant
@@ -308,6 +293,29 @@ const $dataCutscenes = {
         { type: 'dialog', text: "My mitochondria... they're screaming.", speaker: "AYA" },
         { type: 'log', text: "Mission Start." }
     ]
+};
+
+// ============================================================================
+// [1.1] TRAITS & STATES DATA
+// ============================================================================
+const TRAIT_PARAM_PLUS = 1;
+const TRAIT_PARAM_RATE = 2;
+const TRAIT_RESTRICTION = 3;
+
+const PARAM_MHP = 0;
+const PARAM_MPE = 1;
+const PARAM_ATK = 2;
+const PARAM_DEF = 3;
+
+/**
+ * Data definitions for states.
+ * @constant
+ * @type {Object}
+ */
+const $dataStates = {
+    "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
+    "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
+    "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] }
 };
 
 // ============================================================================
@@ -423,6 +431,20 @@ class Game_Armor {
 }
 
 /**
+ * Represents a generic state instance.
+ */
+class Game_State {
+    constructor(id) {
+        const d = $dataStates[id];
+        this.id = id;
+        this.name = d.name;
+        this.icon = d.icon;
+        this.traits = d.traits || [];
+        this.duration = d.duration;
+    }
+}
+
+/**
  * Represents an enemy in the game.
  */
 class Game_Enemy {
@@ -436,13 +458,50 @@ class Game_Enemy {
      */
     constructor(d, x, y, uid, hp) {
         Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
-        this.def = 0; this.equip = {}; this.states = [];
+        this.def = 0; this.equip = {};
+        this.states = [];
     }
 
+    /**
+     * Reduces the enemy's HP.
+     * @param {number} v - The amount of damage to take.
+     */
     takeDamage(v) { this.hp -= v; if(this.hp < 0) this.hp = 0; }
 
+    /**
+     * Checks if the enemy is dead.
+     * @returns {boolean} True if HP <= 0.
+     */
     isDead() { return this.hp <= 0; }
 
+    addState(id) {
+        if (this.isStateAffected(id)) {
+             const s = this.states.find(s => s.id === id);
+             s.duration = $dataStates[id].duration;
+        } else {
+             this.states.push(new Game_State(id));
+        }
+    }
+    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
+    isStateAffected(id) { return this.states.some(s => s.id === id); }
+    isRestricted() { return this.traitObjects().some(obj => obj.traits.some(t => t.code === TRAIT_RESTRICTION)); }
+
+    traitObjects() { return [...this.states]; }
+    paramPlus(id) {
+        return this.traitObjects().reduce((r, obj) => {
+            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
+        }, 0);
+    }
+    paramRate(id) {
+        return this.traitObjects().reduce((r, obj) => {
+            return r * (obj.traits || []).filter(t => t.code === TRAIT_PARAM_RATE && t.dataId === id).reduce((a, t) => a * t.value, 1);
+        }, 1);
+    }
+
+    /**
+     * Gets the enemy's attack value.
+     * @returns {number} The attack value.
+     */
     getAtk() {
         let base = this.atk;
         return Math.floor((base + this.paramPlus(PARAM_ATK)) * this.paramRate(PARAM_ATK));
@@ -452,36 +511,6 @@ class Game_Enemy {
         let base = this.def;
         return Math.floor((base + this.paramPlus(PARAM_DEF)) * this.paramRate(PARAM_DEF));
     }
-
-    traitObjects() {
-        return [...this.states];
-    }
-
-    paramPlus(id) {
-        return this.traitObjects().reduce((r, obj) => {
-            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
-        }, 0);
-    }
-
-    paramRate(id) {
-        return this.traitObjects().reduce((r, obj) => {
-            return r * (obj.traits || []).filter(t => t.code === TRAIT_PARAM_RATE && t.dataId === id).reduce((a, t) => a * t.value, 1);
-        }, 1);
-    }
-
-    addState(id) {
-        if (this.isStateAffected(id)) {
-            const s = this.states.find(s => s.id === id);
-            s.duration = $dataStates[id].duration;
-        } else {
-            const s = Object.assign({id: id}, $dataStates[id]);
-            this.states.push(s);
-        }
-    }
-
-    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
-    isStateAffected(id) { return this.states.some(s => s.id === id); }
-    isRestricted() { return this.states.some(s => s.traits.some(t => t.code === TRAIT_RESTRICTION)); }
 }
 
 /**
@@ -502,25 +531,35 @@ class Game_Actor {
         this.uid = 'player';
     }
 
+    /**
+     * Checks if the actor is dead.
+     * @returns {boolean} True if HP <= 0.
+     */
     isDead() { return this.hp <= 0; }
 
+    /**
+     * Reduces the actor's HP.
+     * @param {number} v - The amount of damage to take.
+     */
     takeDamage(v) { this.hp = Math.max(0, this.hp - v); }
 
+    /**
+     * Restores the actor's HP.
+     * @param {number} v - The amount of HP to heal.
+     */
     heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
 
-    regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
-
-    gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
-
-    getAtk() {
-        let base = this.atk;
-        return Math.floor((base + this.paramPlus(PARAM_ATK)) * this.paramRate(PARAM_ATK));
+    addState(id) {
+        if (this.isStateAffected(id)) {
+             const s = this.states.find(s => s.id === id);
+             s.duration = $dataStates[id].duration;
+        } else {
+             this.states.push(new Game_State(id));
+        }
     }
-
-    getDef() {
-        let base = this.def;
-        return Math.floor((base + this.paramPlus(PARAM_DEF)) * this.paramRate(PARAM_DEF));
-    }
+    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
+    isStateAffected(id) { return this.states.some(s => s.id === id); }
+    isRestricted() { return this.traitObjects().some(obj => obj.traits.some(t => t.code === TRAIT_RESTRICTION)); }
 
     traitObjects() {
         const objects = [...this.states];
@@ -528,46 +567,86 @@ class Game_Actor {
         if (this.equip.armor) objects.push(this.equip.armor);
         return objects;
     }
-
     paramPlus(id) {
         return this.traitObjects().reduce((r, obj) => {
             return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
         }, 0);
     }
-
     paramRate(id) {
         return this.traitObjects().reduce((r, obj) => {
             return r * (obj.traits || []).filter(t => t.code === TRAIT_PARAM_RATE && t.dataId === id).reduce((a, t) => a * t.value, 1);
         }, 1);
     }
 
-    addState(id) {
-        if (this.isStateAffected(id)) {
-            const s = this.states.find(s => s.id === id);
-            s.duration = $dataStates[id].duration;
-        } else {
-            const s = Object.assign({id: id}, $dataStates[id]);
-            this.states.push(s);
-        }
+    /**
+     * Regenerates a small amount of PE (Power Energy).
+     */
+    regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
+
+    /**
+     * Adds experience points and handles leveling up.
+     * @param {number} v - The amount of experience to gain.
+     */
+    gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
+
+    /**
+     * Gets the actor's total attack value including equipment.
+     * @returns {number} Total attack.
+     */
+    getAtk() {
+        let base = this.atk;
+        return Math.floor((base + this.paramPlus(PARAM_ATK)) * this.paramRate(PARAM_ATK));
     }
 
-    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
-    isStateAffected(id) { return this.states.some(s => s.id === id); }
-    isRestricted() { return this.states.some(s => s.traits.some(t => t.code === TRAIT_RESTRICTION)); }
+    /**
+     * Gets the actor's total defense value including equipment.
+     * @returns {number} Total defense.
+     */
+    getDef() {
+        let base = this.def;
+        return Math.floor((base + this.paramPlus(PARAM_DEF)) * this.paramRate(PARAM_DEF));
+    }
 
     /**
      * Calculates what the attack would be with a specific item equipped.
      * @param {Game_Weapon} i - The item to check.
      * @returns {number} The hypothetical attack value.
      */
-    getAtkWith(i) { return this.atk + (i.category === 'weapon' ? i.atk : (this.equip.weapon ? this.equip.weapon.atk : 0)); }
+    getAtkWith(i) {
+        // Backup current equip
+        const oldW = this.equip.weapon;
+        const oldA = this.equip.armor;
+
+        // Mock equip
+        if (i.category === 'weapon') this.equip.weapon = i;
+        if (i.category === 'armor') this.equip.armor = i;
+
+        const val = this.getAtk();
+
+        // Restore
+        this.equip.weapon = oldW;
+        this.equip.armor = oldA;
+        return val;
+    }
 
     /**
      * Calculates what the defense would be with a specific item equipped.
      * @param {Game_Armor} i - The item to check.
      * @returns {number} The hypothetical defense value.
      */
-    getDefWith(i) { return this.def + (i.category === 'armor' ? i.def : (this.equip.armor ? this.equip.armor.def : 0)); }
+    getDefWith(i) {
+        const oldW = this.equip.weapon;
+        const oldA = this.equip.armor;
+
+        if (i.category === 'weapon') this.equip.weapon = i;
+        if (i.category === 'armor') this.equip.armor = i;
+
+        const val = this.getDef();
+
+        this.equip.weapon = oldW;
+        this.equip.armor = oldA;
+        return val;
+    }
 }
 
 /**
@@ -731,26 +810,22 @@ class BattleManager {
                 Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
                 UI.floatText(baseDmg, t.x, t.y, "#f00");
                 if(k==='drain') { a.heal(baseDmg); UI.floatText("+"+baseDmg, $gameMap.playerX, $gameMap.playerY, "#0f0"); }
-                if(k==='stun') {
-                    if(Math.random() < 0.5) {
-                        t.addState("stun");
-                        UI.floatText("STUN", t.x, t.y, "#ff0");
-                    }
+
+                // Stun effect
+                if(k==='stun' && Math.random() < 0.5) {
+                    t.addState('stun');
+                    UI.floatText("STUN", t.x, t.y, "#ff0");
                 }
+
                 if(t.hp <= 0) await $gameMap.killEnemy(t);
             }
-        } else if (s.type === 'self') {
-            if (k === 'heal') {
+        } else if(s.type === 'self') {
+            if(k==='barrier') {
+                a.addState('barrier');
+                UI.floatText("SHIELD", $gameMap.playerX, $gameMap.playerY, "#0ff");
+            } else if(k==='heal') {
                 a.heal(s.power);
-                UI.floatText("+" + s.power, $gameMap.playerX, $gameMap.playerY, "#0f0");
-            } else if (k === 'barrier') {
-                a.addState("barrier");
-                UI.floatText("BARRIER", $gameMap.playerX, $gameMap.playerY, "#0ff");
-            } else if (k === 'scan') {
-                // Already handled in description? Or maybe logic needed here if scan does something active
-                // For now, Scan just "Reveals sector layout" which might be minimap reveal
-                // But minimap is already fully revealed in this game version.
-                UI.floatText("SCAN", $gameMap.playerX, $gameMap.playerY, "#0ff");
+                UI.floatText("+"+s.power, $gameMap.playerX, $gameMap.playerY, "#0f0");
             }
         }
         await Sequencer.sleep(500); return true;
@@ -901,108 +976,116 @@ class Game_Map {
      * @param {number} dy - Change in y.
      * @param {Function} [action] - Optional action to execute.
      */
-    async processTurn(dx, dy) {
+    async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
         
         // Check Renderer state for Seamless Movement Throttling
         if(Renderer && Renderer.isAnimating) return;
 
-        // Player State Logic
         const actor = $gameParty.active();
+
+        // Check Player Restriction (Stun)
         if(actor.isRestricted()) {
-             $gameSystem.log(`${actor.name} is stunned!`);
-             // Skip movement but process turn end for states
-             await this.processTurnEnd(actor);
-             await this.updateEnemies();
-             return;
+            $gameSystem.log(`${actor.name} is stunned!`);
+            UI.floatText("...", this.playerX, this.playerY, "#ff0");
+            // Skip player action but update states and enemies
+            await Sequencer.sleep(300);
+            await this.updateStates(actor);
+            await this.updateEnemies();
+            return;
         }
 
-        const nx = this.playerX + dx; const ny = this.playerY + dy;
-        if(this.tiles[nx][ny] === 1) return;
-        
-        const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
-        if(enemy) {
-            if($gameSystem.isBusy) return; 
-            $gameSystem.isBusy = true;
-            const actor = $gameParty.active();
-            const dmg = BattleManager.calcDamage(actor, enemy);
-            enemy.takeDamage(dmg);
-            Renderer.playAnimation('lunge', { tx: nx, ty: ny });
-            await Sequencer.sleep(150);
-            UI.floatText(dmg, nx, ny, "#fff");
-            Renderer.playAnimation('hit', { uid: enemy.uid });
-            await Sequencer.sleep(200);
-            $gameSystem.log(`Hit ${enemy.name} for ${dmg}.`);
-            if(enemy.hp <= 0) await this.killEnemy(enemy);
-            $gameParty.rotate();
-            UI.refresh();
-            await this.updateEnemies();
-            $gameSystem.isBusy = false;
-            // End of action
-            await this.processTurnEnd(actor);
+        if (action) {
+            await action();
         } else {
-            // TRIGGER VISUAL SWAP
-            Renderer.playAnimation('move_switch', { 
-                fromX: this.playerX, fromY: this.playerY, 
-                toX: nx, toY: ny, 
-                nextColor: $gameParty.nextActive().color 
-            });
-            this.playerX = nx; this.playerY = ny;
+            const nx = this.playerX + dx; const ny = this.playerY + dy;
+            if(this.tiles[nx][ny] === 1) return;
             
-            // NO SLEEP - allow continuous input buffer via Renderer flag
-            
-            const itemIdx = this.loot.findIndex(i => i.x === nx && i.y === ny);
-            if(itemIdx > -1) {
-                $gameParty.gainItem(this.loot[itemIdx].item);
-                Renderer.playAnimation('itemGet', { x: nx, y: ny });
-                this.loot.splice(itemIdx, 1);
-                Renderer.syncLoot();
-            }
-            
-            if(this.tiles[nx][ny] === 3) {
-                $gameSystem.log("Ascending...");
-                Renderer.playAnimation('ascend'); 
-                $gameSystem.isInputBlocked = true; 
-                // Wait slightly more for dramatic effect before logic switch
-                await Sequencer.sleep(4000); 
-                $gameSystem.isInputBlocked = false;
-                this.setup($gameSystem.floor + 1);
-                return;
-            }
+            const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
+            if(enemy) {
+                if($gameSystem.isBusy) return;
+                $gameSystem.isBusy = true;
+                const dmg = BattleManager.calcDamage(actor, enemy);
+                enemy.takeDamage(dmg);
+                Renderer.playAnimation('lunge', { tx: nx, ty: ny });
+                await Sequencer.sleep(150);
+                UI.floatText(dmg, nx, ny, "#fff");
+                Renderer.playAnimation('hit', { uid: enemy.uid });
+                await Sequencer.sleep(200);
+                $gameSystem.log(`Hit ${enemy.name} for ${dmg}.`);
+                if(enemy.hp <= 0) await this.killEnemy(enemy);
+                $gameParty.rotate();
+                UI.refresh();
+                await this.updateStates(actor);
+                await this.updateEnemies();
+                $gameSystem.isBusy = false;
+            } else {
+                // TRIGGER VISUAL SWAP
+                Renderer.playAnimation('move_switch', {
+                    fromX: this.playerX, fromY: this.playerY,
+                    toX: nx, toY: ny,
+                    nextColor: $gameParty.nextActive().color
+                });
+                this.playerX = nx; this.playerY = ny;
 
-            // End of action for the actor who moved/acted (which is technically the one leaving)
-            // But wait, $gameParty.rotate() changes active member.
-            // Logic: Current actor moves. Then we rotate.
-            // Should states update on the actor who just acted?
-            // Yes.
-            await this.processTurnEnd($gameParty.active());
+                // NO SLEEP - allow continuous input buffer via Renderer flag
 
-            $gameParty.rotate();
-            UI.refresh();
-            this.updateEnemies(); 
+                const itemIdx = this.loot.findIndex(i => i.x === nx && i.y === ny);
+                if(itemIdx > -1) {
+                    $gameParty.gainItem(this.loot[itemIdx].item);
+                    Renderer.playAnimation('itemGet', { x: nx, y: ny });
+                    this.loot.splice(itemIdx, 1);
+                    Renderer.syncLoot();
+                }
+
+                if(this.tiles[nx][ny] === 3) {
+                    $gameSystem.log("Ascending...");
+                    Renderer.playAnimation('ascend');
+                    $gameSystem.isInputBlocked = true;
+                    // Wait slightly more for dramatic effect before logic switch
+                    await Sequencer.sleep(4000);
+                    $gameSystem.isInputBlocked = false;
+                    this.setup($gameSystem.floor + 1);
+                    return;
+                }
+
+                $gameParty.rotate();
+                UI.refresh();
+                await this.updateStates(actor);
+                this.updateEnemies();
+            }
         }
     }
 
-    async processTurnEnd(actor) {
-        // Update states
-        for(let i = actor.states.length - 1; i >= 0; i--) {
-            const s = actor.states[i];
-            s.duration--;
-            if(s.id === 'poison') {
-                const dmg = Math.floor(actor.mhp * 0.05);
-                actor.takeDamage(dmg);
-                $gameSystem.log(`${actor.name} takes poison dmg!`);
+    /**
+     * Updates states for a battler.
+     * @param {Game_Actor|Game_Enemy} b - The battler.
+     */
+    async updateStates(b) {
+        // Decrease duration
+        b.states.forEach(s => s.duration--);
+
+        // Remove expired
+        const expired = b.states.filter(s => s.duration <= 0);
+        expired.forEach(s => {
+             b.removeState(s.id);
+             if(b === $gameParty.active()) $gameSystem.log(`${b.name}'s ${s.name} faded.`);
+        });
+
+        // Handle Poison
+        if(b.isStateAffected('poison')) {
+            const dmg = Math.floor(b.mhp * 0.1);
+            b.takeDamage(dmg);
+            if(b.uid === 'player') {
+                $gameSystem.log(`${b.name} takes poison dmg!`);
                 UI.floatText(dmg, this.playerX, this.playerY, "#808");
-                if(actor.isDead()) {
-                     // Handle death if active actor dies?
-                     // Currently handled in rotate() or game loop checks?
-                     // rotate() checks if dead and skips.
-                     // But if active actor dies here, next rotate will handle it.
-                }
+                Renderer.flash(0x880088);
+            } else {
+                UI.floatText(dmg, b.x, b.y, "#808");
             }
-            if(s.duration <= 0) {
-                actor.removeState(s.id);
-                $gameSystem.log(`${actor.name}'s ${s.name} faded.`);
+            if(b.isDead()) {
+                if(b.uid === 'player') SceneManager.gameOver();
+                else await this.killEnemy(b);
             }
         }
     }
@@ -1012,15 +1095,15 @@ class Game_Map {
      */
     async updateEnemies() {
         for(const e of this.enemies) {
-            // Enemy State Logic
-            let restricted = false;
-            for(let i = e.states.length - 1; i >= 0; i--) {
-                const s = e.states[i];
-                s.duration--;
-                if(s.traits.some(t => t.code === TRAIT_RESTRICTION)) restricted = true;
-                if(s.duration <= 0) e.removeState(s.id);
+            // Update enemy states
+            await this.updateStates(e);
+            if(e.isDead()) continue; // Killed by poison
+
+            // Check restriction
+            if(e.isRestricted()) {
+                UI.floatText("...", e.x, e.y, "#ff0");
+                continue;
             }
-            if(restricted) continue;
 
             const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
             if(dist < 7) e.alerted = true;
@@ -1804,14 +1887,7 @@ class UIManager {
     useConsumable(actor, i, idx) {
         if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
         if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
-        if(i.type==='cure') {
-            if(actor.isStateAffected('poison')) {
-                actor.removeState('poison');
-                $gameSystem.log(`${actor.name} is cured.`);
-            } else {
-                $gameSystem.log("No effect.");
-            }
-        }
+        if(i.type==='cure') { actor.removeState('poison'); $gameSystem.log(`${actor.name} cured.`); }
         $gameParty.inventory.splice(idx, 1);
         this.closeModal(); $gameSystem.isInputBlocked = false; this.refresh(); $gameMap.processTurn(0,0);
     }
