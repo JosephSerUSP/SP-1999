@@ -217,6 +217,13 @@ const TRAIT_PARAM_PLUS = 1;
 const TRAIT_PARAM_RATE = 2;
 const TRAIT_RESTRICTION = 3;
 
+const EFFECT_HP_DAMAGE = 11;
+const EFFECT_HP_RECOVER = 12;
+const EFFECT_PE_RECOVER = 13;
+const EFFECT_ADD_STATE = 21;
+const EFFECT_REMOVE_STATE = 22;
+const EFFECT_SPECIAL = 31;
+
 const PARAM_MHP = 0;
 const PARAM_MPE = 1;
 const PARAM_ATK = 2;
@@ -234,16 +241,17 @@ const $dataStates = {
  * @type {Object}
  */
 const $dataSkills = {
-    "rapid": { name: "Rapid Fire", cost: 10, range: 6, type: "target", power: 1.2, count: 2, desc: (a) => `2x shots. Est: ${Math.floor(a.atk * 1.2) * 2} DMG.` },
-    "scan": { name: "Scan", cost: 5, range: 0, type: "self", power: 0, desc: () => "Map Intel. Reveals sector layout." },
-    "blast": { name: "Grenade", cost: 15, range: 100, type: "all_enemies", power: 15, fixed: true, desc: () => "AoE Blast. 15 DMG to all hostiles." },
-    "barrier": { name: "Barrier", cost: 20, range: 0, type: "self", power: 0, desc: () => "Nano-shield. DEF +2 temporarily." },
-    "combust": { name: "Combust", cost: 25, range: 100, type: "all_enemies", power: 25, fixed: true, desc: () => "Ignite Room. 25 Fire DMG to all." },
-    "drain": { name: "Drain", cost: 10, range: 2, type: "target", power: 10, fixed: true, desc: () => "Bio-leech. 10 DMG + Heal Self." },
-    "snipe": { name: "Snipe", cost: 15, range: 8, type: "target", power: 3.0, desc: (a) => `Precision shot. Est: ${Math.floor(a.atk * 3.0)} DMG.` },
-    "heal": { name: "Heal", cost: 15, range: 0, type: "self", power: 30, fixed: true, desc: () => "Restore 30 HP." },
-    "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", power: 1.0, desc: (a) => "Melee shock. Chance to stun." },
-    "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, desc: () => "Discharge all PE. 60 DMG." }
+    "rapid": { name: "Rapid Fire", cost: 10, range: 6, type: "target", power: 1.2, count: 2, effects: [{code: EFFECT_HP_DAMAGE, value1: 1.2, value2: 1}], animation: 'projectile', desc: (a) => `2x shots. Est: ${Math.floor(a.atk * 1.2) * 2} DMG.` },
+    "scan": { name: "Scan", cost: 5, range: 0, type: "self", power: 0, effects: [{code: EFFECT_SPECIAL, dataId: 'scan'}], animation: 'flash', desc: () => "Map Intel. Reveals sector layout." },
+    "blast": { name: "Grenade", cost: 15, range: 100, type: "all_enemies", power: 15, fixed: true, effects: [{code: EFFECT_HP_DAMAGE, value1: 15, value2: 2}], animation: 'shake', desc: () => "AoE Blast. 15 DMG to all hostiles." },
+    "barrier": { name: "Barrier", cost: 20, range: 0, type: "self", power: 0, effects: [{code: EFFECT_ADD_STATE, dataId: 'barrier'}], animation: 'flash', desc: () => "Nano-shield. DEF +2 temporarily." },
+    "combust": { name: "Combust", cost: 25, range: 100, type: "all_enemies", power: 25, fixed: true, effects: [{code: EFFECT_HP_DAMAGE, value1: 25, value2: 2}], animation: 'shake', desc: () => "Ignite Room. 25 Fire DMG to all." },
+    "drain": { name: "Drain", cost: 10, range: 2, type: "target", power: 10, fixed: true, effects: [{code: EFFECT_HP_DAMAGE, value1: 10, value2: 2}, {code: EFFECT_HP_RECOVER, value1: 10, value2: 2, targetType: 1}], animation: 'projectile', desc: () => "Bio-leech. 10 DMG + Heal Self." },
+    "snipe": { name: "Snipe", cost: 15, range: 8, type: "target", power: 3.0, effects: [{code: EFFECT_HP_DAMAGE, value1: 3.0, value2: 1}], animation: 'projectile', desc: (a) => `Precision shot. Est: ${Math.floor(a.atk * 3.0)} DMG.` },
+    "heal": { name: "Heal", cost: 15, range: 0, type: "self", power: 30, fixed: true, effects: [{code: EFFECT_HP_RECOVER, value1: 30, value2: 2}], animation: 'flash', desc: () => "Restore 30 HP." },
+    "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", power: 1.0, effects: [{code: EFFECT_HP_DAMAGE, value1: 1.0, value2: 1}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.5}], animation: 'lunge', desc: (a) => "Melee shock. Chance to stun." },
+    "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", power: 60, fixed: true, effects: [{code: EFFECT_HP_DAMAGE, value1: 60, value2: 2}], animation: 'shake', desc: () => "Discharge all PE. 60 DMG." },
+    "attack": { name: "Attack", cost: 0, range: 1, type: "target", effects: [{code: EFFECT_HP_DAMAGE, value1: 1.0, value2: 0}], animation: 'lunge', desc: () => "Basic attack." }
 };
 
 /**
@@ -281,7 +289,12 @@ const $dataLootTable = {
     prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
     weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm." }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise." }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter." }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
     armors: [ { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." }, { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." }, { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." }, { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." } ],
-    items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
+    items: [
+        { name: "Medicine 1", type: "heal", val: 30, effects: [{code: EFFECT_HP_RECOVER, value1: 30, value2: 2}], icon: "💊", desc: "Heals 30 HP." },
+        { name: "Medicine 2", type: "heal", val: 60, effects: [{code: EFFECT_HP_RECOVER, value1: 60, value2: 2}], icon: "💉", desc: "Heals 60 HP." },
+        { name: "Stim", type: "pe", val: 20, effects: [{code: EFFECT_PE_RECOVER, value1: 20}], icon: "🧪", desc: "Restores 20 PE." },
+        { name: "Antidote", type: "cure", val: 0, effects: [{code: EFFECT_REMOVE_STATE, dataId: 'poison'}], icon: "🧬", desc: "Cures poison." }
+    ]
 };
 
 /**
@@ -436,7 +449,7 @@ class Game_Enemy {
      */
     constructor(d, x, y, uid, hp) {
         Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
-        this.def = 0; this.equip = {}; this.states = [];
+        this.def = 0; this.equip = {}; this.states = []; this.pe = 0; this.mpe = 0;
     }
 
     takeDamage(v) { this.hp -= v; if(this.hp < 0) this.hp = 0; }
@@ -690,70 +703,150 @@ class BattleManager {
     }
 
     /**
+     * Applies an effect to a target.
+     * @param {Object} subject - The user of the effect.
+     * @param {Object} target - The target of the effect.
+     * @param {Object} effect - The effect object.
+     */
+    static applyEffect(subject, target, effect) {
+        if (effect.chance !== undefined && Math.random() > effect.chance) return;
+
+        const realTarget = effect.targetType === 1 ? subject : target;
+
+        switch(effect.code) {
+            case EFFECT_HP_DAMAGE:
+                let dmg = 0;
+                // Value2: 0 = Physical (Atk*2 - Def), 1 = Skill (Atk * Val), 2 = Fixed
+                if (effect.value2 === 0) {
+                     // Scaled Physical: Replicate calcDamage logic but allow multiplier
+                     let atk = subject.getAtk ? subject.getAtk() : subject.atk;
+                     let def = realTarget.getDef ? realTarget.getDef() : (realTarget.def || 0);
+                     const variation = 0.8 + Math.random() * 0.4;
+                     dmg = Math.floor((atk * 2 * (effect.value1 || 1) - def) * variation);
+                } else if (effect.value2 === 1) {
+                     // Scaled Skill (Ignore Def)
+                     let atk = subject.getAtk ? subject.getAtk() : subject.atk;
+                     dmg = Math.floor(atk * effect.value1);
+                } else {
+                     // Fixed
+                     dmg = effect.value1;
+                }
+                dmg = Math.max(1, dmg);
+                realTarget.takeDamage(dmg);
+                UI.floatText(dmg, realTarget.x, realTarget.y, "#f00");
+                Renderer.playAnimation('hit', { uid: realTarget.uid });
+                if(effect.targetType === 1) $gameSystem.log(`${subject.name} takes ${dmg} dmg!`);
+                break;
+            case EFFECT_HP_RECOVER:
+                realTarget.heal(effect.value1);
+                UI.floatText("+" + effect.value1, realTarget.x, realTarget.y, "#0f0");
+                break;
+            case EFFECT_PE_RECOVER:
+                if (realTarget.pe !== undefined) {
+                    realTarget.pe = Math.min(realTarget.mpe, realTarget.pe + effect.value1);
+                    $gameSystem.log(`${realTarget.name} recovered PE.`);
+                }
+                break;
+            case EFFECT_ADD_STATE:
+                realTarget.addState(effect.dataId);
+                UI.floatText(effect.dataId.toUpperCase(), realTarget.x, realTarget.y, "#ff0");
+                break;
+            case EFFECT_REMOVE_STATE:
+                if (realTarget.isStateAffected(effect.dataId)) {
+                    realTarget.removeState(effect.dataId);
+                    $gameSystem.log(`${realTarget.name} cured of ${effect.dataId}.`);
+                } else {
+                     $gameSystem.log("No effect.");
+                }
+                break;
+            case EFFECT_SPECIAL:
+                if (effect.dataId === 'scan') {
+                    UI.floatText("SCAN", realTarget.x, realTarget.y, "#0ff");
+                }
+                break;
+        }
+    }
+
+    /**
      * Executes a skill by an actor.
      * @param {Game_Actor} a - The actor using the skill.
      * @param {string} k - The key/ID of the skill.
+     * @param {Array<Object>} [explicitTargets] - Optional explicit targets (e.g. for bump attack).
      * @returns {Promise<boolean>} Resolves to true if skill was executed successfully, false otherwise.
      */
-    static async executeSkill(a, k) {
+    static async executeSkill(a, k, explicitTargets = null) {
         const s = $dataSkills[k];
-        if(a.pe < s.cost) { $gameSystem.log("No PE."); return false; }
-        a.pe -= s.cost; $gameSystem.log(`${a.name} uses ${s.name}!`);
-        Renderer.playAnimation('flash', { color: a.color });
-        await Sequencer.sleep(300);
-        const baseDmg = s.fixed ? s.power : Math.floor(a.getAtk() * s.power);
+        if (a.pe !== undefined && a.pe < s.cost) { $gameSystem.log("No PE."); return false; }
+        if (a.pe !== undefined) a.pe -= s.cost;
 
-        if(k === 'rapid') {
-            const tgts = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) < s.range);
-            if(tgts.length > 0) {
-                for(let i=0; i<2; i++) {
-                    const t = tgts[Math.floor(Math.random()*tgts.length)];
-                    t.takeDamage(baseDmg);
-                    Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
-                    await Sequencer.sleep(200);
-                    UI.floatText(baseDmg, t.x, t.y, "#fff");
-                    Renderer.playAnimation('hit', { uid: t.uid });
-                    if(t.hp <= 0) await $gameMap.killEnemy(t);
-                    await Sequencer.sleep(300);
-                }
+        $gameSystem.log(`${a.name} uses ${s.name}!`);
+
+        // Animation determination
+        if (s.animation === 'lunge') {
+            if (a.uid === 'player' && explicitTargets && explicitTargets[0]) {
+                Renderer.playAnimation('lunge', { tx: explicitTargets[0].x, ty: explicitTargets[0].y });
+            } else if (a.uid !== 'player' && explicitTargets && explicitTargets[0]) {
+                Renderer.playAnimation('enemyLunge', { uid: a.uid, tx: explicitTargets[0].x, ty: explicitTargets[0].y });
             }
-        } else if(s.type === 'all_enemies') {
-            $gameMap.enemies.forEach(e => {
-                e.takeDamage(baseDmg); UI.floatText(baseDmg, e.x, e.y, "#f40");
-                Renderer.playAnimation('hit', { uid: e.uid });
-                if(e.hp <= 0) $gameMap.killEnemy(e);
-            });
+        } else if (s.animation === 'flash') {
+            Renderer.playAnimation('flash', { color: a.color || 0xffffff });
+        } else if (s.animation === 'shake') {
             Renderer.playAnimation('shake');
-        } else if(s.type === 'target') {
-            const tgts = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) < s.range);
-            if(tgts.length > 0) {
-                const t = tgts[0]; t.takeDamage(baseDmg);
-                Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
-                UI.floatText(baseDmg, t.x, t.y, "#f00");
-                if(k==='drain') { a.heal(baseDmg); UI.floatText("+"+baseDmg, $gameMap.playerX, $gameMap.playerY, "#0f0"); }
-                if(k==='stun') {
-                    if(Math.random() < 0.5) {
-                        t.addState("stun");
-                        UI.floatText("STUN", t.x, t.y, "#ff0");
-                    }
+        }
+
+        await Sequencer.sleep(150);
+
+        const count = s.count || 1;
+
+        for (let i = 0; i < count; i++) {
+            let targets = [];
+
+            if (explicitTargets) {
+                targets = explicitTargets;
+            } else if (s.type === 'target' || (k === 'rapid')) { // Rapid uses target logic but loops
+                const potential = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) < s.range);
+                if (potential.length > 0) {
+                     // For 'target' type without explicit targets, usually picks closest or random?
+                     // Old logic for 'target' picked index 0. Old logic for 'rapid' picked random.
+                     // I'll stick to: 'rapid' picks random, others pick index 0.
+                     // But 'rapid' is marked as type 'target' in data.
+                     if (s.count > 1) {
+                         targets = [potential[Math.floor(Math.random() * potential.length)]];
+                     } else {
+                         targets = [potential[0]];
+                     }
                 }
-                if(t.hp <= 0) await $gameMap.killEnemy(t);
+            } else if (s.type === 'all_enemies') {
+                targets = [...$gameMap.enemies];
+            } else if (s.type === 'self') {
+                targets = [a];
             }
-        } else if (s.type === 'self') {
-            if (k === 'heal') {
-                a.heal(s.power);
-                UI.floatText("+" + s.power, $gameMap.playerX, $gameMap.playerY, "#0f0");
-            } else if (k === 'barrier') {
-                a.addState("barrier");
-                UI.floatText("BARRIER", $gameMap.playerX, $gameMap.playerY, "#0ff");
-            } else if (k === 'scan') {
-                // Already handled in description? Or maybe logic needed here if scan does something active
-                // For now, Scan just "Reveals sector layout" which might be minimap reveal
-                // But minimap is already fully revealed in this game version.
-                UI.floatText("SCAN", $gameMap.playerX, $gameMap.playerY, "#0ff");
+
+            if (targets.length > 0) {
+                for (const t of targets) {
+                    // Projectile animation for ranged attacks
+                    if (s.animation === 'projectile') {
+                        Renderer.playAnimation('projectile', { x1: a.x || $gameMap.playerX, y1: a.y || $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
+                        await Sequencer.sleep(200);
+                    }
+
+                    if (s.effects) {
+                        s.effects.forEach(eff => {
+                            this.applyEffect(a, t, eff);
+                        });
+                    }
+
+                    if (t.hp !== undefined && t.hp <= 0) {
+                        if (t.uid !== 'player') await $gameMap.killEnemy(t);
+                    }
+                    await Sequencer.sleep(100);
+                }
+            } else {
+                 if (s.type !== 'self') $gameSystem.log("No targets.");
             }
         }
-        await Sequencer.sleep(500); return true;
+        await Sequencer.sleep(300);
+        return true;
     }
 }
 
@@ -925,15 +1018,9 @@ class Game_Map {
             if($gameSystem.isBusy) return; 
             $gameSystem.isBusy = true;
             const actor = $gameParty.active();
-            const dmg = BattleManager.calcDamage(actor, enemy);
-            enemy.takeDamage(dmg);
-            Renderer.playAnimation('lunge', { tx: nx, ty: ny });
-            await Sequencer.sleep(150);
-            UI.floatText(dmg, nx, ny, "#fff");
-            Renderer.playAnimation('hit', { uid: enemy.uid });
-            await Sequencer.sleep(200);
-            $gameSystem.log(`Hit ${enemy.name} for ${dmg}.`);
-            if(enemy.hp <= 0) await this.killEnemy(enemy);
+
+            await BattleManager.executeSkill(actor, 'attack', [enemy]);
+
             $gameParty.rotate();
             UI.refresh();
             await this.updateEnemies();
@@ -1033,11 +1120,7 @@ class Game_Map {
                 const nx = e.x + dx; const ny = e.y + dy;
                 if(nx === this.playerX && ny === this.playerY) {
                     const target = $gameParty.active();
-                    const dmg = BattleManager.calcDamage(e, target);
-                    target.takeDamage(dmg);
-                    Renderer.playAnimation('enemyLunge', { uid: e.uid, tx: nx, ty: ny });
-                    UI.floatText(dmg, this.playerX, this.playerY, "#f00");
-                    Renderer.playAnimation('hit', { uid: 'player' });
+                    await BattleManager.executeSkill(e, 'attack', [target]);
                 } else if(this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
                     e.x = nx; e.y = ny;
                     Renderer.syncEnemies();
@@ -1802,16 +1885,26 @@ class UIManager {
      * @param {number} idx - The index of the item in inventory.
      */
     useConsumable(actor, i, idx) {
-        if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
-        if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
-        if(i.type==='cure') {
-            if(actor.isStateAffected('poison')) {
-                actor.removeState('poison');
-                $gameSystem.log(`${actor.name} is cured.`);
-            } else {
-                $gameSystem.log("No effect.");
-            }
+        const itemData = $dataLootTable.items.find(it => it.name === i.name);
+        if(itemData && itemData.effects) {
+            itemData.effects.forEach(eff => {
+                BattleManager.applyEffect(actor, actor, eff);
+            });
+            $gameSystem.log(`${actor.name} used ${i.name}.`);
+        } else {
+            // Fallback for legacy data or missing effects
+             if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
+             if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
+             if(i.type==='cure') {
+                 if(actor.isStateAffected('poison')) {
+                     actor.removeState('poison');
+                     $gameSystem.log(`${actor.name} is cured.`);
+                 } else {
+                     $gameSystem.log("No effect.");
+                 }
+             }
         }
+
         $gameParty.inventory.splice(idx, 1);
         this.closeModal(); $gameSystem.isInputBlocked = false; this.refresh(); $gameMap.processTurn(0,0);
     }
