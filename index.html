@@ -213,6 +213,21 @@
  */
 const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
 
+const TRAIT_PARAM_PLUS = 1;
+const TRAIT_PARAM_RATE = 2;
+const TRAIT_RESTRICTION = 3;
+
+const PARAM_MHP = 0;
+const PARAM_MPE = 1;
+const PARAM_ATK = 2;
+const PARAM_DEF = 3;
+
+const $dataStates = {
+    "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
+    "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
+    "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] }
+};
+
 /**
  * Data definitions for all available skills.
  * @constant
@@ -378,7 +393,15 @@ class Game_Weapon {
      * @param {Object} b - The base weapon data.
      * @param {Object} p - The prefix data modifying the weapon.
      */
-    constructor(b, p) { this.name = `${p.name} ${b.name}`; this.atk = b.baseAtk + (p.atk||0); this.color = p.color; this.category = "weapon"; this.icon = b.icon||"⚔️"; this.desc = b.desc||""; }
+    constructor(b, p) {
+        this.name = `${p.name} ${b.name}`;
+        this.atk = b.baseAtk + (p.atk||0);
+        this.color = p.color;
+        this.category = "weapon";
+        this.icon = b.icon||"⚔️";
+        this.desc = b.desc||"";
+        this.traits = [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_ATK, value: this.atk }];
+    }
 }
 
 /**
@@ -389,7 +412,14 @@ class Game_Armor {
      * Creates a new Game_Armor.
      * @param {Object} b - The base armor data.
      */
-    constructor(b) { this.name = b.name; this.def = b.baseDef; this.category = "armor"; this.icon = b.icon||"🛡️"; this.desc = b.desc||""; }
+    constructor(b) {
+        this.name = b.name;
+        this.def = b.baseDef;
+        this.category = "armor";
+        this.icon = b.icon||"🛡️";
+        this.desc = b.desc||"";
+        this.traits = [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: this.def }];
+    }
 }
 
 /**
@@ -406,26 +436,52 @@ class Game_Enemy {
      */
     constructor(d, x, y, uid, hp) {
         Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
-        this.def = 0; this.equip = {}; 
+        this.def = 0; this.equip = {}; this.states = [];
     }
 
-    /**
-     * Reduces the enemy's HP.
-     * @param {number} v - The amount of damage to take.
-     */
     takeDamage(v) { this.hp -= v; if(this.hp < 0) this.hp = 0; }
 
-    /**
-     * Checks if the enemy is dead.
-     * @returns {boolean} True if HP <= 0.
-     */
     isDead() { return this.hp <= 0; }
 
-    /**
-     * Gets the enemy's attack value.
-     * @returns {number} The attack value.
-     */
-    getAtk() { return this.atk; } 
+    getAtk() {
+        let base = this.atk;
+        return Math.floor((base + this.paramPlus(PARAM_ATK)) * this.paramRate(PARAM_ATK));
+    }
+
+    getDef() {
+        let base = this.def;
+        return Math.floor((base + this.paramPlus(PARAM_DEF)) * this.paramRate(PARAM_DEF));
+    }
+
+    traitObjects() {
+        return [...this.states];
+    }
+
+    paramPlus(id) {
+        return this.traitObjects().reduce((r, obj) => {
+            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
+        }, 0);
+    }
+
+    paramRate(id) {
+        return this.traitObjects().reduce((r, obj) => {
+            return r * (obj.traits || []).filter(t => t.code === TRAIT_PARAM_RATE && t.dataId === id).reduce((a, t) => a * t.value, 1);
+        }, 1);
+    }
+
+    addState(id) {
+        if (this.isStateAffected(id)) {
+            const s = this.states.find(s => s.id === id);
+            s.duration = $dataStates[id].duration;
+        } else {
+            const s = Object.assign({id: id}, $dataStates[id]);
+            this.states.push(s);
+        }
+    }
+
+    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
+    isStateAffected(id) { return this.states.some(s => s.id === id); }
+    isRestricted() { return this.states.some(s => s.traits.some(t => t.code === TRAIT_RESTRICTION)); }
 }
 
 /**
@@ -440,51 +496,64 @@ class Game_Actor {
         const d = $dataClasses[name];
         Object.assign(this, d); this.name = name; this.mhp = d.hp; this.mpe = 100; this.pe = d.pe; 
         this.equip = { weapon: null, armor: null }; this.level = 1; this.exp = 0; this.nextExp = 50; this.inventory = [];
+        this.states = [];
         if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
         if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
         this.uid = 'player';
     }
 
-    /**
-     * Checks if the actor is dead.
-     * @returns {boolean} True if HP <= 0.
-     */
     isDead() { return this.hp <= 0; }
 
-    /**
-     * Reduces the actor's HP.
-     * @param {number} v - The amount of damage to take.
-     */
     takeDamage(v) { this.hp = Math.max(0, this.hp - v); }
 
-    /**
-     * Restores the actor's HP.
-     * @param {number} v - The amount of HP to heal.
-     */
     heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
 
-    /**
-     * Regenerates a small amount of PE (Power Energy).
-     */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
 
-    /**
-     * Adds experience points and handles leveling up.
-     * @param {number} v - The amount of experience to gain.
-     */
     gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
 
-    /**
-     * Gets the actor's total attack value including equipment.
-     * @returns {number} Total attack.
-     */
-    getAtk() { return this.atk + (this.equip.weapon ? this.equip.weapon.atk : 0); }
+    getAtk() {
+        let base = this.atk;
+        return Math.floor((base + this.paramPlus(PARAM_ATK)) * this.paramRate(PARAM_ATK));
+    }
 
-    /**
-     * Gets the actor's total defense value including equipment.
-     * @returns {number} Total defense.
-     */
-    getDef() { return this.def + (this.equip.armor ? this.equip.armor.def : 0); }
+    getDef() {
+        let base = this.def;
+        return Math.floor((base + this.paramPlus(PARAM_DEF)) * this.paramRate(PARAM_DEF));
+    }
+
+    traitObjects() {
+        const objects = [...this.states];
+        if (this.equip.weapon) objects.push(this.equip.weapon);
+        if (this.equip.armor) objects.push(this.equip.armor);
+        return objects;
+    }
+
+    paramPlus(id) {
+        return this.traitObjects().reduce((r, obj) => {
+            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
+        }, 0);
+    }
+
+    paramRate(id) {
+        return this.traitObjects().reduce((r, obj) => {
+            return r * (obj.traits || []).filter(t => t.code === TRAIT_PARAM_RATE && t.dataId === id).reduce((a, t) => a * t.value, 1);
+        }, 1);
+    }
+
+    addState(id) {
+        if (this.isStateAffected(id)) {
+            const s = this.states.find(s => s.id === id);
+            s.duration = $dataStates[id].duration;
+        } else {
+            const s = Object.assign({id: id}, $dataStates[id]);
+            this.states.push(s);
+        }
+    }
+
+    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
+    isStateAffected(id) { return this.states.some(s => s.id === id); }
+    isRestricted() { return this.states.some(s => s.traits.some(t => t.code === TRAIT_RESTRICTION)); }
 
     /**
      * Calculates what the attack would be with a specific item equipped.
@@ -662,7 +731,26 @@ class BattleManager {
                 Renderer.playAnimation('projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: t.x, y2: t.y, color: a.color });
                 UI.floatText(baseDmg, t.x, t.y, "#f00");
                 if(k==='drain') { a.heal(baseDmg); UI.floatText("+"+baseDmg, $gameMap.playerX, $gameMap.playerY, "#0f0"); }
+                if(k==='stun') {
+                    if(Math.random() < 0.5) {
+                        t.addState("stun");
+                        UI.floatText("STUN", t.x, t.y, "#ff0");
+                    }
+                }
                 if(t.hp <= 0) await $gameMap.killEnemy(t);
+            }
+        } else if (s.type === 'self') {
+            if (k === 'heal') {
+                a.heal(s.power);
+                UI.floatText("+" + s.power, $gameMap.playerX, $gameMap.playerY, "#0f0");
+            } else if (k === 'barrier') {
+                a.addState("barrier");
+                UI.floatText("BARRIER", $gameMap.playerX, $gameMap.playerY, "#0ff");
+            } else if (k === 'scan') {
+                // Already handled in description? Or maybe logic needed here if scan does something active
+                // For now, Scan just "Reveals sector layout" which might be minimap reveal
+                // But minimap is already fully revealed in this game version.
+                UI.floatText("SCAN", $gameMap.playerX, $gameMap.playerY, "#0ff");
             }
         }
         await Sequencer.sleep(500); return true;
@@ -819,6 +907,16 @@ class Game_Map {
         // Check Renderer state for Seamless Movement Throttling
         if(Renderer && Renderer.isAnimating) return;
 
+        // Player State Logic
+        const actor = $gameParty.active();
+        if(actor.isRestricted()) {
+             $gameSystem.log(`${actor.name} is stunned!`);
+             // Skip movement but process turn end for states
+             await this.processTurnEnd(actor);
+             await this.updateEnemies();
+             return;
+        }
+
         const nx = this.playerX + dx; const ny = this.playerY + dy;
         if(this.tiles[nx][ny] === 1) return;
         
@@ -840,6 +938,8 @@ class Game_Map {
             UI.refresh();
             await this.updateEnemies();
             $gameSystem.isBusy = false;
+            // End of action
+            await this.processTurnEnd(actor);
         } else {
             // TRIGGER VISUAL SWAP
             Renderer.playAnimation('move_switch', { 
@@ -870,9 +970,40 @@ class Game_Map {
                 return;
             }
 
+            // End of action for the actor who moved/acted (which is technically the one leaving)
+            // But wait, $gameParty.rotate() changes active member.
+            // Logic: Current actor moves. Then we rotate.
+            // Should states update on the actor who just acted?
+            // Yes.
+            await this.processTurnEnd($gameParty.active());
+
             $gameParty.rotate();
             UI.refresh();
             this.updateEnemies(); 
+        }
+    }
+
+    async processTurnEnd(actor) {
+        // Update states
+        for(let i = actor.states.length - 1; i >= 0; i--) {
+            const s = actor.states[i];
+            s.duration--;
+            if(s.id === 'poison') {
+                const dmg = Math.floor(actor.mhp * 0.05);
+                actor.takeDamage(dmg);
+                $gameSystem.log(`${actor.name} takes poison dmg!`);
+                UI.floatText(dmg, this.playerX, this.playerY, "#808");
+                if(actor.isDead()) {
+                     // Handle death if active actor dies?
+                     // Currently handled in rotate() or game loop checks?
+                     // rotate() checks if dead and skips.
+                     // But if active actor dies here, next rotate will handle it.
+                }
+            }
+            if(s.duration <= 0) {
+                actor.removeState(s.id);
+                $gameSystem.log(`${actor.name}'s ${s.name} faded.`);
+            }
         }
     }
 
@@ -881,6 +1012,16 @@ class Game_Map {
      */
     async updateEnemies() {
         for(const e of this.enemies) {
+            // Enemy State Logic
+            let restricted = false;
+            for(let i = e.states.length - 1; i >= 0; i--) {
+                const s = e.states[i];
+                s.duration--;
+                if(s.traits.some(t => t.code === TRAIT_RESTRICTION)) restricted = true;
+                if(s.duration <= 0) e.removeState(s.id);
+            }
+            if(restricted) continue;
+
             const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
             if(dist < 7) e.alerted = true;
             if(e.alerted) {
@@ -1663,6 +1804,14 @@ class UIManager {
     useConsumable(actor, i, idx) {
         if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
         if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
+        if(i.type==='cure') {
+            if(actor.isStateAffected('poison')) {
+                actor.removeState('poison');
+                $gameSystem.log(`${actor.name} is cured.`);
+            } else {
+                $gameSystem.log("No effect.");
+            }
+        }
         $gameParty.inventory.splice(idx, 1);
         this.closeModal(); $gameSystem.isInputBlocked = false; this.refresh(); $gameMap.processTurn(0,0);
     }
