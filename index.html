@@ -36,10 +36,8 @@
         }
 
         #app-container {
-            width: 100%;
-            max-width: 100vw;
-            aspect-ratio: 16/9;
-            max-height: 100vh;
+            width: 960px;
+            height: 540px;
             position: relative;
             background: black;
             overflow: hidden;
@@ -1032,12 +1030,19 @@ class Renderer3D {
      */
     init(container) {
         if(!container) return;
+        this.container = container;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(CONFIG.colors.bg);
         this.scene.fog = new THREE.FogExp2(CONFIG.colors.fog, 0.05);
-        this.camera = new THREE.PerspectiveCamera(50, 16/9, 0.1, 100);
+
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        // Aspect ratio based on actual container size
+        this.camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+
         this.renderer = new THREE.WebGLRenderer({ antialias: false });
-        this.renderer.setSize(320, 180, false); 
+        // Viewport is half the size of the window, scaled up
+        this.renderer.setSize(Math.floor(w/2), Math.floor(h/2), false);
         this.renderer.domElement.id = 'game-canvas';
         container.innerHTML = ''; 
         const wrapper = document.createElement('div');
@@ -1208,12 +1213,22 @@ class Renderer3D {
      * @returns {Object} Screen coordinates {x, y}.
      */
     projectToScreen(x, y, z) {
-        const container = document.getElementById('app-container');
-        const width = container.clientWidth;
-        const height = container.clientHeight;
+        if (!this.container) return { x: 0, y: 0 };
+        const appRect = document.getElementById('app-container').getBoundingClientRect();
+        const viewRect = this.container.getBoundingClientRect();
+
         const vec = new THREE.Vector3(x, y, z);
         vec.project(this.camera);
-        return { x: (vec.x * width/2) + width/2, y: -(vec.y * height/2) + height/2 };
+
+        // Convert NDC to pixel coordinates within the view window
+        const localX = (vec.x * 0.5 + 0.5) * viewRect.width;
+        const localY = (-vec.y * 0.5 + 0.5) * viewRect.height;
+
+        // Offset by the view window's position relative to the app container
+        return {
+            x: localX + (viewRect.left - appRect.left),
+            y: localY + (viewRect.top - appRect.top)
+        };
     }
 
     /**
