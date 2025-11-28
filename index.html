@@ -371,9 +371,28 @@ class Sequencer {
 
 // DEFINED BEFORE USE
 /**
+ * Represents a base item in the game.
+ */
+class Game_BaseItem {
+    /**
+     * Creates a new Game_BaseItem.
+     * @param {string} name - The name of the item.
+     * @param {string} icon - The icon for the item.
+     * @param {string} desc - The description of the item.
+     * @param {string} category - The category of the item.
+     */
+    constructor(name, icon, desc, category) {
+        this.name = name;
+        this.icon = icon;
+        this.desc = desc;
+        this.category = category;
+    }
+}
+
+/**
  * Represents a generic item in the game.
  */
-class Game_Item {
+class Game_Item extends Game_BaseItem {
     /**
      * Creates a new Game_Item.
      * @param {Object} d - The data object for the item.
@@ -383,26 +402,37 @@ class Game_Item {
      * @param {string} [d.icon] - The icon for the item.
      * @param {string} [d.desc] - The description of the item.
      */
-    constructor(d) { this.name = d.name; this.type = d.type; this.val = d.val; this.category = "item"; this.icon = d.icon||"📦"; this.desc = d.desc||""; }
+    constructor(d) {
+        super(d.name, d.icon || "📦", d.desc || "", "item");
+        this.type = d.type;
+        this.val = d.val;
+    }
+}
+
+/**
+ * Represents equipment in the game.
+ */
+class Game_Equipment extends Game_BaseItem {
+    constructor(name, icon, desc, category) {
+        super(name, icon, desc, category);
+        this.traits = [];
+    }
 }
 
 /**
  * Represents a weapon.
  */
-class Game_Weapon {
+class Game_Weapon extends Game_Equipment {
     /**
      * Creates a new Game_Weapon.
      * @param {Object} b - The base weapon data.
      * @param {Object} p - The prefix data modifying the weapon.
      */
     constructor(b, p) {
-        this.name = `${p.name} ${b.name}`;
+        super(`${p.name} ${b.name}`, b.icon || "⚔️", b.desc || "", "weapon");
         this.atk = b.baseAtk + (p.atk||0);
         this.color = p.color;
-        this.category = "weapon";
-        this.icon = b.icon||"⚔️";
-        this.desc = b.desc||"";
-        this.traits = [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_ATK, value: this.atk }];
+        this.traits.push({ code: TRAIT_PARAM_PLUS, dataId: PARAM_ATK, value: this.atk });
         if (b.attackSkill) this.traits.push({ code: TRAIT_ATTACK_SKILL, dataId: 0, value: b.attackSkill });
     }
 }
@@ -410,111 +440,36 @@ class Game_Weapon {
 /**
  * Represents armor.
  */
-class Game_Armor {
+class Game_Armor extends Game_Equipment {
     /**
      * Creates a new Game_Armor.
      * @param {Object} b - The base armor data.
      */
     constructor(b) {
-        this.name = b.name;
+        super(b.name, b.icon || "🛡️", b.desc || "", "armor");
         this.def = b.baseDef;
-        this.category = "armor";
-        this.icon = b.icon||"🛡️";
-        this.desc = b.desc||"";
-        this.traits = [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: this.def }];
+        this.traits.push({ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: this.def });
     }
 }
 
 /**
- * Represents an enemy in the game.
+ * Represents a base battler entity.
  */
-class Game_Enemy {
-    /**
-     * Creates a new Game_Enemy.
-     * @param {Object} d - The enemy data template.
-     * @param {number} x - The x-coordinate on the map.
-     * @param {number} y - The y-coordinate on the map.
-     * @param {string|number} uid - Unique identifier for the enemy instance.
-     * @param {number} hp - The hit points of the enemy.
-     */
-    constructor(d, x, y, uid, hp) {
-        Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
-        this.def = 0; this.equip = {}; this.states = [];
-    }
-
-    takeDamage(v) { this.hp -= v; if(this.hp < 0) this.hp = 0; }
-
-    isDead() { return this.hp <= 0; }
-
-    getAtk() {
-        let base = this.atk;
-        return Math.floor((base + this.paramPlus(PARAM_ATK)) * this.paramRate(PARAM_ATK));
-    }
-
-    getDef() {
-        let base = this.def;
-        return Math.floor((base + this.paramPlus(PARAM_DEF)) * this.paramRate(PARAM_DEF));
-    }
-
-    traitObjects() {
-        return [...this.states];
-    }
-
-    paramPlus(id) {
-        return this.traitObjects().reduce((r, obj) => {
-            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
-        }, 0);
-    }
-
-    paramRate(id) {
-        return this.traitObjects().reduce((r, obj) => {
-            return r * (obj.traits || []).filter(t => t.code === TRAIT_PARAM_RATE && t.dataId === id).reduce((a, t) => a * t.value, 1);
-        }, 1);
-    }
-
-    addState(id) {
-        if (this.isStateAffected(id)) {
-            const s = this.states.find(s => s.id === id);
-            s.duration = $dataStates[id].duration;
-        } else {
-            const s = Object.assign({id: id}, $dataStates[id]);
-            this.states.push(s);
-        }
-    }
-
-    removeState(id) { this.states = this.states.filter(s => s.id !== id); }
-    isStateAffected(id) { return this.states.some(s => s.id === id); }
-    isRestricted() { return this.states.some(s => s.traits.some(t => t.code === TRAIT_RESTRICTION)); }
-}
-
-/**
- * Represents a player character (actor).
- */
-class Game_Actor {
-    /**
-     * Creates a new Game_Actor.
-     * @param {string} name - The name of the character (must match a key in $dataClasses).
-     */
-    constructor(name) {
-        const d = $dataClasses[name];
-        Object.assign(this, d); this.name = name; this.mhp = d.hp; this.mpe = 100; this.pe = d.pe; 
-        this.equip = { weapon: null, armor: null }; this.level = 1; this.exp = 0; this.nextExp = 50; this.inventory = [];
+class Game_Battler {
+    constructor() {
+        this.hp = 0;
+        this.mhp = 0;
+        this.atk = 0;
+        this.def = 0;
         this.states = [];
-        if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
-        if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
-        this.uid = 'player';
-        this.direction = {x:0, y:1};
+        this.equip = { weapon: null, armor: null };
     }
 
     isDead() { return this.hp <= 0; }
 
-    takeDamage(v) { this.hp = Math.max(0, this.hp - v); }
-
-    heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
-
-    regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
-
-    gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
+    takeDamage(v) {
+        this.hp = Math.max(0, this.hp - v);
+    }
 
     getAtk() {
         let base = this.atk;
@@ -563,6 +518,55 @@ class Game_Actor {
         const t = this.traitObjects().flatMap(o => o.traits || []).find(t => t.code === TRAIT_ATTACK_SKILL);
         return t ? t.value : null;
     }
+}
+
+/**
+ * Represents an enemy in the game.
+ */
+class Game_Enemy extends Game_Battler {
+    /**
+     * Creates a new Game_Enemy.
+     * @param {Object} d - The enemy data template.
+     * @param {number} x - The x-coordinate on the map.
+     * @param {number} y - The y-coordinate on the map.
+     * @param {string|number} uid - Unique identifier for the enemy instance.
+     * @param {number} hp - The hit points of the enemy.
+     */
+    constructor(d, x, y, uid, hp) {
+        super();
+        Object.assign(this, d); this.x = x; this.y = y; this.uid = uid; this.hp = hp; this.mhp = hp; this.alerted = false;
+        // this.def = 0; // Handled by super default
+        // this.equip = {}; // Handled by super default, though super sets it to {weapon:null, armor:null} which is compatible
+        // this.states = []; // Handled by super
+    }
+}
+
+/**
+ * Represents a player character (actor).
+ */
+class Game_Actor extends Game_Battler {
+    /**
+     * Creates a new Game_Actor.
+     * @param {string} name - The name of the character (must match a key in $dataClasses).
+     */
+    constructor(name) {
+        super();
+        const d = $dataClasses[name];
+        Object.assign(this, d); this.name = name; this.mhp = d.hp; this.hp = this.mhp; this.mpe = 100; this.pe = d.pe;
+        // this.equip, this.states initialized in super
+        this.level = 1; this.exp = 0; this.nextExp = 50; this.inventory = [];
+
+        if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
+        if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
+        this.uid = 'player';
+        this.direction = {x:0, y:1};
+    }
+
+    heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
+
+    regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
+
+    gainExp(v) { this.exp += v; if(this.exp >= this.nextExp) { this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++; $gameSystem.log(`${this.name} Lv.${this.level}!`); } }
 
     /**
      * Calculates what the attack would be with a specific item equipped.
