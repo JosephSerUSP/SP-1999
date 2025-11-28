@@ -282,7 +282,13 @@ const $dataEnemies = [
 const $dataLootTable = {
     prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
     weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
-    armors: [ { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." }, { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." }, { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." }, { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." } ],
+    armors: [
+        { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." },
+        { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." },
+        { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." },
+        { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." },
+        { name: "Crowd Shield", baseDef: 3, icon: "🛡️", desc: "Defends better in crowds.", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5, condition: { type: 'enemy_count_range', range: 5, min: 3 } }] }
+    ],
     items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
 };
 
@@ -312,9 +318,115 @@ const $dataCutscenes = {
     ]
 };
 
+/**
+ * Data for party banter.
+ */
+const $dataBanter = [
+    { text: "Got one!", trigger: "kill", chance: 0.4, speakers: ["Aya", "Kyle"] },
+    { text: "Target neutralized.", trigger: "kill", chance: 0.4, speakers: ["Kyle", "Eve"] },
+    { text: "Messy.", trigger: "kill", chance: 0.2, speakers: ["Aya"] },
+    { text: "Moving out.", trigger: "walk", chance: 0.02, speakers: ["Kyle"] },
+    { text: "Checking sector.", trigger: "walk", chance: 0.02, speakers: ["Aya"] },
+    { text: "Too many targets!", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 }, speakers: ["Aya", "Kyle", "Eve"] }
+];
+
 // ============================================================================
 // [2] CORE SYSTEMS
 // ============================================================================
+
+class ConditionSystem {
+    static check(condition, context) {
+        if (!condition) return true;
+        switch (condition.type) {
+            case 'enemy_count_range':
+                const range = condition.range || 5;
+                const min = condition.min || 1;
+                const px = context.x;
+                const py = context.y;
+                // Assuming $gameMap is available globally
+                const count = $gameMap.enemies.filter(e => Math.abs(e.x - px) + Math.abs(e.y - py) <= range).length;
+                return count >= min;
+        }
+        return false;
+    }
+}
+
+class BanterManager {
+    constructor() {
+        this.activeLines = []; // { text, speaker, timer, element }
+        this.container = null;
+    }
+
+    init(container) {
+        this.container = document.createElement('div');
+        this.container.id = 'banter-container';
+        this.container.style.position = 'absolute';
+        this.container.style.top = '10px';
+        this.container.style.left = '10px';
+        this.container.style.display = 'flex';
+        this.container.style.flexDirection = 'column';
+        this.container.style.pointerEvents = 'none';
+        this.container.style.zIndex = '100';
+        container.appendChild(this.container);
+    }
+
+    update() {
+        if (!this.container) return;
+        for (let i = this.activeLines.length - 1; i >= 0; i--) {
+            const line = this.activeLines[i];
+            line.timer--;
+            if (line.timer < 20) {
+                line.element.style.opacity = line.timer / 20;
+            }
+            if (line.timer <= 0) {
+                line.element.remove();
+                this.activeLines.splice(i, 1);
+            }
+        }
+    }
+
+    trigger(type, context = {}) {
+        const candidates = $dataBanter.filter(b => b.trigger === type);
+        candidates.forEach(b => {
+             if (Math.random() < b.chance) {
+                 if (!b.condition || ConditionSystem.check(b.condition, context)) {
+                     const possibleSpeakers = b.speakers.filter(name => $gameParty.members.some(m => m.name === name && !m.isDead()));
+                     if (possibleSpeakers.length > 0) {
+                         const speaker = possibleSpeakers[Math.floor(Math.random() * possibleSpeakers.length)];
+                         this.addBanter(speaker, b.text);
+                     }
+                 }
+             }
+        });
+    }
+
+    addBanter(speaker, text) {
+        if (this.activeLines.length >= 5) {
+            const oldest = this.activeLines.shift();
+            oldest.element.remove();
+        }
+
+        const el = document.createElement('div');
+        el.style.background = 'rgba(0,0,0,0.6)';
+        el.style.color = 'white';
+        el.style.padding = '4px 8px';
+        el.style.marginBottom = '2px';
+        el.style.borderLeft = '2px solid var(--pe-gold)';
+        el.style.fontSize = '12px';
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.2s';
+
+        const actor = $gameParty.members.find(m => m.name === speaker);
+        const color = actor ? '#' + actor.color.toString(16) : '#fff';
+
+        el.innerHTML = `<span style="color:${color}; font-weight:bold">${speaker}:</span> ${text}`;
+
+        this.container.appendChild(el);
+        requestAnimationFrame(() => el.style.opacity = '1');
+
+        this.activeLines.push({ text, speaker, timer: 120, element: el });
+    }
+}
 
 /**
  * Manages global game state, such as floor level and logs.
@@ -489,8 +601,20 @@ class Game_Battler {
     }
 
     paramPlus(id) {
+        let context = { hp: this.hp, mhp: this.mhp, battler: this };
+        if (this.uid === 'player' || this instanceof Game_Actor) {
+            context.x = $gameMap.playerX;
+            context.y = $gameMap.playerY;
+        } else {
+            context.x = this.x;
+            context.y = this.y;
+        }
+
         return this.traitObjects().reduce((r, obj) => {
-            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => a + t.value, 0);
+            return r + (obj.traits || []).filter(t => t.code === TRAIT_PARAM_PLUS && t.dataId === id).reduce((a, t) => {
+                 if (t.condition && !ConditionSystem.check(t.condition, context)) return a;
+                 return a + t.value;
+            }, 0);
         }, 0);
     }
 
@@ -1015,6 +1139,8 @@ class Game_Map {
             $gameParty.rotate();
             UI.refresh();
             this.updateEnemies(); 
+            $gameBanter.trigger('walk', {x: this.playerX, y: this.playerY});
+            $gameBanter.trigger('surrounded', {x: this.playerX, y: this.playerY});
         }
     }
 
@@ -1092,6 +1218,7 @@ class Game_Map {
         $gameParty.distributeExp(enemy.exp);
         $gameSystem.log(`${enemy.name} dissolved.`);
         Renderer.syncEnemies();
+        $gameBanter.trigger('kill', {x: this.playerX, y: this.playerY});
     }
 
     async playerAttack() {
@@ -2094,7 +2221,7 @@ class UIManager {
     closeModal() { if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove(); }
 }
 
-let $gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene;
+let $gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene, $gameBanter;
 /**
  * Static class that manages the main game loop and initialization.
  */
@@ -2105,7 +2232,9 @@ class SceneManager {
     static init() {
         $gameSystem = new Game_System(); $gameParty = new Game_Party(); $gameMap = new Game_Map();
         UI = new UIManager(); Renderer = new Renderer3D(); Cutscene = new CutsceneManager();
+        $gameBanter = new BanterManager();
         Renderer.init(UI.windows.view.content); $gameMap.setup(1); UI.refresh();
+        $gameBanter.init(UI.windows.view.content);
         $gameSystem.log("System initialized.");
         
         // INPUT POLLING
@@ -2121,6 +2250,7 @@ class SceneManager {
      */
     static loop() {
         requestAnimationFrame(() => this.loop());
+        $gameBanter.update();
         // Input Logic
         if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !Renderer.isAnimating) {
              if(this.keys["ArrowUp"]||this.keys["w"]) $gameMap.processTurn(0,-1);
