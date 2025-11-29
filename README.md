@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Stillnight: Eve of the Stack** is a browser-based, turn-based dungeon crawler RPG. Players control a squad of three specialized characters—Aya (Detective), Kyle (Trooper), and Eve (Subject)—as they navigate through procedurally generated sectors of a mysterious "stack". The game features tactical combat, resource management, and a 3D visual representation built with Three.js.
+**Stillnight: Eve of the Stack** is a browser-based, turn-based dungeon crawler RPG. Players control a squad of three specialized characters—Aya (Detective), Kyle (Trooper), and Eve (Subject)—as they navigate through procedurally generated sectors of a mysterious "stack". The game features tactical combat, resource management, and a unique 3D visual representation built with Three.js.
 
 ## Getting Started
 
@@ -11,39 +11,50 @@
 *   A modern web browser (Chrome, Firefox, Safari, Edge).
 *   An internet connection is required to load external libraries (Three.js and Tailwind CSS).
 
-### Installation
+### Installation & Usage
 
-No installation is required. This is a standalone web application contained within a single HTML file.
-
-1.  Clone or download this repository.
-2.  Locate the `index.html` file.
-
-### Usage
-
-1.  Open `index.html` in your web browser.
-2.  The game will load and initialize automatically.
+1.  **Download:** Clone or download this repository.
+2.  **Run:** Open `index.html` in your web browser. No build process or local server is strictly required, though a local server (e.g., VS Code Live Server) is recommended for best performance.
 
 ## Game Controls
 
 *   **Arrow Keys** or **W/A/S/D**: Move the character.
 *   **Spacebar**: Wait / Skip turn.
+*   **Enter**: Melee Attack.
 *   **Mouse**: Interact with the UI (select skills, manage inventory, view tooltips).
 
-## Game Mechanics
+## Architecture
 
-*   **Exploration**: Navigate through grid-based levels, uncovering the map and finding loot.
-*   **Combat**: Turn-based combat. Bump into enemies to attack or use skills from the "TACTICS" menu.
-*   **Squad System**: You have three characters with unique stats and skills. Characters rotate automatically or manually.
-    *   **Aya**: High speed/utility.
-    *   **Kyle**: Defense/crowd control.
-    *   **Eve**: High damage magic/PE consumer.
-*   **Progression**: Gain EXP to level up, increasing stats. Find better weapons and armor to equip.
+The codebase has been refactored from a monolithic prototype into a modular architecture inspired by RPG Maker MZ's structure.
+
+### Module Structure (`src/`)
+
+*   **`data.js`**: Contains static configuration data (`CONFIG`), game database objects (`$dataSkills`, `$dataClasses`, `$dataEnemies`), and constant definitions (`EFFECT_*`, `TRAIT_*`).
+*   **`core.js`**: Contains core utility classes that define the engine's backbone, such as `EventBus` (for decoupling logic and view), `ConditionSystem`, and `Sequencer`.
+*   **`managers.js`**: Static classes that manage high-level game logic and systems (`SceneManager`, `BattleManager`, `ItemManager`).
+*   **`objects.js`**: The "Model" layer. Classes representing game entities (`Game_Actor`, `Game_Enemy`, `Game_Map`). These hold state and business logic but do not handle rendering.
+*   **`sprites.js`**: The "View" layer for the 3D world. Contains `Renderer3D` (Three.js logic) and `ParticleSystem`.
+*   **`windows.js`**: The "View" layer for the UI. Contains `UIManager` and `UI_Window`.
+*   **`main.js`**: The entry point. Bootstraps the application, handles window resizing, and initializes the `SceneManager`.
+
+### Key Design Patterns
+
+*   **Event-Driven Architecture**: The Game Logic (Objects/Managers) is decoupled from the Presentation (Sprites/Windows) using an `EventBus`. The logic layer emits events (e.g., `play_animation`, `refresh_ui`) which the view layer subscribes to.
+*   **Data-Driven Skills**: Skills are defined in `$dataSkills` using a generic `effects` array, processed by `BattleManager.applyEffect`, allowing for flexible skill creation without hardcoding logic.
 
 ## Development
 
-The entire codebase is located in `index.html`. It uses:
-*   **Three.js**: For 3D rendering.
-*   **Tailwind CSS**: For UI styling.
-*   **Vanilla JavaScript**: For game logic.
+To modify the game:
+1.  Edit the files in `src/`.
+2.  Refresh `index.html` to see changes.
+3.  Ensure you follow the established module dependencies (Data -> Core -> Managers -> Objects -> Sprites -> Windows -> Main).
 
-To modify the game, edit the script section within `index.html`.
+## Game Mechanics
+
+*   **Exploration**: Navigate grid-based levels.
+*   **Combat**: Turn-based. Bump enemies to attack or use skills.
+*   **Squad System**: Rotate between three characters with unique stats and skills.
+    *   **Aya**: High speed/utility.
+    *   **Kyle**: Defense/crowd control.
+    *   **Eve**: High damage magic/PE consumer.
+*   **Progression**: Gain EXP to level up. Find loot to equip.
