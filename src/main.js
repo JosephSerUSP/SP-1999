@@ -38,6 +38,12 @@ class SceneManager {
         $gameMap.setup(1);
         UI.refresh();
         $gameBanter.init(UI.windows.view.content);
+
+        // Event Listeners
+        EventBus.on('play_cutscene', (id) => {
+            if ($dataCutscenes[id]) Cutscene.play($dataCutscenes[id]);
+        });
+
         $gameSystem.log("System initialized.");
 
         // INPUT POLLING
