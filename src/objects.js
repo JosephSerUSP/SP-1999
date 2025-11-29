@@ -670,10 +670,13 @@ class Game_Map {
                 $gameSystem.log(`${actor.name} takes poison dmg!`);
                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#808");
                 if(actor.isDead()) {
-                     // Handle death if active actor dies?
-                     // Currently handled in rotate() or game loop checks?
-                     // rotate() checks if dead and skips.
-                     // But if active actor dies here, next rotate will handle it.
+                     $gameSystem.log(`${actor.name} collapsed.`);
+                     // Force rotation immediately if active actor died
+                     if($gameParty.active() === actor) {
+                         $gameParty.rotate();
+                         EventBus.emit('refresh_ui');
+                         // If everyone is dead, rotate() calls gameOver(), so we are good.
+                     }
                 }
             }
             if(s.duration <= 0) {
@@ -700,21 +703,61 @@ class Game_Map {
 
             const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
             if(dist < 7) e.alerted = true;
-            if(e.alerted) {
+
+            // Flee Logic
+            if(e.hp < e.mhp * 0.3) e.ai = "flee";
+
+            if(e.alerted || e.ai === "patrol") {
                 let dx = 0, dy = 0;
-                if(e.ai === "hunter" || e.ai === "ambush") {
+
+                // AI BEHAVIORS
+                if(e.ai === "turret") {
+                    // Turret: Doesn't move. Attacks if in range.
+                    if (dist <= 5) {
+                        // Remote Attack
+                        const target = $gameParty.active();
+                        // Turrets shoot, so maybe less damage variation or distinct effect?
+                        // Using standard calcDamage for now but could be a skill.
+                        const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
+                        target.takeDamage(dmg);
+                        EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
+                        await Sequencer.sleep(100);
+                        EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                        EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                    }
+                    continue; // Skip movement
+                } else if (e.ai === "flee") {
+                     // Move AWAY from player
+                     dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
+                     // Add randomness to avoid getting stuck in corners?
+                     if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
+                } else if(e.ai === "patrol" && !e.alerted) {
+                     // Random walk
+                     if(Math.random() < 0.3) {
+                         const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
+                         const dir = dirs[Math.floor(Math.random()*dirs.length)];
+                         dx = dir.x; dy = dir.y;
+                     }
+                } else if(e.ai === "hunter" || e.ai === "ambush" || (e.ai === "patrol" && e.alerted)) {
+                    // Chase Player
                     dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
                     if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
                 }
+
+                // MOVEMENT EXECUTION
                 const nx = e.x + dx; const ny = e.y + dy;
+
+                // Attack if adjacent (Melee) - Turrets handled above
                 if(nx === this.playerX && ny === this.playerY) {
-                    const target = $gameParty.active();
-                    const dmg = BattleManager.calcDamage(e, target);
-                    target.takeDamage(dmg);
-                    EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
-                    EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                    EventBus.emit('play_animation', 'hit', { uid: 'player' });
-                } else if(this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
+                    if (e.ai !== "flee") { // Fleeing enemies shouldn't attack just because they bumped you
+                        const target = $gameParty.active();
+                        const dmg = BattleManager.calcDamage(e, target);
+                        target.takeDamage(dmg);
+                        EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
+                        EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                        EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                    }
+                } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
                     e.x = nx; e.y = ny;
                     EventBus.emit('sync_enemies');
                 }
@@ -751,6 +794,19 @@ class Game_Map {
         let target = null;
         let skillIdToExec = attackSkillId;
 
+        if (skill && (skill.type === 'self' || skill.type === 'all_enemies')) {
+             // For self/all_enemies, we don't need to resolve a single target here.
+             // BattleManager handles it.
+             await BattleManager.executeSkill(actor, skillIdToExec, null);
+             // Skip the rest of the targeting logic
+             $gameParty.rotate();
+             EventBus.emit('refresh_ui');
+             await this.updateEnemies();
+             $gameSystem.isBusy = false;
+             await this.processTurnEnd(actor);
+             return;
+        }
+
         if (skill && skill.type === 'line') {
             const dx = actor.direction.x; const dy = actor.direction.y;
             for (let i=1; i<=skill.range; i++) {
@@ -761,15 +817,24 @@ class Game_Map {
             }
             // Execute even if no target (miss)
         } else {
-            // Default melee range 1
+            // Default melee range 1 (or single target skill with range > 1 but not 'line')
+            // Actually 'target' type skills are ranged single target.
+            // But this block is "default melee range 1" IF no skill.
+            // If skill is present and type is 'target', we should look up to skill range.
+            const range = skill ? skill.range : 1;
+            // For now, simpler logic: if it's a 'target' skill, we look for closest enemy in direction or just front?
+            // Original logic was just front. Let's keep it simple for 'target' type: it acts like melee but extended range?
+            // Or should it be directional like 'line' but stops at first? That's what 'line' does.
+            // Let's assume 'target' means "Hit enemy at Cursor" but we don't have cursor.
+            // So we'll treat it as directional line for now (stops at first target).
+
              const dx = actor.direction.x; const dy = actor.direction.y;
-             const tx = this.playerX + dx; const ty = this.playerY + dy;
-             target = this.enemies.find(en => en.x === tx && en.y === ty);
-             if (!skillIdToExec && target) {
-                 // Normal attack logic logic is inside processTurn, but here we want to force attack
-                 // Since we don't have a skill ID for normal attack, we can simulate it or wrap it.
-                 // Ideally standard attack is a skill too, but it isn't implemented as such fully.
-                 // If no custom skill, we do standard melee damage.
+             // Check along the line up to range
+             for (let i=1; i<=range; i++) {
+                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
+                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
+                 if (e) { target = e; break; }
              }
         }
 
@@ -785,7 +850,7 @@ class Game_Map {
             }
         } else {
             // Basic Attack (No skill override)
-            if (target) {
+            if (target && (Math.abs(target.x - this.playerX) + Math.abs(target.y - this.playerY) <= 1)) {
                 const dmg = BattleManager.calcDamage(actor, target);
                 target.takeDamage(dmg);
                 EventBus.emit('play_animation', 'lunge', { tx: target.x, ty: target.y });
