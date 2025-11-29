@@ -199,6 +199,8 @@ class UIManager {
 
         createBtn("WAIT", "", () => $gameMap.processTurn(0,0));
         createBtn("ITEM", "", () => this.showInventoryModal());
+        createBtn("TALK", "", () => $gameMap.negotiate()); // New Talk Command
+        createBtn("COMP", "", () => this.showCompModal()); // New COMP Command
         w.content.appendChild(document.createElement('hr'));
 
         actor.skills.forEach(k => {
@@ -488,5 +490,105 @@ class UIManager {
      */
     closeModal() {
         if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove();
+    }
+
+    /**
+     * Shows the COMP (Demon Stock) management modal.
+     */
+    showCompModal() {
+        $gameSystem.isInputBlocked = true;
+        const render = (container) => {
+             container.innerHTML = '';
+             container.style.display = 'flex'; container.style.flexDirection = 'column'; container.style.gap = '10px';
+
+             // Party Section
+             const partyDiv = document.createElement('div');
+             partyDiv.innerHTML = "<div style='color:yellow;border-bottom:1px solid #444'>ACTIVE PARTY</div>";
+             $gameParty.members.forEach((m, idx) => {
+                 const d = document.createElement('div');
+                 d.className = 'item-row';
+                 d.innerText = `${m.name} (HP: ${m.hp}/${m.mhp})`;
+                 if(idx > 0) { // Hero cannot be swapped
+                     d.style.cursor = 'pointer';
+                     d.onclick = () => {
+                         this.selectedPartyIndex = idx;
+                         render(container);
+                     };
+                     if(this.selectedPartyIndex === idx) d.style.background = '#444';
+                 } else {
+                     d.style.color = '#888';
+                 }
+                 partyDiv.appendChild(d);
+             });
+             container.appendChild(partyDiv);
+
+             // Stock Section
+             const stockDiv = document.createElement('div');
+             stockDiv.innerHTML = "<div style='color:cyan;border-bottom:1px solid #444'>DEMON STOCK</div>";
+             if ($gameParty.stock.length === 0) stockDiv.innerHTML += "<div style='color:#666;font-style:italic'>No demons in COMP.</div>";
+
+             $gameParty.stock.forEach((d, idx) => {
+                 const row = document.createElement('div');
+                 row.className = 'item-row';
+                 row.innerText = `${d.name} (Lv.${d.level} ${d.race})`;
+                 row.onclick = () => {
+                     if (this.selectedPartyIndex) {
+                         $gameParty.swapMember(this.selectedPartyIndex, idx);
+                         this.selectedPartyIndex = null;
+                         render(container);
+                         this.refresh();
+                     }
+                 };
+                 stockDiv.appendChild(row);
+             });
+             container.appendChild(stockDiv);
+
+             const help = document.createElement('div');
+             help.style.fontSize = '10px'; help.style.color = '#aaa';
+             help.innerText = "Select a Party Member (excluding Hero), then select a Demon to swap.";
+             container.appendChild(help);
+        };
+        this.createModal("COMP - SUMMONING PROGRAM", render, () => {
+            $gameSystem.isInputBlocked = false;
+            this.selectedPartyIndex = null;
+        });
+    }
+
+    /**
+     * Shows the Negotiation Interface.
+     * @param {Game_Enemy} enemy - The enemy being talked to.
+     * @param {Object} step - The current negotiation step.
+     */
+    showNegotiationModal(enemy, step, onChoice) {
+        // We use a custom modal logic here to update dynamically
+        let m = document.getElementById('negotiation-modal');
+        if (!m) {
+            m = document.createElement('div'); m.id = 'negotiation-modal';
+            m.className = 'pe-window';
+            Object.assign(m.style, {left:'20%', top:'60%', width:'60%', height:'30%', zIndex:200});
+            document.getElementById('ui-root').appendChild(m);
+        }
+
+        m.innerHTML = `<div class="pe-header" style="color:#${enemy.color.toString(16)}">${enemy.name}</div>
+                       <div class="pe-content" style="display:flex; flex-direction:column; justify-content:space-between; height:100%">
+                           <div style="font-size:16px; margin-bottom:10px;">${step.text}</div>
+                           <div id="nego-choices" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+                       </div>`;
+
+        const cDiv = m.querySelector('#nego-choices');
+        step.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.className = 'cmd-btn';
+            btn.innerText = choice.label;
+            btn.onclick = () => {
+                onChoice(choice);
+            };
+            cDiv.appendChild(btn);
+        });
+    }
+
+    closeNegotiationModal() {
+        const m = document.getElementById('negotiation-modal');
+        if(m) m.remove();
     }
 }

@@ -3,282 +3,154 @@
 // ============================================================================
 /**
  * Configuration for game colors.
- * @constant
- * @type {Object}
- * @property {Object} colors - Map of color definitions.
- * @property {number} colors.floor - Hex color for floor tiles.
- * @property {number} colors.wall - Hex color for wall tiles.
- * @property {number} colors.fog - Hex color for fog.
- * @property {number} colors.bg - Hex color for background.
  */
-const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
+const CONFIG = { colors: { floor: 0x222222, wall: 0x111111, fog: 0x000000, bg: 0x000000 } };
 
-/**
- * Trait code for parameter addition.
- * @constant {number}
- */
 const TRAIT_PARAM_PLUS = 1;
-/**
- * Trait code for parameter rate (multiplier).
- * @constant {number}
- */
 const TRAIT_PARAM_RATE = 2;
-/**
- * Trait code for restriction (e.g. stunned).
- * @constant {number}
- */
 const TRAIT_RESTRICTION = 3;
-/**
- * Trait code for adding an attack skill.
- * @constant {number}
- */
 const TRAIT_ATTACK_SKILL = 4;
 
-/**
- * Effect code for dealing damage.
- * @constant {number}
- */
 const EFFECT_DAMAGE = 11;
-/**
- * Effect code for healing HP.
- * @constant {number}
- */
 const EFFECT_HEAL = 12;
-/**
- * Effect code for adding a state.
- * @constant {number}
- */
 const EFFECT_ADD_STATE = 21;
-/**
- * Effect code for recovering PE.
- * @constant {number}
- */
 const EFFECT_RECOVER_PE = 31;
-/**
- * Effect code for revealing the map.
- * @constant {number}
- */
 const EFFECT_SCAN_MAP = 41;
 
-/**
- * Parameter ID for Maximum HP.
- * @constant {number}
- */
 const PARAM_MHP = 0;
-/**
- * Parameter ID for Maximum PE.
- * @constant {number}
- */
 const PARAM_MPE = 1;
-/**
- * Parameter ID for Attack.
- * @constant {number}
- */
 const PARAM_ATK = 2;
-/**
- * Parameter ID for Defense.
- * @constant {number}
- */
 const PARAM_DEF = 3;
 
-/**
- * Definitions for game states (buffs/debuffs).
- * @constant
- * @type {Object.<string, Object>}
- */
 const $dataStates = {
-    "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
-    "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
-    "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] }
+    "barrier": { name: "Tetraja", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5 }] },
+    "stun": { name: "Shock", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
+    "poison": { name: "Poison", duration: 10, icon: "☠️", traits: [] },
+    "charm": { name: "Charm", duration: 3, icon: "💕", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] } // Simplified charm as stun for now
 };
 
-/**
- * Data definitions for all available skills.
- * @constant
- * @type {Object.<string, Object>}
- */
 const $dataSkills = {
-    "rapid": { name: "Rapid Fire", cost: 10, range: 6, type: "target", count: 2, effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => `2x shots. Est: ${Math.floor(a.atk * 1.2) * 2} DMG.` },
-    "scan": { name: "Scan", cost: 5, range: 0, type: "self", effects: [{code: EFFECT_SCAN_MAP}], desc: () => "Map Intel. Reveals sector layout." },
-    "blast": { name: "Grenade", cost: 15, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 15, fixed: true}], desc: () => "AoE Blast. 15 DMG to all hostiles." },
-    "barrier": { name: "Barrier", cost: 20, range: 0, type: "self", effects: [{code: EFFECT_ADD_STATE, dataId: 'barrier'}], desc: () => "Nano-shield. DEF +2 temporarily." },
-    "combust": { name: "Combust", cost: 25, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 25, fixed: true}], desc: () => "Ignite Room. 25 Fire DMG to all." },
-    "drain": { name: "Drain", cost: 10, range: 2, type: "target", effects: [{code: EFFECT_DAMAGE, value: 10, fixed: true}, {code: EFFECT_HEAL, value: 10, target: 'self'}], desc: () => "Bio-leech. 10 DMG + Heal Self." },
-    "snipe": { name: "Snipe", cost: 15, range: 8, type: "target", effects: [{code: EFFECT_DAMAGE, value: 3.0}], desc: (a) => `Precision shot. Est: ${Math.floor(a.atk * 3.0)} DMG.` },
-    "heal": { name: "Heal", cost: 15, range: 0, type: "self", effects: [{code: EFFECT_HEAL, value: 30}], desc: () => "Restore 30 HP." },
-    "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.0}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.5}], desc: (a) => "Melee shock. Chance to stun." },
-    "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 60, fixed: true}], desc: () => "Discharge all PE. 60 DMG." },
-    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` }
+    // Magic - Fire
+    "agi": { name: "Agi", cost: 4, range: 4, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Small Fire. Est: ${Math.floor(a.atk * 1.5)}.` },
+    "agilao": { name: "Agilao", cost: 8, range: 5, type: "target", effects: [{code: EFFECT_DAMAGE, value: 2.5}], desc: (a) => `Medium Fire. Est: ${Math.floor(a.atk * 2.5)}.` },
+    "maragi": { name: "Maragi", cost: 12, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => `AoE Fire. Est: ${Math.floor(a.atk * 1.2)}.` },
+
+    // Magic - Ice
+    "bufu": { name: "Bufu", cost: 4, range: 4, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Small Ice. Est: ${Math.floor(a.atk * 1.5)}.` },
+    "bufula": { name: "Bufula", cost: 8, range: 5, type: "target", effects: [{code: EFFECT_DAMAGE, value: 2.5}], desc: (a) => `Medium Ice. Est: ${Math.floor(a.atk * 2.5)}.` },
+
+    // Magic - Elec
+    "zio": { name: "Zio", cost: 5, range: 4, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.4}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.3}], desc: (a) => `Small Elec + Shock.` },
+    "mzio": { name: "Mazio", cost: 15, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 1.2}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.2}], desc: (a) => `AoE Elec + Shock.` },
+
+    // Magic - Force/Impact
+    "zan": { name: "Zan", cost: 4, range: 4, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Small Force. Est: ${Math.floor(a.atk * 1.5)}.` },
+
+    // Healing
+    "dia": { name: "Dia", cost: 5, range: 0, type: "self", effects: [{code: EFFECT_HEAL, value: 50}], desc: () => "Heal 50 HP (Self)." },
+    "media": { name: "Media", cost: 15, range: 0, type: "self", effects: [{code: EFFECT_HEAL, value: 40}], desc: () => "Heal 40 HP (Self)." }, // Engine doesn't support 'all_allies' easily yet, self for now.
+
+    // Support
+    "tarukaja": { name: "Tarukaja", cost: 12, range: 0, type: "self", effects: [{code: EFFECT_ADD_STATE, dataId: 'barrier'}], desc: () => "Buffs ATK (Simulated)." }, // Placeholder
+
+    // Physical
+    "lunge": { name: "Lunge", cost: 3, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => `Light Phys.` },
+    "gunshot": { name: "Shoot", cost: 0, range: 6, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.0}], desc: (a) => `Gun Attack.` },
+
+    // Utility
+    "scan": { name: "Mapper", cost: 2, range: 0, type: "self", effects: [{code: EFFECT_SCAN_MAP}], desc: () => "Map Intel." }
 };
 
-/**
- * Data definitions for player classes/characters.
- * @constant
- * @type {Object.<string, Object>}
- */
 const $dataClasses = {
-    "Aya": {
-        job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
+    "Hero": {
+        job: "Human", hp: 60, atk: 5, def: 4, pe: 20, color: 0xaaaaaa, skills: ["gunshot", "scan"],
         banter: [
-            { text: "Got one.", trigger: "kill", chance: 0.5 },
-            { text: "Messy work.", trigger: "kill", chance: 0.3 },
-            { text: "Down you go.", trigger: "kill", chance: 0.3 },
-            { text: "Another stat.", trigger: "kill", chance: 0.2 },
-            { text: "Clean shot.", trigger: "kill", chance: 0.2 },
-            { text: "Checking corners.", trigger: "walk", chance: 0.05 },
-            { text: "Watch your step.", trigger: "walk", chance: 0.05 },
-            { text: "Quiet...", trigger: "walk", chance: 0.05 },
-            { text: "Scanning area.", trigger: "walk", chance: 0.05 },
-            { text: "Don't like this quiet.", trigger: "walk", chance: 0.05 },
-            { text: "Too many of them!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Need backup here!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "They're everywhere.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Back to back!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Getting crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Found something.", trigger: "loot", chance: 0.8 },
-            { text: "Useful.", trigger: "loot", chance: 0.5 },
-            { text: "Bagging it.", trigger: "loot", chance: 0.5 },
-            { text: "Evidence?", trigger: "loot", chance: 0.3 },
-            { text: "Mine.", trigger: "loot", chance: 0.3 },
-            { text: "Damn it!", trigger: "hurt", chance: 0.5 },
-            { text: "Just a scratch.", trigger: "hurt", chance: 0.4 },
-            { text: "Need a medic!", trigger: "hurt", chance: 0.3 },
-            { text: "They hit hard.", trigger: "hurt", chance: 0.3 },
-            { text: "Ugh...", trigger: "hurt", chance: 0.3 },
-            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Vision blurring...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Not done yet.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Stronger.", trigger: "level_up", chance: 1.0 },
-            { text: "Experience pays off.", trigger: "level_up", chance: 0.8 }
+            { text: "Demon neutralized.", trigger: "kill", chance: 0.5 },
+            { text: "Got it.", trigger: "loot", chance: 0.5 },
+            { text: "Ugh...", trigger: "hurt", chance: 0.5 },
+            { text: "Not here to die.", trigger: "low_hp", chance: 0.8 },
+            { text: "Stronger.", trigger: "level_up", chance: 1.0 }
         ]
     },
-    "Kyle": {
-        job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
+    "Law": {
+        job: "Messian", hp: 40, atk: 3, def: 3, pe: 60, color: 0x4444ff, skills: ["dia", "zan", "hama"],
         banter: [
-            { text: "Target neutralized.", trigger: "kill", chance: 0.5 },
-            { text: "Hostile down.", trigger: "kill", chance: 0.4 },
-            { text: "Tango down.", trigger: "kill", chance: 0.4 },
-            { text: "Threat cleared.", trigger: "kill", chance: 0.3 },
-            { text: "One less.", trigger: "kill", chance: 0.3 },
-            { text: "Moving out.", trigger: "walk", chance: 0.05 },
-            { text: "Stay sharp.", trigger: "walk", chance: 0.05 },
-            { text: "Check your six.", trigger: "walk", chance: 0.05 },
-            { text: "Advancing.", trigger: "walk", chance: 0.05 },
-            { text: "Maintain formation.", trigger: "walk", chance: 0.05 },
-            { text: "We are surrounded!", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Multiple contacts!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Defensive perimeter!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "They're swarming.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Supplies secured.", trigger: "loot", chance: 0.8 },
-            { text: "Equipment recovered.", trigger: "loot", chance: 0.6 },
-            { text: "Asset acquired.", trigger: "loot", chance: 0.5 },
-            { text: "Lock and load.", trigger: "loot", chance: 0.4 },
-            { text: "Good find.", trigger: "loot", chance: 0.4 },
-            { text: "Taking fire!", trigger: "hurt", chance: 0.6 },
-            { text: "Armor hit!", trigger: "hurt", chance: 0.5 },
-            { text: "I'm hit!", trigger: "hurt", chance: 0.5 },
-            { text: "Damage report.", trigger: "hurt", chance: 0.3 },
-            { text: "Grr...", trigger: "hurt", chance: 0.3 },
-            { text: "Critical condition.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Need evac...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Holding the line.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Combat efficiency up.", trigger: "level_up", chance: 1.0 },
-            { text: "Promoted.", trigger: "level_up", chance: 0.8 }
+            { text: "God's will.", trigger: "kill", chance: 0.6 },
+            { text: "Impure.", trigger: "kill", chance: 0.4 },
+            { text: "For the Order.", trigger: "walk", chance: 0.05 },
+            { text: "Protect me!", trigger: "hurt", chance: 0.5 },
+            { text: "I see the light...", trigger: "low_hp", chance: 0.8 }
         ]
     },
-    "Eve": {
-        job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
+    "Chaos": {
+        job: "Gaean", hp: 70, atk: 6, def: 2, pe: 30, color: 0xff4444, skills: ["agi", "lunge"],
         banter: [
-            { text: "Burn.", trigger: "kill", chance: 0.6 },
-            { text: "Gone.", trigger: "kill", chance: 0.5 },
-            { text: "Ashes.", trigger: "kill", chance: 0.4 },
-            { text: "It screamed.", trigger: "kill", chance: 0.4 },
-            { text: "Fuel.", trigger: "kill", chance: 0.3 },
-            { text: "It calls to me.", trigger: "walk", chance: 0.05 },
-            { text: "So dark...", trigger: "walk", chance: 0.05 },
-            { text: "Can you hear it?", trigger: "walk", chance: 0.05 },
-            { text: "Wandering.", trigger: "walk", chance: 0.05 },
-            { text: "The stack breathes.", trigger: "walk", chance: 0.05 },
-            { text: "So many souls.", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Get away!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "I'll burn them all.", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Too loud...", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Pretty.", trigger: "loot", chance: 0.7 },
-            { text: "Mine.", trigger: "loot", chance: 0.6 },
-            { text: "Can I keep it?", trigger: "loot", chance: 0.5 },
-            { text: "Shiny.", trigger: "loot", chance: 0.4 },
-            { text: "Curious.", trigger: "loot", chance: 0.4 },
-            { text: "Pain...", trigger: "hurt", chance: 0.6 },
-            { text: "Don't touch me!", trigger: "hurt", chance: 0.5 },
-            { text: "My blood...", trigger: "hurt", chance: 0.5 },
-            { text: "Stop it.", trigger: "hurt", chance: 0.4 },
-            { text: "Ah!", trigger: "hurt", chance: 0.4 },
-            { text: "Fading...", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Cold...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Help me.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Power growing.", trigger: "level_up", chance: 1.0 },
-            { text: "Evolving.", trigger: "level_up", chance: 0.8 }
+            { text: "Weak.", trigger: "kill", chance: 0.6 },
+            { text: "More blood.", trigger: "kill", chance: 0.4 },
+            { text: "Boring.", trigger: "walk", chance: 0.05 },
+            { text: "Heh, good hit.", trigger: "hurt", chance: 0.5 },
+            { text: "Not... done...", trigger: "low_hp", chance: 0.8 }
         ]
     }
 };
 
-/**
- * Data definitions for enemies.
- * @constant
- * @type {Array<Object>}
- */
 const $dataEnemies = [
-    { id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter" },
-    { id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
-    { id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush" },
-    { id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret" },
-    { id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3, ai: "hunter" },
-    { id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter" },
-    { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" }
+    // Floor 1-5 (Kichijoji / Hospital)
+    { id: 1, name: "Pixie", hp: 15, atk: 3, exp: 5, color: 0xffaaaa, scale: 0.4, ai: "hunter", race: "Fairy", skills: ["dia", "zio"], talk: { type: "friendly" } },
+    { id: 2, name: "Kobold", hp: 20, atk: 5, exp: 8, color: 0x885544, scale: 0.5, ai: "patrol", race: "Jirae", skills: ["lunge"], talk: { type: "aggressive" } },
+    { id: 3, name: "Cait Sith", hp: 25, atk: 6, exp: 12, color: 0xffffaa, scale: 0.5, ai: "hunter", race: "Beast", skills: ["agi"], talk: { type: "greedy" } },
+    { id: 4, name: "Slime", hp: 30, atk: 4, exp: 6, color: 0x44ff44, scale: 0.6, ai: "patrol", race: "Slime", skills: ["lunge"], talk: { type: "dumb" } },
+
+    // Floor 6-10 (Shinjuku)
+    { id: 10, name: "Jack Frost", hp: 40, atk: 6, exp: 20, color: 0xaaccff, scale: 0.5, ai: "hunter", race: "Fairy", skills: ["bufu"], talk: { type: "friendly" } },
+    { id: 11, name: "Pyro Jack", hp: 40, atk: 6, exp: 20, color: 0xffaa44, scale: 0.5, ai: "hunter", race: "Fairy", skills: ["agi"], talk: { type: "friendly" } },
+    { id: 12, name: "Bodyconian", hp: 50, atk: 8, exp: 25, color: 0xff00ff, scale: 0.7, ai: "ambush", race: "Zombie", skills: ["lunge"], talk: { type: "seductive" } },
+
+    // Floor 11-15 (Roppongi / Law)
+    { id: 20, name: "Angel", hp: 60, atk: 8, exp: 35, color: 0xeeeeff, scale: 0.6, ai: "patrol", race: "Divine", skills: ["hama", "dia"], talk: { type: "law" } },
+    { id: 21, name: "Power", hp: 90, atk: 12, exp: 50, color: 0xffffff, scale: 0.8, ai: "hunter", race: "Divine", skills: ["zan", "tarukaja"], talk: { type: "law" } },
+
+    // Floor 16-20 (Cathedral / Chaos)
+    { id: 30, name: "Girimehkala", hp: 150, atk: 20, exp: 100, color: 0x440044, scale: 1.0, ai: "hunter", race: "Jaki", skills: ["mzio", "lunge"], talk: { type: "chaos" } },
+    { id: 31, name: "Surt", hp: 200, atk: 25, exp: 150, color: 0xff0000, scale: 1.2, ai: "hunter", race: "Tyrant", skills: ["maragi", "lunge"], talk: { type: "chaos" } }
 ];
 
-/**
- * Loot table for generating random items.
- * @constant
- * @type {Object}
- */
 const $dataLootTable = {
-    prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
-    weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
-    armors: [
-        { name: "N Vest", baseDef: 2, icon: "🦺", desc: "Basic protection." },
-        { name: "Kevlar", baseDef: 5, icon: "🛡️", desc: "Ballistic weave vest." },
-        { name: "Cmbt Suit", baseDef: 8, icon: "🧥", desc: "Full body tactical armor." },
-        { name: "Tac Gear", baseDef: 6, icon: "🥋", desc: "Lightweight ops gear." },
-        { name: "Crowd Shield", baseDef: 3, icon: "🛡️", desc: "Defends better in crowds.", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 5, condition: { type: 'enemy_count_range', range: 5, min: 3 } }] }
+    prefixes: [ { name: "Rusty", atk: -1 }, { name: "Std", atk: 0 }, { name: "Blessed", atk: 2 }, { name: "Cursed", atk: 3 }, { name: "Ancient", atk: 5 } ],
+    weapons: [
+        { name: "Knife", baseAtk: 4, icon: "🗡️", desc: "Survival knife." },
+        { name: "Pistol", baseAtk: 6, icon: "🔫", desc: "Handgun.", attackSkill: "gunshot" },
+        { name: "Sword", baseAtk: 8, icon: "⚔️", desc: "Ceremonial sword." },
+        { name: "Rifle", baseAtk: 10, icon: "︻", desc: "Assault rifle.", attackSkill: "gunshot" }
     ],
-    items: [ { name: "Medicine 1", type: "heal", val: 30, icon: "💊", desc: "Heals 30 HP." }, { name: "Medicine 2", type: "heal", val: 60, icon: "💉", desc: "Heals 60 HP." }, { name: "Stim", type: "pe", val: 20, icon: "🧪", desc: "Restores 20 PE." }, { name: "Antidote", type: "cure", val: 0, icon: "🧬", desc: "Cures poison." } ]
+    armors: [
+        { name: "Vest", baseDef: 3, icon: "🦺", desc: "Light armor." },
+        { name: "Suit", baseDef: 6, icon: "🧥", desc: "Demonica suit." },
+        { name: "Plate", baseDef: 10, icon: "🛡️", desc: "Heavy plating." }
+    ],
+    items: [
+        { name: "Medicine", type: "heal", val: 50, icon: "💊", desc: "Heals 50 HP." },
+        { name: "Life Stone", type: "heal", val: 30, icon: "💎", desc: "Heals 30 HP." },
+        { name: "Chakra Drop", type: "pe", val: 20, icon: "💧", desc: "Restores 20 MP." },
+        { name: "Bead", type: "heal", val: 200, icon: "📿", desc: "Full Heal." }
+    ]
 };
 
-/**
- * Configuration for floor generation.
- * @constant
- * @type {Object}
- */
 const $dataFloors = {
-    1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro' },
-    2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8 },
-    3: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 12 },
-    default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15 }
+    1: { width: 25, height: 25, rooms: 10, enemies: 5, loot: 4, cutscene: 'intro', colors: { floor: 0x444455, wall: 0x222233, fog: 0x050510, bg: 0x000000 } },
+    5: { width: 30, height: 30, rooms: 15, enemies: 10, loot: 6, colors: { floor: 0x553333, wall: 0x331111, fog: 0x100000, bg: 0x000000 } }, // Boss floor transition
+    6: { width: 35, height: 35, rooms: 15, enemies: 12, loot: 8, colors: { floor: 0x333333, wall: 0x552222, fog: 0x201010, bg: 0x100000 } }, // Shinjuku
+    11: { width: 40, height: 40, rooms: 20, enemies: 15, loot: 10, colors: { floor: 0x111144, wall: 0x000022, fog: 0x000020, bg: 0x000010 } }, // Roppongi
+    16: { width: 50, height: 50, rooms: 25, enemies: 20, loot: 15, colors: { floor: 0x330000, wall: 0x220000, fog: 0x100000, bg: 0x050000 } }, // Cathedral
+    default: { width: 30, height: 30, rooms: 15, enemies: 10, loot: 5 }
 };
 
-/**
- * Data for cutscenes.
- * @constant
- * @type {Object}
- */
 const $dataCutscenes = {
     'intro': [
         { type: 'wait', time: 500 },
-        { type: 'dialog', text: "Target area reached. The stack goes deep.", speaker: "KYLE" },
-        { type: 'dialog', text: "My mitochondria... they're screaming.", speaker: "AYA" },
-        { type: 'log', text: "Mission Start." }
+        { type: 'dialog', text: "Kichijoji Hospital... Demons have appeared.", speaker: "HERO" },
+        { type: 'dialog', text: "We need to find the terminal.", speaker: "LAW" },
+        { type: 'dialog', text: "Whatever, let's just kill them.", speaker: "CHAOS" },
+        { type: 'log', text: "SURVIVE." }
     ]
 };

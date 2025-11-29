@@ -336,15 +336,31 @@ class Game_Actor extends Game_Battler {
     /**
      * Creates a new Game_Actor.
      * @param {string} name - The name of the character (must match a key in $dataClasses).
+     * @param {Object} [dataOverride] - Optional data to override class data (for Demons).
      */
-    constructor(name) {
+    constructor(name, dataOverride = null) {
         super();
-        const d = $dataClasses[name];
+        let d = $dataClasses[name];
+
+        // If no class data found (e.g. Demon name), look in Enemies or use override
+        if (!d && dataOverride) {
+            d = dataOverride;
+            // Normalize Enemy Data to Actor Data
+            d.job = d.race || "Demon";
+            d.pe = d.mp || 20;
+            d.mpe = d.mp || 20;
+            d.skills = d.skills || [];
+            // Demons don't have equipment slots by default but inherit the object structure
+        } else if (!d) {
+             // Fallback
+             d = { hp: 10, atk: 1, def: 1, pe: 10, job: "Unknown", color: 0xffffff, skills: [] };
+        }
+
         Object.assign(this, d);
         this.name = name;
-        this.mhp = d.hp;
+        this.mhp = d.hp || d.mhp;
         this.hp = this.mhp;
-        this.mpe = 100;
+        this.mpe = d.mpe || 100;
         this.pe = d.pe;
         // this.equip, this.states initialized in super
         this.level = 1;
@@ -352,8 +368,10 @@ class Game_Actor extends Game_Battler {
         this.nextExp = 50;
         this.inventory = [];
 
-        if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
-        if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
+        if(name === "Hero") this.equip.weapon = new Game_Weapon({name:"COMP Blade", baseAtk:3, icon:"🗡️"}, {name:"Std", atk:0});
+        if(name === "Law") this.equip.armor = new Game_Armor({name:"Order Robe", baseDef:3, icon:"🦺"});
+        if(name === "Chaos") this.equip.weapon = new Game_Weapon({name:"Spiked Bat", baseAtk:4, icon:"🏏"}, {name:"Rst", atk:-1});
+
         this.uid = 'player';
         this.direction = {x:0, y:1};
     }
@@ -405,14 +423,20 @@ class Game_Party {
      * Creates an instance of Game_Party.
      */
     constructor() {
+        // Initial party is just Hero. Law and Chaos join later via events or are defaulted for now.
+        // For the adaptation start, let's have Hero alone, or Hero + Law + Chaos.
+        // Let's go with full party for gameplay immediate testing.
+        this.members = [new Game_Actor("Hero"), new Game_Actor("Law"), new Game_Actor("Chaos")];
         /** @type {Array<Game_Actor>} */
-        this.members = [new Game_Actor("Aya"), new Game_Actor("Kyle"), new Game_Actor("Eve")];
+        this.stock = [];
         /** @type {number} */
         this.index = 0;
         /** @type {Array<Game_Item|Game_Weapon|Game_Armor>} */
         this.inventory = [];
         /** @type {number} */
         this.maxInventory = 20;
+        /** @type {number} */
+        this.alignment = 0; // <0 Chaos, >0 Law
     }
 
     /**
@@ -439,7 +463,48 @@ class Game_Party {
      * Distributes experience points to the party.
      * @param {number} a - The base amount of experience.
      */
-    distributeExp(a) { const k = this.active(); this.members.forEach(m => !m.isDead() && m.gainExp(m===k ? a : Math.floor(a*0.5))); }
+    distributeExp(a) {
+        const k = this.active();
+        this.members.forEach(m => !m.isDead() && m.gainExp(m===k ? a : Math.floor(a*0.5)));
+    }
+
+    /**
+     * Adds an enemy to the stock as a recruit.
+     * @param {Game_Enemy} enemy - The enemy to recruit.
+     */
+    recruit(enemy) {
+        if (this.stock.length >= 8) {
+             $gameSystem.log("COMP is full!");
+             return false;
+        }
+        // Create new actor from enemy data
+        // We need to ensure enemy data has 'skills' or we default
+        const data = Object.assign({}, enemy);
+        if(!data.skills) data.skills = ["lunge"]; // Default skill
+
+        const demon = new Game_Actor(enemy.name, data);
+        this.stock.push(demon);
+        $gameSystem.log(`${enemy.name} joined stock.`);
+        return true;
+    }
+
+    /**
+     * Swaps a party member with a stock member.
+     * @param {number} partyIndex - Index in members array (0,1,2).
+     * @param {number} stockIndex - Index in stock array.
+     */
+    swapMember(partyIndex, stockIndex) {
+        if (partyIndex === 0) {
+            $gameSystem.log("Cannot remove Hero.");
+            return;
+        }
+        const member = this.members[partyIndex];
+        const demon = this.stock[stockIndex];
+
+        this.members[partyIndex] = demon;
+        this.stock[stockIndex] = member;
+        $gameSystem.log(`Summoned ${demon.name}!`);
+    }
 
     /**
      * Adds an item to the party's inventory.
@@ -777,6 +842,121 @@ class Game_Map {
         $gameSystem.log(`${enemy.name} dissolved.`);
         EventBus.emit('sync_enemies');
         $gameBanter.trigger('kill', {x: this.playerX, y: this.playerY});
+    }
+
+    /**
+     * Initiates negotiation with an adjacent enemy.
+     */
+    async negotiate() {
+        if ($gameSystem.isBusy || $gameSystem.isInputBlocked) return;
+        const actor = $gameParty.active();
+        const dx = actor.direction.x; const dy = actor.direction.y;
+        const tx = this.playerX + dx; const ty = this.playerY + dy;
+
+        const enemy = this.enemies.find(e => e.x === tx && e.y === ty);
+        if (!enemy) {
+            $gameSystem.log("No one there.");
+            return;
+        }
+
+        $gameSystem.isInputBlocked = true;
+
+        // Simple Negotiation State Machine
+        // Step 1: Greeting
+        const processStep = (stepId) => {
+            let stepData = { text: "...", choices: [] };
+
+            if (stepId === 'start') {
+                const talkType = enemy.talk ? enemy.talk.type : 'dumb';
+                if (talkType === 'friendly') {
+                    stepData.text = "Hee-ho! You want to talk, ho?";
+                    stepData.choices = [
+                        { label: "Join me.", next: 'join_req' },
+                        { label: "Give item.", next: 'item_req' },
+                        { label: "Nevermind.", next: 'leave' }
+                    ];
+                } else if (talkType === 'aggressive') {
+                    stepData.text = "You got guts, human. What do you want?";
+                    stepData.choices = [
+                        { label: "Your power.", next: 'join_hard' },
+                        { label: "Just passing.", next: 'leave' }
+                    ];
+                } else {
+                    stepData.text = "Grrr... (It seems confused)";
+                    stepData.choices = [
+                        { label: "Leave.", next: 'leave' }
+                    ];
+                }
+            } else if (stepId === 'join_req') {
+                 stepData.text = "You want me? Give me something shiny!";
+                 stepData.choices = [
+                     { label: "Give Life Stone", next: 'check_item_lstone' },
+                     { label: "Give HP", next: 'check_hp' },
+                     { label: "Refuse", next: 'anger' }
+                 ];
+            } else if (stepId === 'join_hard') {
+                 stepData.text = "Prove your strength!";
+                 stepData.choices = [
+                     { label: "Intimidate", next: 'check_level' },
+                     { label: "Beg", next: 'anger' }
+                 ];
+            } else if (stepId === 'check_item_lstone') {
+                 // Check if player has Life Stone (simplified for now: just succeed)
+                 // In real impl, check inventory.
+                 const hasItem = true;
+                 if (hasItem) {
+                     $gameParty.recruit(enemy);
+                     stepData.text = "Thanks! I'm with you now.";
+                     stepData.choices = [{ label: "Done", next: 'end_remove' }];
+                 }
+            } else if (stepId === 'check_hp') {
+                 actor.takeDamage(10);
+                 stepData.text = "Yummy! Okay, I'll join.";
+                 $gameParty.recruit(enemy);
+                 stepData.choices = [{ label: "Done", next: 'end_remove' }];
+            } else if (stepId === 'check_level') {
+                 if (actor.level >= enemy.hp / 5) { // Arbitrary check
+                     stepData.text = "Fine. You are strong. I submit.";
+                     $gameParty.recruit(enemy);
+                     stepData.choices = [{ label: "Done", next: 'end_remove' }];
+                 } else {
+                     stepData.text = "Pathetic! Die!";
+                     stepData.choices = [{ label: "...", next: 'end_attack' }];
+                 }
+            } else if (stepId === 'anger') {
+                 stepData.text = "You're wasting my time!";
+                 stepData.choices = [{ label: "...", next: 'end_attack' }];
+            } else if (stepId === 'leave') {
+                 stepData.text = "Bye then.";
+                 stepData.choices = [{ label: "Bye", next: 'end' }];
+            } else if (stepId === 'end_remove') {
+                 this.enemies = this.enemies.filter(e => e !== enemy);
+                 EventBus.emit('sync_enemies');
+                 UI.closeNegotiationModal();
+                 $gameSystem.isInputBlocked = false;
+                 return;
+            } else if (stepId === 'end_attack') {
+                 UI.closeNegotiationModal();
+                 $gameSystem.isInputBlocked = false;
+                 // Enemy attacks immediately
+                 const dmg = BattleManager.calcDamage(enemy, actor);
+                 actor.takeDamage(dmg);
+                 $gameSystem.log(`${enemy.name} attacks angrily!`);
+                 EventBus.emit('float_text', dmg, actor.x, actor.y, "#f00");
+                 return;
+            } else {
+                 // Default end
+                 UI.closeNegotiationModal();
+                 $gameSystem.isInputBlocked = false;
+                 return;
+            }
+
+            UI.showNegotiationModal(enemy, stepData, (choice) => {
+                 processStep(choice.next);
+            });
+        };
+
+        processStep('start');
     }
 
     /**

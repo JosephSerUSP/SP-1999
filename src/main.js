@@ -64,6 +64,8 @@ class SceneManager {
              else if(this.keys["ArrowRight"]||this.keys["d"]) $gameMap.processTurn(1,0);
              else if(this.keys[" "]) $gameMap.processTurn(0,0);
              else if(this.keys["Enter"]) $gameMap.playerAttack();
+             else if(this.keys["t"]) $gameMap.negotiate();
+             else if(this.keys["c"]) UI.showCompModal();
         }
     }
 
