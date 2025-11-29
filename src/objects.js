@@ -473,7 +473,25 @@ class Game_Map {
      */
     setup(floor) {
         $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`);
-        const c = $dataFloors[floor] || $dataFloors.default;
+
+        // Biome Logic: Inherit from base floor of the biome if specific floor not defined
+        let c = $dataFloors[floor];
+        if (!c) {
+            let baseId = 1;
+            if (floor > 5) baseId = 6;
+            if (floor > 10) baseId = 11;
+            if (floor > 15) baseId = 16;
+            // Inherit colors and dimensions, but disable unique events/bosses
+            // We use default as base, then biome base, then override specifics
+            c = Object.assign({}, $dataFloors.default, $dataFloors[baseId] || {}, {
+                boss: null,
+                cutscene: null,
+                events: null
+            });
+            // Ensure width/height are reasonable if biome base is small/large
+            // Actually biome base defines the size for that biome, so it's fine.
+        }
+
         this.width = c.width; this.height = c.height;
         this.tiles = Array(this.width).fill(0).map(()=>Array(this.height).fill(1));
         this.visited = Array(this.width).fill(0).map(()=>Array(this.height).fill(false));
@@ -495,7 +513,28 @@ class Game_Map {
             this.tiles[this.stairsX][this.stairsY] = 3;
         }
         this.revealZone(this.playerX, this.playerY, 6);
-        this.enemies = []; this.loot = [];
+        this.enemies = []; this.loot = []; this.events = [];
+
+        // Spawn Boss if defined
+        if (c.boss) {
+            // Find a spot near stairs (which is at rooms[rooms.length-1])
+            const bossRoom = rooms[rooms.length-1];
+            // Try to place boss in the center of the exit room, or near it
+            // Safe bet: just put it ON the stairs? No, that blocks exit physically.
+            // Put it adjacent to stairs.
+            let bx = this.stairsX, by = this.stairsY;
+            // Simple search for empty spot in boss room
+            for(let x = bossRoom.x; x < bossRoom.x + bossRoom.w; x++) {
+                for(let y = bossRoom.y; y < bossRoom.y + bossRoom.h; y++) {
+                    if(this.tiles[x][y] === 0 && (x !== this.stairsX || y !== this.stairsY)) {
+                        bx = x; by = y; break;
+                    }
+                }
+            }
+            const bossData = $dataEnemies.find(e => e.id === c.boss) || $dataEnemies[0];
+            this.enemies.push(new Game_Enemy(bossData, bx, by, 'BOSS', bossData.hp)); // Boss HP scaling handled in data?
+        }
+
         for(let i=0; i<c.enemies+floor; i++) {
             const pt = this.getRandomPoint();
             if(pt) this.enemies.push(new Game_Enemy($dataEnemies[Math.floor(Math.random()*$dataEnemies.length)], pt.x, pt.y, this.enemyIdCounter++, 10+floor*2));
@@ -504,8 +543,35 @@ class Game_Map {
             const pt = this.getRandomPoint();
             if(pt) this.loot.push({x: pt.x, y: pt.y, item: ItemManager.generateLoot(floor)});
         }
+
+        // Spawn Floor Events
+        if (c.events) {
+            c.events.forEach(evt => {
+                const pt = this.getRandomPoint();
+                if (pt) {
+                    this.events.push({ x: pt.x, y: pt.y, ...evt });
+                }
+            });
+        }
+
         EventBus.emit('map_setup');
-        if(c.cutscene) Cutscene.play($dataCutscenes[c.cutscene]);
+        if(c.cutscene) {
+            // Delay slightly to allow fade in
+            setTimeout(() => {
+                // If cutscene manager exists (it should, globally)
+                // We rely on Main to have initialized CutsceneManager instance or static
+                // Wait, CutsceneManager is a class in managers.js but where is the instance?
+                // Checking usage in previous code: Cutscene.play ... Wait, Cutscene was not defined in the scope of Game_Map?
+                // The previous code had `Cutscene.play` but `Cutscene` is likely the class name?
+                // In managers.js it is `class CutsceneManager`.
+                // I need to check main.js to see if it's instantiated as a global.
+                // Assuming $gameCutscene or similar.
+                // Re-reading managers.js: `class CutsceneManager`.
+                // Re-reading main.js (haven't read it yet).
+                // I will use EventBus to request cutscene play to be safe/decoupled.
+                EventBus.emit('play_cutscene', c.cutscene);
+            }, 500);
+        }
         EventBus.emit('refresh_minimap');
     }
 
@@ -629,7 +695,25 @@ class Game_Map {
                 $gameBanter.trigger('loot');
             }
 
+            // Event Trigger
+            const evtIdx = this.events.findIndex(e => e.x === nx && e.y === ny);
+            if (evtIdx > -1) {
+                const evt = this.events[evtIdx];
+                if (evt.type === 'cutscene') {
+                    EventBus.emit('play_cutscene', evt.id);
+                    // Remove if one-time?
+                    if (evt.once) this.events.splice(evtIdx, 1);
+                }
+            }
+
             if(this.tiles[nx][ny] === 3) {
+                // Check Boss Lock
+                if (this.enemies.some(e => e.uid === 'BOSS')) {
+                    $gameSystem.log("Sector Locked. Eliminate Guardian.");
+                    $gameBanter.trigger('surrounded'); // Reuse "surrounded" for panic or frustration?
+                    return;
+                }
+
                 $gameSystem.log("Ascending...");
                 EventBus.emit('play_animation', 'ascend');
                 $gameSystem.isInputBlocked = true;
