@@ -83,6 +83,23 @@ class ParticleSystem {
 }
 
 /**
+ * Helper to properly dispose of a Three.js object and its children.
+ * @param {THREE.Object3D} obj
+ */
+function disposeHierarchy(obj) {
+    obj.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+            if (Array.isArray(child.material)) {
+                child.material.forEach(m => m.dispose());
+            } else {
+                child.material.dispose();
+            }
+        }
+    });
+}
+
+/**
  * Main renderer class handling the 3D scene using Three.js.
  */
 class Renderer3D {
@@ -171,6 +188,7 @@ class Renderer3D {
      * Rebuilds the level geometry (floor, walls) based on current map data.
      */
     rebuildLevel() {
+        disposeHierarchy(this.mapGroup);
         this.mapGroup.clear();
         const count = $gameMap.width * $gameMap.height;
         const geoFloor = new THREE.PlaneGeometry(0.95, 0.95);
