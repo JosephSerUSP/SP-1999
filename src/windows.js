@@ -53,6 +53,13 @@ class UIManager {
          * @type {Object.<string, UI_Window>}
          */
         this.windows = {};
+
+        // Input / Focus Tracking
+        this.focusedWindow = null; // 'status' or 'cmd' or null (map)
+        this.focusIndex = 0;
+        this.focusableElements = []; // Array of DOM elements
+        this.activeModal = null; // Stores reference to active modal wrapper if any
+
         this.createLayout();
         this.initEvents();
     }
@@ -106,6 +113,126 @@ class UIManager {
         this.refreshCmd();
         this.refreshLog();
         this.refreshMinimap();
+
+        // Restore focus visual if valid
+        if (this.focusedWindow) {
+            this.setFocus(this.focusIndex);
+        }
+    }
+
+    /**
+     * Update Loop for Input Handling when UI is focused.
+     */
+    updateInput() {
+        if (!InputManager.isTriggered) return; // Safety check if method missing
+
+        if (InputManager.isTriggered('CANCEL')) {
+            if (this.activeModal) {
+                // If modal has a cancel button or X, click it, or just close
+                const closeBtn = this.activeModal.querySelector('#modal-close');
+                if (closeBtn) closeBtn.click();
+                else this.closeModal();
+            } else if (this.focusedWindow) {
+                this.blurWindow();
+            }
+            return;
+        }
+
+        if (InputManager.isTriggered('MENU')) {
+            if (!this.activeModal) {
+                if (!this.focusedWindow) {
+                    this.focusWindow('cmd');
+                } else if (this.focusedWindow === 'cmd') {
+                    this.focusWindow('status');
+                } else {
+                    this.blurWindow();
+                }
+            }
+            return;
+        }
+
+        // Navigation
+        if (this.focusableElements.length > 0) {
+            let nextIndex = this.focusIndex;
+            if (InputManager.isTriggered('DOWN') || InputManager.isTriggered('RIGHT')) nextIndex++;
+            if (InputManager.isTriggered('UP') || InputManager.isTriggered('LEFT')) nextIndex--;
+
+            // Wrap
+            if (nextIndex < 0) nextIndex = this.focusableElements.length - 1;
+            if (nextIndex >= this.focusableElements.length) nextIndex = 0;
+
+            if (nextIndex !== this.focusIndex) {
+                this.setFocus(nextIndex);
+            }
+
+            // Action
+            if (InputManager.isTriggered('OK')) {
+                const el = this.focusableElements[this.focusIndex];
+                if (el && !el.classList.contains('disabled')) el.click();
+            }
+        }
+    }
+
+    focusWindow(winKey) {
+        this.focusedWindow = winKey;
+        this.collectFocusables();
+        this.setFocus(0);
+    }
+
+    blurWindow() {
+        this.focusedWindow = null;
+        this.clearFocus();
+    }
+
+    collectFocusables() {
+        this.focusableElements = [];
+        let container = null;
+
+        if (this.activeModal) {
+            container = this.activeModal;
+        } else if (this.focusedWindow === 'cmd') {
+            container = this.windows.cmd.content;
+        } else if (this.focusedWindow === 'status') {
+            container = this.windows.status.content;
+        }
+
+        if (container) {
+            // Find all elements with known interactive classes
+            // We use querySelectorAll and filter manually or add a common class 'ui-focusable'
+            // Current interactive classes: 'cmd-btn', 'party-slot', 'item-row', and modals specific buttons
+            // Let's grab them generally
+            const candidates = container.querySelectorAll('.cmd-btn, .party-slot, .item-row');
+            candidates.forEach(el => this.focusableElements.push(el));
+
+            // Also grab custom modal buttons if not covered above
+            // (e.g. YES/NO buttons in confirm modal are .cmd-btn, so they are covered)
+            // Target selection list items are divs with click handlers but maybe no class?
+            // See showTargetSelectModal -> they have no class but have style.cursor='pointer'.
+            // Let's add a class to them in that method to make this easier.
+        }
+    }
+
+    setFocus(index) {
+        // Clear previous
+        this.focusableElements.forEach(el => el.classList.remove('focused'));
+
+        this.focusIndex = index;
+        if (this.focusableElements[index]) {
+            const el = this.focusableElements[index];
+            el.classList.add('focused');
+            el.scrollIntoView({ block: 'nearest' });
+
+            // Trigger mouseenter logic for tooltips
+            if (el.onmouseenter) el.onmouseenter({ clientX: el.getBoundingClientRect().right, clientY: el.getBoundingClientRect().top });
+        }
+    }
+
+    clearFocus() {
+        this.focusableElements.forEach(el => {
+            el.classList.remove('focused');
+            if (el.onmouseleave) el.onmouseleave();
+        });
+        this.focusableElements = [];
     }
 
     /**
@@ -322,6 +449,7 @@ class UIManager {
 
                 const renderEquip = (slot, item) => {
                     const row = document.createElement('div');
+                    row.className = 'item-row'; // Reuse class for focus
                     row.style.fontSize = "10px"; row.style.display = "flex"; row.style.justifyContent = "space-between";
                     row.style.cursor = item ? "pointer" : "default";
                     if(item) {
@@ -343,6 +471,10 @@ class UIManager {
 
             body.appendChild(leftCol); body.appendChild(rightCol);
             container.appendChild(body);
+
+            // Auto focus first element
+            this.collectFocusables();
+            this.setFocus(0);
         };
         this.createModal(`SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`, render, () => $gameSystem.isInputBlocked=false);
     }
@@ -400,6 +532,7 @@ class UIManager {
 
         $gameParty.members.forEach(m => {
             const btn = document.createElement('div');
+            btn.className = 'cmd-btn'; // Use cmd-btn for focus style
             let txt = m.name;
             if(itemPreview) {
                 if(itemPreview.category === 'weapon') {
@@ -413,8 +546,7 @@ class UIManager {
                 }
             }
             btn.innerHTML = txt;
-            btn.style.padding = '5px'; btn.style.border = '1px solid #333'; btn.style.marginBottom = '5px'; btn.style.cursor = 'pointer'; btn.style.color = '#'+m.color.toString(16);
-            btn.onmouseover = () => btn.style.background = '#333'; btn.onmouseout = () => btn.style.background = '';
+            btn.style.color = '#'+m.color.toString(16);
             btn.onclick = () => { callback(m); overlay.remove(); };
             overlay.appendChild(btn);
         });
@@ -423,7 +555,27 @@ class UIManager {
         cancel.innerText = "CANCEL"; cancel.style.color = "#888"; cancel.style.textAlign = "center"; cancel.style.cursor = "pointer"; cancel.style.fontSize = "10px";
         cancel.onclick = () => overlay.remove();
         overlay.appendChild(cancel);
+
+        // This is a "nested" modal interaction.
+        // We need to attach it to the DOM first
         document.getElementById('ui-root').appendChild(overlay);
+
+        // Then override focus manually for this overlay
+        // We'll treat it as a new "activeModal" temporarily
+        const prevModal = this.activeModal;
+        this.activeModal = overlay;
+        this.collectFocusables();
+        this.setFocus(0);
+
+        // Clean up on removal (monkey patch the remove function or just rely on flow?)
+        // The original logic just calls overlay.remove(). We need to restore focus to prevModal.
+        const originalRemove = overlay.remove.bind(overlay);
+        overlay.remove = () => {
+            originalRemove();
+            this.activeModal = prevModal;
+            this.collectFocusables();
+            this.setFocus(0); // Reset or remember index? 0 is fine for now.
+        };
     }
 
     /**
@@ -444,6 +596,19 @@ class UIManager {
 
         overlay.appendChild(yes); overlay.appendChild(no);
         document.getElementById('ui-root').appendChild(overlay);
+
+        const prevModal = this.activeModal;
+        this.activeModal = overlay;
+        this.collectFocusables();
+        this.setFocus(0);
+
+        const originalRemove = overlay.remove.bind(overlay);
+        overlay.remove = () => {
+            originalRemove();
+            this.activeModal = prevModal;
+            this.collectFocusables();
+            this.setFocus(0);
+        };
     }
 
     /**
@@ -481,6 +646,12 @@ class UIManager {
         buildFn(m.querySelector('.pe-content'));
         document.getElementById('ui-root').appendChild(m);
         m.querySelector('#modal-close').onclick = () => { this.closeModal(); if(closeCallback) closeCallback(); };
+
+        this.activeModal = m;
+        // Wait for content to potentially load/render if async? No, synchronous.
+        this.collectFocusables();
+        // If no focusables (e.g. Status modal), we still trap focus to allow cancelling
+        this.setFocus(0);
     }
 
     /**
@@ -488,5 +659,13 @@ class UIManager {
      */
     closeModal() {
         if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove();
+        this.activeModal = null;
+        this.clearFocus();
+
+        // Restore focus to previous window if any
+        if (this.focusedWindow) {
+            this.collectFocusables();
+            this.setFocus(this.focusIndex);
+        }
     }
 }

@@ -91,15 +91,37 @@ class CutsceneManager {
                 this.dialogEl.innerHTML = `
                     <div style="border-bottom:1px solid #444; margin-bottom:5px; padding-bottom:2px; font-weight:bold; color:${cmd.color || '#0ff'}">${cmd.speaker || 'SYSTEM'}</div>
                     <div style="font-size:14px; margin-bottom:10px;">${cmd.text}</div>
-                    <div style="font-size:10px; color:#666;">[CLICK TO CONTINUE]</div>
+                    <div style="font-size:10px; color:#666;">[CLICK / PRESS OK TO CONTINUE]</div>
                 `;
                 this.dialogEl.style.display = 'block';
-                const clickHandler = () => {
+
+                let advanced = false;
+                const advance = () => {
+                    if (advanced) return;
+                    advanced = true;
                     this.dialogEl.style.display = 'none';
-                    document.removeEventListener('click', clickHandler);
+                    document.removeEventListener('click', advance);
                     this.next();
                 };
-                setTimeout(() => document.addEventListener('click', clickHandler), 100);
+
+                // Allow mouse click
+                setTimeout(() => document.addEventListener('click', advance), 100);
+
+                // Allow keyboard Input (need to hook into update loop or just poll here?
+                // Since this blocks input, SceneManager loop is still running but game map updates are blocked.
+                // But SceneManager.loop calls InputManager.update().
+                // We need a way to check input here.
+                // We can't easily hook into the loop from here without a callback or polling interval.
+                // Let's use a polling interval for this specific blocking state.
+                const checkInput = setInterval(() => {
+                    if (advanced) { clearInterval(checkInput); return; }
+                    // We need to check InputManager state. InputManager updates in SceneManager loop.
+                    if (InputManager.isTriggered('OK')) {
+                        clearInterval(checkInput);
+                        advance();
+                    }
+                }, 100);
+
                 break;
             case 'wait':
                 setTimeout(() => this.next(), cmd.time);
