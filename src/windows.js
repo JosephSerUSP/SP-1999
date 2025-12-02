@@ -403,80 +403,39 @@ class UIManager {
      */
     showInventoryModal() {
         $gameSystem.isInputBlocked = true;
-        const render = (container) => {
-            container.innerHTML = '';
-            container.style.display = "flex"; container.style.flexDirection = "column"; container.style.gap = "10px"; container.style.height = "100%";
+        const w = new Window_Inventory();
+        w.show();
+        this.activeModal = w.el;
 
-            // Description Pane
-            const desc = document.createElement('div');
-            desc.style.height = "60px"; desc.style.borderBottom = "1px solid #444"; desc.style.marginBottom = "5px"; desc.style.padding = "5px"; desc.style.fontSize = "12px"; desc.style.color = "#aaa"; desc.style.fontStyle = "italic";
-            desc.innerText = "Select an item...";
-            container.appendChild(desc);
-
-            const body = document.createElement('div');
-            body.style.flex = "1"; body.style.display = "flex"; body.style.gap = "10px"; body.style.overflow = "hidden";
-
-            // Left Column: Item List
-            const leftCol = document.createElement('div');
-            leftCol.style.flex = "1"; leftCol.style.borderRight = "1px solid #444"; leftCol.style.paddingRight = "5px"; leftCol.style.overflowY = "auto";
-            if($gameParty.inventory.length === 0) leftCol.innerHTML = "<div style='color:#666; text-align:center; padding-top:20px;'>Empty</div>";
-
-            $gameParty.inventory.forEach((i, idx) => {
-                const r = document.createElement('div'); r.className = 'item-row';
-                r.innerHTML = `<span>${i.icon} ${i.name}</span><span style="font-size:10px;color:#666">${i.category.toUpperCase()}</span>`;
-                r.onmouseenter = () => desc.innerText = i.desc || "No description.";
-                r.onclick = () => {
-                    if(i.category === 'item') {
-                        this.showTargetSelectModal((t) => {
-                            this.showConfirmModal(`Use ${i.name} on ${t.name}?`, () => this.useConsumable(t, i, idx));
-                        });
-                    } else {
-                        this.showTargetSelectModal((t) => { this.equipGear(t, i, idx, () => { render(container); this.refresh(); }); }, i);
-                    }
-                };
-                leftCol.appendChild(r);
-            });
-
-            // Right Column: Squad Equip Status
-            const rightCol = document.createElement('div');
-            rightCol.style.flex = "1"; rightCol.style.display = "flex"; rightCol.style.flexDirection = "column"; rightCol.style.gap = "5px"; rightCol.style.overflowY = "auto";
-            rightCol.innerHTML = "<div style='text-align:center; color:var(--pe-gold); font-size:10px; margin-bottom:5px;'>SQUAD STATUS</div>";
-
-            $gameParty.members.forEach(m => {
-                const box = document.createElement('div');
-                box.style.border = "1px solid #333"; box.style.padding = "4px";
-                box.innerHTML = `<div style="font-weight:bold; color:#${m.color.toString(16)}; border-bottom:1px solid #222; margin-bottom:2px; display:flex; justify-content:space-between;"><span>${m.name}</span><span style="font-size:9px; color:#999">ATK:${m.getAtk()} DEF:${m.getDef()}</span></div>`;
-
-                const renderEquip = (slot, item) => {
-                    const row = document.createElement('div');
-                    row.className = 'item-row'; // Reuse class for focus
-                    row.style.fontSize = "10px"; row.style.display = "flex"; row.style.justifyContent = "space-between";
-                    row.style.cursor = item ? "pointer" : "default";
-                    if(item) {
-                        row.innerHTML = `<span>${slot}: ${item.icon} ${item.name}</span>`;
-                        row.onclick = () => {
-                            if($gameParty.inventory.length < $gameParty.maxInventory) {
-                                $gameParty.gainItem(item); m.equip[slot] = null; render(container); this.refresh();
-                            } else { alert("Inventory Full!"); }
-                        };
-                        row.onmouseover = () => row.style.color = "var(--pe-red)"; row.onmouseout = () => row.style.color = "";
-                    } else { row.innerHTML = `<span style="color:#444">${slot}: ---</span>`; }
-                    return row;
-                };
-
-                box.appendChild(renderEquip('weapon', m.equip.weapon));
-                box.appendChild(renderEquip('armor', m.equip.armor));
-                rightCol.appendChild(box);
-            });
-
-            body.appendChild(leftCol); body.appendChild(rightCol);
-            container.appendChild(body);
-
-            // Auto focus first element
-            this.collectFocusables();
-            this.setFocus(0);
+        // Add close logic
+        const closeBtn = document.createElement('span');
+        closeBtn.id = 'modal-close';
+        closeBtn.innerText = 'X';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.right = '5px';
+        closeBtn.style.top = '2px';
+        closeBtn.onclick = () => {
+             w.close();
+             w.destroy();
+             this.closeModal(); // Clean up state
+             $gameSystem.isInputBlocked = false;
         };
-        this.createModal(`SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`, render, () => $gameSystem.isInputBlocked=false);
+        w.headerEl.appendChild(closeBtn);
+
+        this.collectFocusables();
+        this.setFocus(0);
+
+        // Override closeModal to also destroy this specific window
+        const superClose = this.closeModal.bind(this);
+        this.closeModal = () => {
+            w.close();
+            w.destroy();
+            $gameSystem.isInputBlocked = false;
+            superClose();
+            // Restore original method
+            this.closeModal = superClose;
+        };
     }
 
     /**
@@ -617,19 +576,39 @@ class UIManager {
      */
     showStatusModal(a) {
         $gameSystem.isInputBlocked = true;
-        this.createModal(`STATUS: ${a.name}`, (c) => {
-            c.innerHTML = `<div style="display:flex; gap:10px; margin-bottom:10px;">
-                <div style="width:60px; height:60px; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-size:30px; color:#${a.color.toString(16)}">${a.name[0]}</div>
-                <div style="flex:1"><div class="stat-label">JOB: <span class="stat-val">${a.job}</span></div>
-                <div class="stat-label">HP: <span class="stat-val" style="color:var(--pe-green)">${a.hp}/${a.mhp}</span></div>
-                <div class="stat-label">PE: <span class="stat-val" style="color:var(--pe-red)">${a.pe}/${a.mpe}</span></div></div></div>
-                <hr style="border-color:#333; margin:10px 0;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
-                <div><div class="stat-label">ATK</div><div style="color:white">${a.getAtk()}</div></div>
-                <div><div class="stat-label">DEF</div><div style="color:white">${a.getDef()}</div></div>
-                <div><div class="stat-label">EXP</div><div style="color:white">${a.exp}/${a.nextExp}</div></div>
-                <div><div class="stat-label">LVL</div><div style="color:white">${a.level}</div></div></div>`;
-        }, () => $gameSystem.isInputBlocked=false);
+
+        const w = new Window_Status(a);
+        w.show();
+        this.activeModal = w.el;
+
+        // Add close logic
+        const closeBtn = document.createElement('span');
+        closeBtn.id = 'modal-close';
+        closeBtn.innerText = 'X';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.right = '5px';
+        closeBtn.style.top = '2px';
+        closeBtn.onclick = () => {
+             w.close();
+             w.destroy();
+             this.closeModal();
+             $gameSystem.isInputBlocked = false;
+        };
+        w.headerEl.appendChild(closeBtn);
+
+        this.collectFocusables();
+        // setFocus might fail if no buttons in status window, but we need it for ESC handling
+        this.setFocus(0);
+
+        const superClose = this.closeModal.bind(this);
+        this.closeModal = () => {
+            w.close();
+            w.destroy();
+            $gameSystem.isInputBlocked = false;
+            superClose();
+            this.closeModal = superClose;
+        };
     }
 
     /**
