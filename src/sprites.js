@@ -129,16 +129,32 @@ class Renderer3D {
         const w = container.clientWidth;
         const h = container.clientHeight;
         // Aspect ratio based on actual container size
-        this.camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 16);
+        this.camera = new THREE.PerspectiveCamera(50, (w && h) ? w/h : 1, 0.1, 16);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: false });
         // Viewport is half the size of the window, scaled up
         this.renderer.setSize(Math.floor(w/2), Math.floor(h/2), false);
         this.renderer.domElement.id = 'game-canvas';
+        this.renderer.domElement.style.width = '100%';
+        this.renderer.domElement.style.height = '100%';
+        this.renderer.domElement.style.imageRendering = 'pixelated';
+
         container.innerHTML = '';
         const wrapper = document.createElement('div');
         wrapper.id = 'game-view-wrapper'; wrapper.style.width = '100%'; wrapper.style.height = '100%';
         wrapper.appendChild(this.renderer.domElement); container.appendChild(wrapper);
+
+        const resizeObserver = new ResizeObserver(entries => {
+            const entry = entries[0];
+            const width = entry.contentRect.width;
+            const height = entry.contentRect.height;
+            if (width > 0 && height > 0) {
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(Math.floor(width/2), Math.floor(height/2), false);
+            }
+        });
+        resizeObserver.observe(container);
 
         this.scene.add(new THREE.AmbientLight(0x222222));
         const dirLight = new THREE.DirectionalLight(0x555555, 0.6); dirLight.position.set(10, 20, 10); this.scene.add(dirLight);
