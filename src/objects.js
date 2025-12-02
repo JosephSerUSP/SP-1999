@@ -669,20 +669,22 @@ class Game_Map {
                 actor.takeDamage(dmg);
                 $gameSystem.log(`${actor.name} takes poison dmg!`);
                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#808");
-                if(actor.isDead()) {
-                     $gameSystem.log(`${actor.name} collapsed.`);
-                     // Force rotation immediately if active actor died
-                     if($gameParty.active() === actor) {
-                         $gameParty.rotate();
-                         EventBus.emit('refresh_ui');
-                         // If everyone is dead, rotate() calls gameOver(), so we are good.
-                     }
-                }
             }
             if(s.duration <= 0) {
                 actor.removeState(s.id);
                 $gameSystem.log(`${actor.name}'s ${s.name} faded.`);
             }
+        }
+
+        // Check for death after all state effects
+        if(actor.isDead()) {
+             $gameSystem.log(`${actor.name} collapsed.`);
+             // Force rotation immediately if active actor died
+             if($gameParty.active() === actor) {
+                 $gameParty.rotate();
+                 EventBus.emit('refresh_ui');
+                 // If everyone is dead, rotate() calls gameOver(), so we are good.
+             }
         }
     }
 
