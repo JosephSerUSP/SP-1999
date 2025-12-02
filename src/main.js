@@ -39,13 +39,7 @@ class SceneManager {
         UI.refresh();
         $gameBanter.init(UI.windows.view.content);
         $gameSystem.log("System initialized.");
-
-        // INPUT POLLING
-        /** @type {Object.<string, boolean>} */
-        this.keys = {};
-        document.addEventListener('keydown', e => this.keys[e.key] = true);
-        document.addEventListener('keyup', e => this.keys[e.key] = false);
-
+        InputManager.init();
         this.loop();
     }
 
@@ -55,15 +49,25 @@ class SceneManager {
      */
     static loop() {
         requestAnimationFrame(() => this.loop());
+        InputManager.update();
         $gameBanter.update();
-        // Input Logic
+
+        // Delegate Input
+        // 1. UI Navigation
+        if (UI.activeModal || UI.focusedWindow) {
+            UI.updateInput();
+            return;
+        }
+
+        // 2. Map Gameplay
         if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !Renderer.isAnimating) {
-             if(this.keys["ArrowUp"]||this.keys["w"]) $gameMap.processTurn(0,-1);
-             else if(this.keys["ArrowDown"]||this.keys["s"]) $gameMap.processTurn(0,1);
-             else if(this.keys["ArrowLeft"]||this.keys["a"]) $gameMap.processTurn(-1,0);
-             else if(this.keys["ArrowRight"]||this.keys["d"]) $gameMap.processTurn(1,0);
-             else if(this.keys[" "]) $gameMap.processTurn(0,0);
-             else if(this.keys["Enter"]) $gameMap.playerAttack();
+             if(InputManager.isPressed('UP')) $gameMap.processTurn(0,-1);
+             else if(InputManager.isPressed('DOWN')) $gameMap.processTurn(0,1);
+             else if(InputManager.isPressed('LEFT')) $gameMap.processTurn(-1,0);
+             else if(InputManager.isPressed('RIGHT')) $gameMap.processTurn(1,0);
+             else if(InputManager.isPressed('OK') && !InputManager.isTriggered('OK')) { /* Prevent auto-repeat attack spam if desired, or allow hold? Original logic allowed hold. Keeping hold. */ $gameMap.playerAttack(); }
+             else if(InputManager.isTriggered('OK')) $gameMap.playerAttack(); // Ensure tap also works
+             else if(InputManager.isTriggered('MENU')) { UI.focusWindow('tactics'); }
         }
     }
 
