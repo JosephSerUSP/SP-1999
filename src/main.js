@@ -30,6 +30,7 @@ class SceneManager {
         $gameParty = new Game_Party();
         $gameMap = new Game_Map();
         UI = new UIManager();
+        $gameSystem.ui = UI; // Bind UI to game system for easy access in classes
         Renderer = new Renderer3D();
         Cutscene = new CutsceneManager();
         $gameBanter = new BanterManager();
