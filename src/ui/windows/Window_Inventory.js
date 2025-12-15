@@ -6,7 +6,7 @@ class Window_Inventory extends Window_Base {
     constructor() {
         super('inventory-modal', {
             left: '20%', top: '10%', width: '60%', height: '80%', zIndex: '100'
-        }, `SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`);
+        }, `INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`);
 
         // Track state internally for selection
         this.selectedItem = null;
@@ -24,9 +24,12 @@ class Window_Inventory extends Window_Base {
                     props: {
                         id: 'inv-desc-pane',
                         style: {
-                            height: '60px', borderBottom: '1px solid #444',
-                            marginBottom: '5px', padding: '5px',
-                            fontSize: '12px', color: '#aaa', fontStyle: 'italic'
+                            height: '60px',
+                            borderBottom: '1px solid rgba(0, 240, 255, 0.2)',
+                            background: 'rgba(0,0,0,0.3)',
+                            marginBottom: '5px', padding: '8px',
+                            fontSize: '12px', color: 'var(--c-text-sec)', fontStyle: 'italic',
+                            boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
                         }
                     },
                     children: [
@@ -58,7 +61,7 @@ class Window_Inventory extends Window_Base {
                     label: `${item.icon} ${item.name}`,
                     subLabel: item.category ? item.category.toUpperCase() : '???',
                     onClick: () => this.onItemClick(item, idx),
-                    onMouseEnter: () => this.updateDescription(item.desc || "No description.")
+                    onMouseEnter: (e) => this.updateDescription(item.desc || "No description.")
                 }
             };
         });
@@ -66,7 +69,7 @@ class Window_Inventory extends Window_Base {
         if (items.length === 0) {
             items.push({
                 component: Label,
-                props: { text: "Empty", align: 'center', color: '#666', style: { paddingTop: '20px' } }
+                props: { text: "NO ITEMS", align: 'center', color: '#666', style: { paddingTop: '20px', letterSpacing: '2px' } }
             });
         }
 
@@ -75,7 +78,7 @@ class Window_Inventory extends Window_Base {
             layout: new FlexLayout({ direction: 'column', gap: 0 }),
             props: {
                 flex: '1',
-                style: { borderRight: '1px solid #444', paddingRight: '5px', overflowY: 'auto' }
+                style: { borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '5px', overflowY: 'auto' }
             },
             children: items
         };
@@ -85,22 +88,29 @@ class Window_Inventory extends Window_Base {
         const members = $gameParty.members.map(m => {
             return {
                 component: Box,
-                props: { style: { marginBottom: '5px', border: '1px solid #333', padding: '4px' } },
-                layout: new FlexLayout({ direction: 'column', gap: 2 }),
+                props: {
+                    style: {
+                        marginBottom: '8px',
+                        border: '1px solid #333',
+                        padding: '6px',
+                        background: 'rgba(255,255,255,0.02)'
+                    }
+                },
+                layout: new FlexLayout({ direction: 'column', gap: 4 }),
                 children: [
                     // Header
                     {
                         type: 'container',
                         layout: new FlexLayout({ direction: 'row', justify: 'space-between' }),
-                        props: { style: { borderBottom: '1px solid #222', marginBottom: '2px' } },
+                        props: { style: { borderBottom: '1px solid #222', marginBottom: '4px', paddingBottom: '2px' } },
                         children: [
                             { component: Label, props: { text: m.name, color: '#' + m.color.toString(16), fontWeight: 'bold' } },
-                            { component: Label, props: { text: `ATK:${m.getAtk()} DEF:${m.getDef()}`, fontSize: '9px', color: '#999' } }
+                            { component: Label, props: { text: `ATK:${m.getAtk()} DEF:${m.getDef()}`, fontSize: '10px', color: '#888' } }
                         ]
                     },
                     // Slots
-                    this.createEquipRow('weapon', m.equip.weapon, m),
-                    this.createEquipRow('armor', m.equip.armor, m)
+                    this.createEquipRow('WEAPON', m.equip.weapon, m),
+                    this.createEquipRow('ARMOR', m.equip.armor, m)
                 ]
             };
         });
@@ -113,7 +123,7 @@ class Window_Inventory extends Window_Base {
                 style: { overflowY: 'auto' }
             },
             children: [
-                { component: Label, props: { text: 'SQUAD STATUS', align: 'center', color: 'var(--pe-gold)', fontSize: '10px', style: { marginBottom: '5px' } } },
+                { component: Label, props: { text: 'SQUAD STATUS', align: 'center', color: 'var(--c-accent-gold)', fontSize: '11px', style: { marginBottom: '8px', letterSpacing: '2px' } } },
                 ...members
             ]
         };
@@ -124,24 +134,36 @@ class Window_Inventory extends Window_Base {
             type: 'container', // Changed from Button to container (div) to avoid button styling issues
             props: {
                 className: 'item-row',
-                style: { fontSize: '10px', display: 'flex', justifyContent: 'space-between', cursor: item ? 'pointer' : 'default', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', padding: '2px' },
-                html: item ? `<span>${slot}: ${item.icon} ${item.name}</span>` : `<span style="color:#444">${slot}: ---</span>`,
+                style: {
+                    fontSize: '11px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    cursor: item ? 'pointer' : 'default',
+                    background: 'transparent',
+                    border: 'none',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '4px'
+                },
+                html: item ? `<span style="color:#aaa">${slot}:</span> <span style="color:white">${item.icon} ${item.name}</span>` : `<span style="color:#444">${slot}: ---</span>`,
                 onClick: () => {
-                     if (item) this.unequipItem(actor, slot);
+                     if (item) this.unequipItem(actor, slot.toLowerCase());
                 },
                 onMouseEnter: (e) => {
-                    if (item) e.target.style.color = "var(--pe-red)";
+                    if (item) {
+                        e.currentTarget.style.background = 'rgba(255, 42, 42, 0.2)'; // Warn/Remove color
+                        e.currentTarget.style.border = '1px solid var(--c-accent-warn)';
+                    }
                 },
                 onMouseLeave: (e) => {
-                    e.target.style.color = "";
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.border = 'none';
                 }
             }
         };
     }
 
     updateDescription(text) {
-        // Direct DOM manipulation for performance on hover, bypassing full re-render
-        // Though ideally we'd use state. But for now this is fine.
         const el = document.getElementById('inv-desc-text');
         if (el) el.innerText = text;
     }
@@ -181,19 +203,28 @@ class Window_Inventory extends Window_Base {
     }
 
     refreshAndTitle() {
-        this.title = `SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`;
+        this.title = `INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`;
         if (this.headerEl) {
+            // Rebuild Header Content while preserving close button
             const closeBtn = this.headerEl.querySelector('#modal-close');
-            this.headerEl.innerText = this.title;
+            this.headerEl.innerText = "";
+
+            // Add decorative box
+            const box = document.createElement('span');
+            box.style.display = 'inline-block';
+            box.style.width = '6px';
+            box.style.height = '6px';
+            box.style.background = 'var(--c-accent-main)';
+            box.style.marginRight = '8px';
+            box.style.boxShadow = 'var(--border-glow)';
+            this.headerEl.appendChild(box);
+
+            this.headerEl.appendChild(document.createTextNode(this.title));
+
             if (closeBtn) this.headerEl.appendChild(closeBtn);
         }
         this.refresh();
 
-        // Re-focus logic would go here if we had a robust focus system linked to components
-        // For now, UIManager handles focus separately via class names
-        // But since we rebuilt the DOM, we need to let UIManager know to re-collect focusables
-        // This is a bit tricky with the hybrid approach.
-        // We'll rely on UIManager's loop or manual trigger.
         if ($gameSystem.ui.activeModal === this.el) {
              $gameSystem.ui.collectFocusables();
              $gameSystem.ui.setFocus(0);

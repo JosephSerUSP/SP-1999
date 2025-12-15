@@ -20,6 +20,7 @@ class Label extends UIComponent {
         if (this.props.align) this.el.style.textAlign = this.props.align;
         if (this.props.fontSize) this.el.style.fontSize = typeof this.props.fontSize === 'number' ? this.props.fontSize + 'px' : this.props.fontSize;
         if (this.props.fontWeight) this.el.style.fontWeight = this.props.fontWeight;
+        if (this.props.className) this.el.classList.add(...this.props.className.split(' '));
     }
 }
 
@@ -38,7 +39,7 @@ class Button extends UIComponent {
         if (this.props.label) {
             this.el.innerText = this.props.label;
             if (this.props.subLabel) {
-                this.el.innerHTML = `<span>${this.props.label}</span><span style="font-size:10px; color:#666; margin-left: 5px;">${this.props.subLabel}</span>`;
+                this.el.innerHTML = `<span>${this.props.label}</span><span style="font-size:10px; opacity:0.7; margin-left: 5px;">${this.props.subLabel}</span>`;
             }
         }
         if (this.props.disabled) {
@@ -47,6 +48,9 @@ class Button extends UIComponent {
         } else {
             this.el.classList.remove('disabled');
             this.el.disabled = false;
+        }
+        if (this.props.className) {
+            this.el.classList.add(...this.props.className.split(' '));
         }
     }
 }
@@ -57,15 +61,21 @@ class Button extends UIComponent {
 class Gauge extends UIComponent {
     create() {
         const el = document.createElement('div');
+        el.className = 'ui-gauge';
+        // Inline styles for base sizing
         el.style.width = '100%';
         el.style.height = this.props.height || '4px';
-        el.style.backgroundColor = '#333';
+        el.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        el.style.border = '1px solid rgba(255,255,255,0.1)';
         el.style.marginTop = '2px';
+        el.style.position = 'relative';
 
         const fill = document.createElement('div');
+        fill.className = 'ui-gauge-fill';
         fill.style.height = '100%';
         fill.style.width = '0%';
-        fill.style.transition = 'width 0.2s';
+        fill.style.transition = 'width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        fill.style.boxShadow = '0 0 5px currentColor';
         el.appendChild(fill);
 
         this.fillEl = fill;
@@ -77,7 +87,11 @@ class Gauge extends UIComponent {
         if (this.fillEl) {
             const pct = Math.max(0, Math.min(100, this.props.percent || 0));
             this.fillEl.style.width = `${pct}%`;
-            this.fillEl.style.backgroundColor = this.props.color || '#fff';
+            // If color is a variable, we can't easily use currentColor for shadow unless we set it on color property
+            // So we set background color explicitly
+            const color = this.props.color || '#fff';
+            this.fillEl.style.backgroundColor = color;
+            this.fillEl.style.color = color; // For currentColor shadow
         }
     }
 }
@@ -87,10 +101,10 @@ class Gauge extends UIComponent {
  */
 class Separator extends UIComponent {
     create() {
-        const el = document.createElement('hr');
-        el.style.border = '0';
-        el.style.borderTop = '1px solid #333';
-        el.style.margin = '5px 0';
+        const el = document.createElement('div');
+        el.style.height = '1px';
+        el.style.background = 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)';
+        el.style.margin = '8px 0';
         return el;
     }
 }
@@ -103,6 +117,7 @@ class Box extends UIContainer {
         const el = document.createElement('div');
         el.style.border = '1px solid #333';
         el.style.padding = '5px';
+        el.style.background = 'rgba(0,0,0,0.2)';
         return el;
     }
 }

@@ -1,15 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Share+Tech+Mono&display=swap');
 
 :root {
-    --pe-dark: #050505;
-    --pe-panel-bg: linear-gradient(180deg, #1a1a1a 0%, #080808 100%);
-    --pe-teal-header: linear-gradient(90deg, #004d4d, #000);
-    --pe-gold: #fbbf24;
-    --pe-text-gray: #9ca3af;
-    --pe-green: #10b981;
-    --pe-red: #ef4444;
-    --pe-cyan: #00ffff;
+    /* --- Cyberpunk Palette --- */
+    --c-bg: #050508;
+    --c-panel: rgba(10, 10, 15, 0.85);
+    --c-panel-header: rgba(20, 20, 30, 0.95);
+
+    --c-accent-main: #00f0ff; /* Cyber Cyan */
+    --c-accent-sec: #ff00ff;  /* Neon Magenta */
+    --c-accent-warn: #ff2a2a; /* Danger Red */
+    --c-accent-ok: #00ff9d;   /* Success Green */
+    --c-accent-gold: #fbbf24; /* UI Highlights */
+
+    --c-text-pri: #e0e0e0;
+    --c-text-sec: #9ca3af;
+
     --font-ui: 'Share Tech Mono', monospace;
+
+    /* Effects */
+    --glass: blur(6px);
+    --border-glow: 0 0 4px rgba(0, 240, 255, 0.3);
+    --text-glow: 0 0 2px rgba(0, 240, 255, 0.5);
+
+    /* --- Legacy Compatibility Aliases --- */
+    /* Mapping old variables to new theme values to prevent breaking unpatched components */
+    --pe-dark: var(--c-bg);
+    --pe-panel-bg: var(--c-panel);
+    --pe-teal-header: linear-gradient(90deg, var(--c-accent-main), #000);
+    --pe-gold: var(--c-accent-gold);
+    --pe-text-gray: var(--c-text-sec);
+    --pe-green: var(--c-accent-ok);
+    --pe-red: var(--c-accent-warn);
+    --pe-cyan: var(--c-accent-main);
 }
 
 body {
@@ -18,7 +40,7 @@ body {
     overflow: hidden;
     font-family: var(--font-ui);
     user-select: none;
-    color: var(--pe-text-gray);
+    color: var(--c-text-sec);
     cursor: default;
     display: flex;
     justify-content: center;
@@ -30,57 +52,203 @@ body {
     width: 960px;
     height: 540px;
     position: relative;
-    background: black;
+    background: var(--c-bg);
     overflow: hidden;
-    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    box-shadow: 0 0 80px rgba(0,0,0,0.8);
+    /* Subtle Grid Background */
+    background-image:
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 
 #screen-fx {
     position: absolute;
     inset: 0;
-    background:
-        radial-gradient(circle, transparent 50%, black 120%),
-        linear-gradient(rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.2) 50%);
-    background-size: 100% 100%, 100% 4px;
     pointer-events: none;
     z-index: 9999;
-    opacity: 0.6;
+    /* Vignette & CRT Lines */
+    background:
+        radial-gradient(circle, transparent 60%, black 140%),
+        repeating-linear-gradient(
+            0deg,
+            rgba(0,0,0,0.1),
+            rgba(0,0,0,0.1) 1px,
+            transparent 1px,
+            transparent 2px
+        );
+    opacity: 0.7;
     mix-blend-mode: overlay;
 }
 
 /* --- UI SYSTEM --- */
 .pe-window {
     position: absolute;
-    background: var(--pe-panel-bg);
-    border: 1px solid #444;
-    box-shadow: 0 0 10px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
+    background: var(--c-panel);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    /* backdrop-filter: var(--glass); */ /* Removed for performance on low-end, can add back if smooth */
     display: flex;
     flex-direction: column;
-    padding: 2px;
+    padding: 0;
     pointer-events: auto;
+
+    /* Tech Corners using Clip-path or visual trickery */
+    /* Since clip-path cuts content, we use psuedo elements for corners or just simple borders */
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* Corner Accents */
+.pe-window::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px; width: 6px; height: 6px;
+    border-top: 1px solid var(--c-accent-main);
+    border-left: 1px solid var(--c-accent-main);
+    z-index: 2;
+}
+.pe-window::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px; width: 6px; height: 6px;
+    border-bottom: 1px solid var(--c-accent-main);
+    border-right: 1px solid var(--c-accent-main);
+    z-index: 2;
 }
 
 .pe-header {
-    background: var(--pe-teal-header);
-    color: white;
-    font-size: 12px;
-    padding: 2px 8px;
-    letter-spacing: 1px;
+    background: var(--c-panel-header);
+    color: var(--c-accent-main);
+    font-size: 13px;
+    padding: 6px 10px;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    border-bottom: 1px solid #000;
-    text-shadow: 1px 1px 0 #000;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    text-shadow: var(--text-glow);
+}
+
+/* Decorative square in header */
+.pe-header::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--c-accent-main);
+    margin-right: 8px;
+    box-shadow: var(--border-glow);
 }
 
 .pe-content {
     flex: 1;
-    padding: 6px;
-    overflow: hidden;
-    font-size: 12px;
+    padding: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    font-size: 13px;
+    color: var(--c-text-pri);
 }
 
+/* Scrollbar */
 .pe-content::-webkit-scrollbar { width: 4px; }
-.pe-content::-webkit-scrollbar-thumb { background: var(--pe-gold); }
+.pe-content::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+.pe-content::-webkit-scrollbar-thumb { background: var(--c-accent-main); }
 
+/* --- UI ELEMENTS --- */
+.ui-label {
+    line-height: 1.4;
+}
+
+.cmd-btn {
+    position: relative;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    color: var(--c-text-sec);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid transparent;
+    border-left: 2px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.1s ease-in-out;
+    overflow: hidden;
+}
+
+/* Button Hover State */
+.cmd-btn:hover, .cmd-btn.focused {
+    background: rgba(0, 240, 255, 0.05);
+    color: #fff;
+    border-left-color: var(--c-accent-main);
+    text-shadow: 0 0 5px var(--c-accent-main);
+    padding-left: 16px; /* Shift effect */
+}
+
+/* Scanline effect on hover */
+.cmd-btn:hover::after, .cmd-btn.focused::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent);
+    animation: scan-btn 1s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes scan-btn {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.cmd-btn.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(100%);
+}
+
+.stat-label {
+    color: var(--c-accent-gold);
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+.stat-val {
+    color: white;
+    float: right;
+}
+
+/* --- SPECIFIC LISTS --- */
+.item-row {
+    padding: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: flex;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.02);
+    margin-bottom: 2px;
+    transition: background 0.1s;
+}
+.item-row:hover, .item-row.focused {
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid var(--c-accent-main);
+    color: white;
+}
+
+.party-slot {
+    display: flex; gap: 8px; margin-bottom: 8px; padding: 6px;
+    border: 1px solid #333; transition: all 0.2s;
+    background: rgba(0,0,0,0.4);
+    cursor: pointer;
+    position: relative;
+}
+.party-slot:hover, .party-slot.focused {
+    border-color: var(--c-text-sec);
+    background: rgba(255,255,255,0.05);
+}
+.party-slot.active {
+    border-color: var(--c-accent-gold);
+    background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), transparent);
+    box-shadow: inset 2px 0 0 var(--c-accent-gold);
+}
+
+/* --- OVERLAYS --- */
 #floating-text-layer {
     position: absolute;
     inset: 0;
@@ -98,12 +266,13 @@ body {
 
 .float-digit {
     font-weight: bold;
-    font-size: 20px;
-    text-shadow: 2px 2px 0 #000;
+    font-size: 24px;
+    text-shadow: 0 0 5px var(--c-accent-warn);
     color: white;
     display: inline-block;
     opacity: 0;
     animation: bounce-digit 0.8s forwards cubic-bezier(0.25, 1, 0.5, 1);
+    font-family: 'Cinzel', serif; /* Distinct font for numbers */
 }
 
 @keyframes bounce-digit {
@@ -114,65 +283,32 @@ body {
     100% { transform: translateY(-10px) scale(1); opacity: 0; }
 }
 
-.item-row {
-    padding: 4px 6px;
-    cursor: pointer;
-    border: 1px solid transparent;
-    display: flex;
-    justify-content: space-between;
-    background: rgba(0,0,0,0.3);
-    margin-bottom: 2px;
-}
-.item-row:hover, .item-row.focused {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid var(--pe-gold);
-    color: white;
-}
-
-.party-slot {
-    display: flex; gap: 4px; margin-bottom: 6px; padding: 4px;
-    border: 1px solid #333; transition: all 0.2s;
-    background: rgba(0,0,0,0.3);
-    cursor: pointer;
-}
-.party-slot:hover, .party-slot.focused {
-    background: rgba(255,255,255,0.05);
-    border-color: #666;
-}
-.party-slot.active {
-    border-color: var(--pe-gold);
-    background: linear-gradient(90deg, rgba(251, 191, 36, 0.1), transparent);
-    transform: translateX(4px);
-}
-
-.cmd-btn {
-    padding: 8px; margin-bottom: 4px;
-    cursor: pointer; color: #aaa; border-left: 3px solid transparent;
-    background: rgba(0,0,0,0.2);
-    display: flex; justify-content: space-between;
-    align-items: center;
-}
-.cmd-btn:hover, .cmd-btn.focused { background: #222; color: #fff; border-left-color: var(--pe-gold); }
-.cmd-btn.disabled { opacity: 0.5; pointer-events: none; border-left-color: #333; }
-
-.stat-label { color: var(--pe-gold); font-weight: bold; }
-.stat-val { color: white; float: right; }
-
 #tooltip {
     position: absolute; pointer-events: none;
-    background: rgba(0,0,0,0.9); border: 1px solid var(--pe-gold);
-    padding: 8px; z-index: 100; display: none; max-width: 200px;
-    font-size: 11px; box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+    background: rgba(10, 10, 15, 0.95);
+    border: 1px solid var(--c-accent-gold);
+    padding: 10px; z-index: 100; display: none; max-width: 220px;
+    font-size: 12px;
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+    color: #eee;
 }
+#tooltip b { color: var(--c-accent-gold); font-size: 13px; text-transform: uppercase; }
 
 #cutscene-overlay {
-    position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
-    width: 50%; background: rgba(0,0,0,0.9); border: 1px solid #555;
-    padding: 15px; color: white; display: none; text-align: center;
-    font-family: var(--font-ui); z-index: 200;
-    box-shadow: 0 0 20px rgba(0,255,255,0.1);
+    position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+    width: 60%;
+    background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 20%, rgba(0,0,0,0.9) 80%, rgba(0,0,0,0) 100%);
+    border-top: 1px solid #555;
+    border-bottom: 1px solid #555;
+    padding: 20px 40px;
+    color: white;
+    display: none;
+    text-align: center;
+    font-family: var(--font-ui);
+    z-index: 200;
+    text-shadow: 0 0 5px #000;
 }
 
+/* Canvas */
 #game-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-
-#minimap-canvas { image-rendering: pixelated; background: #000; }
+#minimap-canvas { image-rendering: pixelated; background: #000; border: 1px solid #333; }
