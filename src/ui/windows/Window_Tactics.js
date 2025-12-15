@@ -23,23 +23,20 @@ class Window_Tactics extends Window_Base {
         actor.skills.forEach(k => {
             const s = $dataSkills[k];
             const disabled = actor.pe < s.cost;
+
+            // SubLabel styling
+            let costLabel = `${s.cost} PE`;
+            if (disabled) {
+                 costLabel = `<span style="color:var(--c-accent-warn)">${s.cost} PE</span>`;
+            } else {
+                 costLabel = `<span style="color:var(--c-accent-main)">${s.cost} PE</span>`;
+            }
+
             children.push(this.createCommand(
                 s.name,
-                `${s.cost}PE`,
+                costLabel,
                 () => {
                     if (!$gameSystem.isBusy) $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k));
-                    // Note: original code called processTurn AND executeSkill immediately?
-                    // Original: $gameMap.processTurn(0,0,()=>BattleManager.executeSkill(actor, k));
-                    // BattleManager.executeSkill(actor, k);
-                    // This looks like double execution in original code?
-                    // Ah, processTurn takes a callback.
-                    // But then it calls executeSkill AGAIN outside?
-                    // Wait, looking at src/windows.js original:
-                    // if(!$gameSystem.isBusy) $gameMap.processTurn(0,0,()=>BattleManager.executeSkill(actor, k));
-                    // BattleManager.executeSkill(actor, k);
-                    // That implies if NOT busy, do turn+skill. If BUSY, do skill immediately?
-                    // That seems wrong.
-                    // Let's assume processTurn is the correct path for action.
                 },
                 disabled,
                 s,
@@ -69,6 +66,9 @@ class Window_Tactics extends Window_Base {
                 onMouseEnter: (e) => {
                     if (skill) {
                         Renderer.showRange(skill);
+                        // Tooltip styling uses HTML, so we can use classes/vars there too if we update tooltip logic,
+                        // but currently it's hardcoded inline or in style.css.
+                        // style.css has #tooltip b { color: var(--c-accent-gold) } so we are good.
                         $gameSystem.ui.showTooltip(e, `<b>${skill.name}</b><br>${skill.desc(actor)}`);
                     }
                 },

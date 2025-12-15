@@ -29,7 +29,8 @@ class Window_Log extends Window_Base {
                     style: {
                         opacity: 1 - i * 0.1,
                         marginBottom: '4px',
-                        color: i === 0 ? '#fff' : undefined
+                        color: i === 0 ? 'var(--c-accent-main)' : undefined, // Highlight latest log
+                        textShadow: i === 0 ? 'var(--text-glow)' : 'none'
                     }
                 }
             };
