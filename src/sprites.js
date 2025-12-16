@@ -297,6 +297,30 @@ class Renderer3D {
             this.isAscending = true;
             this.ascendProgress = 0;
             this.zoomProgress = 0;
+        } else if (type === 'projectile') {
+            // Visual projectile
+            const geo = new THREE.SphereGeometry(0.1, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: data.color || 0xffff00 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(data.x1, 0.5, data.y1);
+            this.scene.add(mesh);
+
+            const start = new THREE.Vector3(data.x1, 0.5, data.y1);
+            const end = new THREE.Vector3(data.x2, 0.5, data.y2);
+            let progress = 0;
+
+            const animateProjectile = () => {
+                progress += 0.1; // Speed
+                if(progress >= 1) {
+                    this.scene.remove(mesh);
+                    mesh.geometry.dispose();
+                    mesh.material.dispose();
+                } else {
+                    mesh.position.lerpVectors(start, end, progress);
+                    requestAnimationFrame(animateProjectile);
+                }
+            };
+            animateProjectile();
         } else if (type === 'lunge') {
             this.lungeTarget = new THREE.Vector3(data.tx, 0.5, data.ty);
             setTimeout(() => { this.lungeTarget = null; }, 150);
