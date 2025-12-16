@@ -155,9 +155,6 @@ class CaveGenerator extends MapGenerator {
         if (openSpots.length > 0) {
             this.startPos = openSpots[Math.floor(Math.random() * openSpots.length)];
             this.endPos = openSpots[Math.floor(Math.random() * openSpots.length)];
-
-            // Basic guarantee: Dig a straight line if needed.
-            // For now, assume large enough cave is connected.
         } else {
             // Fallback
              this.fillRegion(1, 1, 3, 3, 0);
@@ -195,3 +192,40 @@ class CaveGenerator extends MapGenerator {
         return count;
     }
 }
+
+/**
+ * Registry for managing and retrieving map generators.
+ */
+class GeneratorRegistry {
+    constructor() {
+        this.generators = {};
+    }
+
+    /**
+     * Registers a generator class with a key.
+     * @param {string} key - The unique identifier for the generator.
+     * @param {Class} cls - The generator class (extends MapGenerator).
+     */
+    register(key, cls) {
+        this.generators[key] = cls;
+    }
+
+    /**
+     * Creates a generator instance.
+     * @param {string} key - The generator key.
+     * @param {number} width - Map width.
+     * @param {number} height - Map height.
+     * @param {Object} config - Configuration object.
+     * @returns {MapGenerator} The generator instance.
+     */
+    create(key, width, height, config) {
+        const GenClass = this.generators[key] || this.generators['default'] || DungeonGenerator;
+        return new GenClass(width, height, config);
+    }
+}
+
+// Initialize Global Registry
+const $generatorRegistry = new GeneratorRegistry();
+$generatorRegistry.register('dungeon', DungeonGenerator);
+$generatorRegistry.register('cave', CaveGenerator);
+$generatorRegistry.register('default', DungeonGenerator);

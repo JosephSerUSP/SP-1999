@@ -473,39 +473,56 @@ class Game_Map {
      */
     setup(floor) {
         $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`);
+        this.generate(floor);
+    }
+
+    /**
+     * Generates the map using the configured generator.
+     * @param {number} floor - The floor ID.
+     */
+    generate(floor) {
         const c = $dataFloors[floor] || $dataFloors.default;
-        this.width = c.width; this.height = c.height;
-        this.tiles = Array(this.width).fill(0).map(()=>Array(this.height).fill(1));
-        this.visited = Array(this.width).fill(0).map(()=>Array(this.height).fill(false));
-        const rooms = [];
-        for(let i=0; i<c.rooms; i++) {
-            const w = 4+Math.floor(Math.random()*5), h = 4+Math.floor(Math.random()*5);
-            const x = Math.floor(Math.random()*(this.width-w-2))+1, y = Math.floor(Math.random()*(this.height-h-2))+1;
-            let ov = false;
-            for(let r of rooms) if(x<r.x+r.w+1 && x+w+1>r.x && y<r.y+r.h+1 && y+h+1>r.y) { ov = true; break; }
-            if(!ov) {
-                rooms.push({x,y,w,h,cx:Math.floor(x+w/2), cy:Math.floor(y+h/2)});
-                for(let rx=x; rx<x+w; rx++) for(let ry=y; ry<y+h; ry++) this.tiles[rx][ry] = 0;
-                if(rooms.length > 1) this.carveTunnel(rooms[rooms.length-2].cx, rooms[rooms.length-2].cy, rooms[rooms.length-1].cx, rooms[rooms.length-1].cy);
-            }
-        }
-        if(rooms.length > 0) {
-            this.playerX = rooms[0].cx; this.playerY = rooms[0].cy;
-            this.stairsX = rooms[rooms.length-1].cx; this.stairsY = rooms[rooms.length-1].cy;
+        this.width = c.width;
+        this.height = c.height;
+
+        // Delegate to Generator
+        const generatorType = c.generator || 'dungeon';
+        const generator = $generatorRegistry.create(generatorType, this.width, this.height, c);
+        const result = generator.generate();
+
+        this.tiles = result.tiles;
+        this.playerX = result.startPos.x;
+        this.playerY = result.startPos.y;
+        this.stairsX = result.endPos.x;
+        this.stairsY = result.endPos.y;
+
+        // Ensure stairs are marked
+        if (this.isValid(this.stairsX, this.stairsY)) {
             this.tiles[this.stairsX][this.stairsY] = 3;
         }
+
+        // Reset Visited
+        this.visited = Array(this.width).fill(0).map(() => Array(this.height).fill(false));
         this.revealZone(this.playerX, this.playerY, 6);
-        this.enemies = []; this.loot = [];
-        for(let i=0; i<c.enemies+floor; i++) {
+
+        // Entities
+        this.enemies = [];
+        this.loot = [];
+        this.enemyIdCounter = 0;
+
+        for (let i = 0; i < c.enemies + floor; i++) {
             const pt = this.getRandomPoint();
-            if(pt) this.enemies.push(new Game_Enemy($dataEnemies[Math.floor(Math.random()*$dataEnemies.length)], pt.x, pt.y, this.enemyIdCounter++, 10+floor*2));
+            if (pt) this.enemies.push(new Game_Enemy($dataEnemies[Math.floor(Math.random() * $dataEnemies.length)], pt.x, pt.y, this.enemyIdCounter++, 10 + floor * 2));
         }
-        for(let i=0; i<c.loot; i++) {
+        for (let i = 0; i < c.loot; i++) {
             const pt = this.getRandomPoint();
-            if(pt) this.loot.push({x: pt.x, y: pt.y, item: ItemManager.generateLoot(floor)});
+            if (pt) this.loot.push({x: pt.x, y: pt.y, item: ItemManager.generateLoot(floor)});
         }
+
         EventBus.emit('map_setup');
-        if(c.cutscene) Cutscene.play($dataCutscenes[c.cutscene]);
+        if(c.cutscene && typeof Cutscene !== 'undefined') {
+            Cutscene.play($dataCutscenes[c.cutscene]);
+        }
         EventBus.emit('refresh_minimap');
     }
 
