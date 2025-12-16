@@ -98,6 +98,7 @@ class Renderer3D {
         this.enemyLunges = new Map();
         this.shakeTargets = new Map();
         this.rangeGroup = new THREE.Group();
+        this.dangerGroup = new THREE.Group();
         this.cameraLookCurrent = new THREE.Vector3();
         this.particles = null;
         this.moveLerpStart = new THREE.Vector3();
@@ -113,6 +114,11 @@ class Renderer3D {
         this.instancedFloor = null;
         this.instancedWalls = null;
         this.currentRangeSkill = null;
+
+        // Shared resources for danger zones to prevent memory leaks
+        this.dangerGeo = new THREE.PlaneGeometry(0.9, 0.9);
+        this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+        this.dangerPool = [];
     }
 
     /**
@@ -168,6 +174,7 @@ class Renderer3D {
 
         this.mapGroup = new THREE.Group(); this.enemyGroup = new THREE.Group(); this.lootGroup = new THREE.Group(); this.rangeGroup = new THREE.Group();
         this.scene.add(this.mapGroup); this.scene.add(this.enemyGroup); this.scene.add(this.lootGroup); this.scene.add(this.rangeGroup);
+        this.scene.add(this.dangerGroup);
         this.particles = new ParticleSystem(this.scene);
         this.initEvents();
         this.animate();
@@ -229,6 +236,7 @@ class Renderer3D {
         this.cameraLookCurrent.set($gameMap.playerX, 0, $gameMap.playerY);
         this.isAscending = false; this.ascendProgress = 0; this.zoomProgress = 0; this.playerMesh.visible = true;
         this.syncEnemies(); this.syncLoot();
+        this.updateDangerZones();
     }
 
     /**
@@ -265,6 +273,51 @@ class Renderer3D {
             } else {
                 const target = this.enemyTargets.get(e.uid); if(target) target.set(e.x, 0.4, e.y);
             }
+        });
+        this.updateDangerZones();
+    }
+
+    /**
+     * Updates the visualization of enemy danger zones (attack ranges).
+     */
+    updateDangerZones() {
+        // Reset pool usage
+        this.dangerPool.forEach(m => m.visible = false);
+        let poolIdx = 0;
+
+        const dangerTiles = new Set();
+        $gameMap.enemies.forEach(e => {
+            if (e.ai === 'turret') {
+                const range = 5; // Hardcoded range for Turret
+                for (let x = e.x - range; x <= e.x + range; x++) {
+                    for (let y = e.y - range; y <= e.y + range; y++) {
+                        if ($gameMap.isValid(x, y) && $gameMap.tiles[x][y] !== 1) {
+                            const dist = Math.abs(x - e.x) + Math.abs(y - e.y);
+                            if (dist <= range) {
+                                if ($gameMap.checkLineOfSight(e.x, e.y, x, y)) {
+                                    dangerTiles.add(`${x},${y}`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        dangerTiles.forEach(key => {
+            const [x, y] = key.split(',').map(Number);
+            let m;
+            if (poolIdx < this.dangerPool.length) {
+                m = this.dangerPool[poolIdx];
+                m.visible = true;
+            } else {
+                m = new THREE.Mesh(this.dangerGeo, this.dangerMat);
+                m.rotation.x = -Math.PI / 2;
+                this.dangerGroup.add(m);
+                this.dangerPool.push(m);
+            }
+            m.position.set(x, 0.03, y);
+            poolIdx++;
         });
     }
 
