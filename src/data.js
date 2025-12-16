@@ -113,6 +113,8 @@ const $dataSkills = {
 
 /**
  * Data definitions for player classes/characters.
+ * Updated with new Banter System fields: priority, reply, id.
+ * Priorities: 100 (Story), 50 (High Reactivity), 10 (Idle/Flavor).
  * @constant
  * @type {Object.<string, Object>}
  */
@@ -120,106 +122,114 @@ const $dataClasses = {
     "Aya": {
         job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
         banter: [
-            { text: "Got one.", trigger: "kill", chance: 0.5 },
-            { text: "Messy work.", trigger: "kill", chance: 0.3 },
-            { text: "Down you go.", trigger: "kill", chance: 0.3 },
-            { text: "Another stat.", trigger: "kill", chance: 0.2 },
-            { text: "Clean shot.", trigger: "kill", chance: 0.2 },
-            { text: "Checking corners.", trigger: "walk", chance: 0.05 },
-            { text: "Watch your step.", trigger: "walk", chance: 0.05 },
-            { text: "Quiet...", trigger: "walk", chance: 0.05 },
-            { text: "Scanning area.", trigger: "walk", chance: 0.05 },
-            { text: "Don't like this quiet.", trigger: "walk", chance: 0.05 },
-            { text: "Too many of them!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Need backup here!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "They're everywhere.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Back to back!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Getting crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Found something.", trigger: "loot", chance: 0.8 },
-            { text: "Useful.", trigger: "loot", chance: 0.5 },
-            { text: "Bagging it.", trigger: "loot", chance: 0.5 },
-            { text: "Evidence?", trigger: "loot", chance: 0.3 },
-            { text: "Mine.", trigger: "loot", chance: 0.3 },
-            { text: "Damn it!", trigger: "hurt", chance: 0.5 },
-            { text: "Just a scratch.", trigger: "hurt", chance: 0.4 },
-            { text: "Need a medic!", trigger: "hurt", chance: 0.3 },
-            { text: "They hit hard.", trigger: "hurt", chance: 0.3 },
-            { text: "Ugh...", trigger: "hurt", chance: 0.3 },
-            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Vision blurring...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Not done yet.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Stronger.", trigger: "level_up", chance: 1.0 },
-            { text: "Experience pays off.", trigger: "level_up", chance: 0.8 }
+            // KILL
+            { text: "Got one.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Kyle", text: "Nice shot.", chance: 0.5 } },
+            { text: "Messy work.", trigger: "kill", chance: 0.2, priority: 10 },
+            { text: "Down you go.", trigger: "kill", chance: 0.2, priority: 10 },
+            { text: "Target down.", trigger: "kill", chance: 0.2, priority: 10 },
+
+            // WALK
+            { text: "Checking corners.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "Watch your step.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "Quiet...", trigger: "walk", chance: 0.05, priority: 10, reply: { speaker: "Eve", text: "It's never quiet.", chance: 0.5 } },
+            { text: "Scanning area.", trigger: "walk", chance: 0.05, priority: 10 },
+
+            // SURROUNDED (High Priority)
+            { text: "Too many of them!", trigger: "surrounded", chance: 0.6, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Kyle", text: "Hold the line!", chance: 1.0 } },
+            { text: "Back to back!", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+
+            // LOOT
+            { text: "Found something.", trigger: "loot", chance: 0.5, priority: 30 },
+            { text: "Useful.", trigger: "loot", chance: 0.3, priority: 30 },
+            { text: "Evidence?", trigger: "loot", chance: 0.2, priority: 30 },
+
+            // HURT
+            { text: "Damn it!", trigger: "hurt", chance: 0.4, priority: 50 },
+            { text: "Need a medic!", trigger: "hurt", chance: 0.3, priority: 50, reply: { speaker: "Kyle", text: "Sit tight.", chance: 0.6 } },
+
+            // LOW HP
+            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Vision blurring...", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+
+            // LEVEL UP
+            { text: "Stronger.", trigger: "level_up", chance: 1.0, priority: 70 },
+
+            // START (New)
+            { text: "Let's move.", trigger: "start", chance: 1.0, priority: 50 },
+            { text: "Stay focused.", trigger: "start", chance: 0.5, priority: 50, reply: { speaker: "Eve", text: "Focus...", chance: 0.4 } }
         ]
     },
     "Kyle": {
         job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
         banter: [
-            { text: "Target neutralized.", trigger: "kill", chance: 0.5 },
-            { text: "Hostile down.", trigger: "kill", chance: 0.4 },
-            { text: "Tango down.", trigger: "kill", chance: 0.4 },
-            { text: "Threat cleared.", trigger: "kill", chance: 0.3 },
-            { text: "One less.", trigger: "kill", chance: 0.3 },
-            { text: "Moving out.", trigger: "walk", chance: 0.05 },
-            { text: "Stay sharp.", trigger: "walk", chance: 0.05 },
-            { text: "Check your six.", trigger: "walk", chance: 0.05 },
-            { text: "Advancing.", trigger: "walk", chance: 0.05 },
-            { text: "Maintain formation.", trigger: "walk", chance: 0.05 },
-            { text: "We are surrounded!", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Multiple contacts!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Defensive perimeter!", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "They're swarming.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Supplies secured.", trigger: "loot", chance: 0.8 },
-            { text: "Equipment recovered.", trigger: "loot", chance: 0.6 },
-            { text: "Asset acquired.", trigger: "loot", chance: 0.5 },
-            { text: "Lock and load.", trigger: "loot", chance: 0.4 },
-            { text: "Good find.", trigger: "loot", chance: 0.4 },
-            { text: "Taking fire!", trigger: "hurt", chance: 0.6 },
-            { text: "Armor hit!", trigger: "hurt", chance: 0.5 },
-            { text: "I'm hit!", trigger: "hurt", chance: 0.5 },
-            { text: "Damage report.", trigger: "hurt", chance: 0.3 },
-            { text: "Grr...", trigger: "hurt", chance: 0.3 },
-            { text: "Critical condition.", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Need evac...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Holding the line.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Combat efficiency up.", trigger: "level_up", chance: 1.0 },
-            { text: "Promoted.", trigger: "level_up", chance: 0.8 }
+            // KILL
+            { text: "Target neutralized.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Aya", text: "Clean.", chance: 0.4 } },
+            { text: "Hostile down.", trigger: "kill", chance: 0.3, priority: 10 },
+            { text: "Threat cleared.", trigger: "kill", chance: 0.3, priority: 10 },
+
+            // WALK
+            { text: "Moving out.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "Stay sharp.", trigger: "walk", chance: 0.05, priority: 10, reply: { speaker: "Aya", text: "Always.", chance: 0.5 } },
+            { text: "Check your six.", trigger: "walk", chance: 0.05, priority: 10 },
+
+            // SURROUNDED
+            { text: "We are surrounded!", trigger: "surrounded", chance: 0.6, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Eve", text: "Good. More to burn.", chance: 0.7 } },
+            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+
+            // LOOT
+            { text: "Supplies secured.", trigger: "loot", chance: 0.6, priority: 30 },
+            { text: "Asset acquired.", trigger: "loot", chance: 0.4, priority: 30 },
+
+            // HURT
+            { text: "Taking fire!", trigger: "hurt", chance: 0.5, priority: 50 },
+            { text: "Armor hit!", trigger: "hurt", chance: 0.4, priority: 50 },
+
+            // LOW HP
+            { text: "Critical condition.", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Need evac...", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+
+            // LEVEL UP
+            { text: "Combat efficiency up.", trigger: "level_up", chance: 1.0, priority: 70 },
+
+             // START
+            { text: "We have a job to do.", trigger: "start", chance: 1.0, priority: 50 }
         ]
     },
     "Eve": {
         job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
         banter: [
-            { text: "Burn.", trigger: "kill", chance: 0.6 },
-            { text: "Gone.", trigger: "kill", chance: 0.5 },
-            { text: "Ashes.", trigger: "kill", chance: 0.4 },
-            { text: "It screamed.", trigger: "kill", chance: 0.4 },
-            { text: "Fuel.", trigger: "kill", chance: 0.3 },
-            { text: "It calls to me.", trigger: "walk", chance: 0.05 },
-            { text: "So dark...", trigger: "walk", chance: 0.05 },
-            { text: "Can you hear it?", trigger: "walk", chance: 0.05 },
-            { text: "Wandering.", trigger: "walk", chance: 0.05 },
-            { text: "The stack breathes.", trigger: "walk", chance: 0.05 },
-            { text: "So many souls.", trigger: "surrounded", chance: 0.5, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Get away!", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "I'll burn them all.", trigger: "surrounded", chance: 0.4, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Too loud...", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Crowded.", trigger: "surrounded", chance: 0.3, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "Pretty.", trigger: "loot", chance: 0.7 },
-            { text: "Mine.", trigger: "loot", chance: 0.6 },
-            { text: "Can I keep it?", trigger: "loot", chance: 0.5 },
-            { text: "Shiny.", trigger: "loot", chance: 0.4 },
-            { text: "Curious.", trigger: "loot", chance: 0.4 },
-            { text: "Pain...", trigger: "hurt", chance: 0.6 },
-            { text: "Don't touch me!", trigger: "hurt", chance: 0.5 },
-            { text: "My blood...", trigger: "hurt", chance: 0.5 },
-            { text: "Stop it.", trigger: "hurt", chance: 0.4 },
-            { text: "Ah!", trigger: "hurt", chance: 0.4 },
-            { text: "Fading...", trigger: "low_hp", chance: 0.8, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Cold...", trigger: "low_hp", chance: 0.6, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Help me.", trigger: "low_hp", chance: 0.5, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Power growing.", trigger: "level_up", chance: 1.0 },
-            { text: "Evolving.", trigger: "level_up", chance: 0.8 }
+            // KILL
+            { text: "Burn.", trigger: "kill", chance: 0.5, priority: 20 },
+            { text: "Gone.", trigger: "kill", chance: 0.4, priority: 10 },
+            { text: "Ashes.", trigger: "kill", chance: 0.3, priority: 10 },
+            { text: "It screamed.", trigger: "kill", chance: 0.3, priority: 20, reply: { speaker: "Kyle", text: "Easy, Eve.", chance: 0.6 } },
+
+            // WALK
+            { text: "It calls to me.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "So dark...", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "The stack breathes.", trigger: "walk", chance: 0.05, priority: 10 },
+
+            // SURROUNDED
+            { text: "So many souls.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "I'll burn them all.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Aya", text: "Don't hit us!", chance: 0.8 } },
+
+            // LOOT
+            { text: "Pretty.", trigger: "loot", chance: 0.5, priority: 30 },
+            { text: "Mine.", trigger: "loot", chance: 0.5, priority: 30 },
+
+            // HURT
+            { text: "Pain...", trigger: "hurt", chance: 0.5, priority: 50 },
+            { text: "Don't touch me!", trigger: "hurt", chance: 0.5, priority: 50 },
+
+            // LOW HP
+            { text: "Fading...", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Help me.", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 }, reply: { speaker: "Kyle", text: "I've got you.", chance: 1.0 } },
+
+            // LEVEL UP
+            { text: "Power growing.", trigger: "level_up", chance: 1.0, priority: 70 },
+
+            // START
+            { text: "It's cold here.", trigger: "start", chance: 1.0, priority: 50 }
         ]
     }
 };
