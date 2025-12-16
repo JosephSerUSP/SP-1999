@@ -263,10 +263,10 @@ const $dataLootTable = {
  * @type {Object}
  */
 const $dataFloors = {
-    1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro' },
-    2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8 },
-    3: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 12 },
-    default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15 }
+    1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro', generator: 'dungeon' },
+    2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8, generator: 'dungeon' },
+    3: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 12, generator: 'cave', density: 0.45 },
+    default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15, generator: 'dungeon' }
 };
 
 /**
