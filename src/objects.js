@@ -474,6 +474,8 @@ class Game_Map {
     setup(floor) {
         $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`);
         this.generate(floor);
+        // Trigger generic start banter after a short delay
+        setTimeout(() => $gameBanter.trigger('start'), 1000);
     }
 
     /**

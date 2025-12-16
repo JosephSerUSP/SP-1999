@@ -287,6 +287,7 @@ class BattleManager {
 
 /**
  * Manages the display of banter (floating text above the map).
+ * Now rewritten with priority queue, cooldowns, and conversational chains.
  */
 class BanterManager {
     /**
@@ -294,15 +295,33 @@ class BanterManager {
      */
     constructor() {
         /**
-         * List of active banter lines currently displayed.
+         * The queue of pending banter lines.
          * @type {Array<Object>}
          */
-        this.activeLines = [];
+        this.queue = [];
+        /**
+         * The currently active banter line being displayed.
+         * @type {Object|null}
+         */
+        this.activeLine = null;
         /**
          * The container element for banter.
          * @type {HTMLElement|null}
          */
         this.container = null;
+
+        // Cooldown state
+        this.cooldowns = {
+            global: 0,
+            triggers: {},
+            actors: {}
+        };
+
+        // Constants
+        this.GLOBAL_COOLDOWN = 180; // frames (~3 seconds)
+        this.TRIGGER_COOLDOWN = 600; // frames (~10 seconds) for same trigger type
+        this.ACTOR_COOLDOWN = 300; // frames (~5 seconds) for same actor
+        this.DISPLAY_TIME = 180; // frames (~3 seconds) to read
     }
 
     /**
@@ -313,7 +332,7 @@ class BanterManager {
         this.container = document.createElement('div');
         this.container.id = 'banter-container';
         this.container.style.position = 'absolute';
-        this.container.style.top = '58px'; // Moved down by 48px from original 10px
+        this.container.style.top = '58px';
         this.container.style.left = '10px';
         this.container.style.display = 'flex';
         this.container.style.flexDirection = 'column';
@@ -323,27 +342,63 @@ class BanterManager {
     }
 
     /**
-     * Updates the state of active banter lines (timers, animations).
+     * Updates the state of active banter lines and processes the queue.
      */
     update() {
-        if (!this.container) return;
-        for (let i = this.activeLines.length - 1; i >= 0; i--) {
-            const line = this.activeLines[i];
-            line.timer--;
+        // Decrease cooldowns
+        if (this.cooldowns.global > 0) this.cooldowns.global--;
+        for (let k in this.cooldowns.triggers) {
+            if (this.cooldowns.triggers[k] > 0) this.cooldowns.triggers[k]--;
+        }
+        for (let k in this.cooldowns.actors) {
+            if (this.cooldowns.actors[k] > 0) this.cooldowns.actors[k]--;
+        }
 
-            // Fade and move left animation when expiring or pushed out
-            if (line.timer < 30) {
-                line.opacity = line.timer / 30;
-                line.xOffset -= 1.0;
-                line.element.style.opacity = line.opacity;
-                line.element.style.transform = `translateX(${line.xOffset}px)`;
+        // Handle Active Line
+        if (this.activeLine) {
+            this.activeLine.timer--;
+
+            // Animation out
+            if (this.activeLine.timer < 30) {
+                this.activeLine.opacity = this.activeLine.timer / 30;
+                this.activeLine.element.style.opacity = this.activeLine.opacity;
+                this.activeLine.element.style.transform = `translateY(-${(30 - this.activeLine.timer)}px)`;
             }
 
-            if (line.timer <= 0) {
-                line.element.remove();
-                this.activeLines.splice(i, 1);
+            if (this.activeLine.timer <= 0) {
+                this.clearActive();
             }
         }
+        // Process Queue if Idle
+        else if (this.queue.length > 0) {
+            // Sort by priority (high first) then entry time
+            this.queue.sort((a, b) => b.priority - a.priority);
+
+            const next = this.queue[0];
+
+            // Check specific cooldowns (Global check is skipped for 'story' priority or replies)
+            const isStory = next.priority >= 100;
+            const isReply = !!next.isReply;
+
+            if (isStory || isReply || (this.cooldowns.global <= 0 && this.canSpeak(next.speaker))) {
+                this.queue.shift(); // Remove from queue
+                this.show(next);
+            } else {
+                // If blocked by cooldown, we wait.
+                // But if the queue gets too big, we should prune low priority stuff?
+                if (this.queue.length > 5) {
+                    // Remove lowest priority
+                    this.queue.pop();
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks if an actor can speak (cooldown check).
+     */
+    canSpeak(speaker) {
+        return (this.cooldowns.actors[speaker] || 0) <= 0;
     }
 
     /**
@@ -352,57 +407,147 @@ class BanterManager {
      * @param {Object} [context={}] - Additional context for condition checking.
      */
     trigger(type, context = {}) {
+        // Block if cutscene active
+        if ($gameSystem.isInputBlocked) return; // Simple check for now
+        // Also block if trigger cooldown is active (unless it's a high priority trigger?)
+        // Let's enforce trigger cooldowns for generic chatter to prevent spam
+        if (this.cooldowns.triggers[type] > 0) return;
+
+        // Collect all possible valid banter from all party members
+        let candidates = [];
+
         $gameParty.members.forEach(actor => {
             if (actor.isDead()) return;
             const data = $dataClasses[actor.name];
             if (!data || !data.banter) return;
 
-            // Filter for trigger match
-            const potential = data.banter.filter(b => b.trigger === type);
-            potential.forEach(b => {
-                if (Math.random() < b.chance) {
-                    // Inject battler into context for conditions like HP check
-                    const checkContext = Object.assign({ battler: actor, x: $gameMap.playerX, y: $gameMap.playerY }, context);
-                    if (!b.condition || ConditionSystem.check(b.condition, checkContext)) {
-                        this.addBanter(actor.name, b.text);
-                    }
-                }
+            const matches = data.banter.filter(b => b.trigger === type);
+            matches.forEach(b => {
+                const checkContext = Object.assign({ battler: actor, x: $gameMap.playerX, y: $gameMap.playerY }, context);
+
+                // 1. Condition Check
+                if (b.condition && !ConditionSystem.check(b.condition, checkContext)) return;
+
+                // 2. Chance Check (Adjusted by queue depth? No, simple roll)
+                if (Math.random() > (b.chance || 1.0)) return;
+
+                candidates.push({
+                    speaker: actor.name,
+                    text: b.text,
+                    priority: b.priority || 10,
+                    reply: b.reply, // Array or Object
+                    trigger: type
+                });
             });
         });
+
+        if (candidates.length === 0) return;
+
+        // Pick one candidate
+        // Weight by priority? Or just random among the valid ones?
+        // Let's pick random among the highest priority tier found.
+        candidates.sort((a, b) => b.priority - a.priority);
+        const maxPrio = candidates[0].priority;
+        const topCandidates = candidates.filter(c => c.priority === maxPrio);
+        const selected = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+
+        this.addBanter(selected);
+
+        // Set Trigger Cooldown
+        this.cooldowns.triggers[type] = this.TRIGGER_COOLDOWN;
     }
 
     /**
-     * Adds a specific banter line to the display.
-     * @param {string} speaker - The name of the speaker.
-     * @param {string} text - The banter text.
+     * Adds a banter object to the queue.
+     * @param {Object} banter
      */
-    addBanter(speaker, text) {
-        // If too many lines, force expire oldest by setting timer low
-        if (this.activeLines.length >= 5) {
-            this.activeLines[0].timer = Math.min(this.activeLines[0].timer, 30);
-        }
+    addBanter(banter) {
+        this.queue.push(banter);
+    }
 
+    /**
+     * Displays a banter line.
+     * @param {Object} banter
+     */
+    show(banter) {
+        if (!this.container) return;
+
+        // Create Element
         const el = document.createElement('div');
-        // Removed background color as requested
-        el.style.color = 'white';
-        el.style.padding = '2px 4px';
-        el.style.marginBottom = '2px';
-        // Kept border for readability, or should I remove it too?
-        // Request said "remove the darkened background". I'll keep the gold accent for speaker ID.
-        // But visual style might need shadow if no background.
-        el.style.textShadow = '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000';
-        el.style.fontSize = '12px';
-        el.style.opacity = '0';
-        el.style.transition = 'opacity 0.2s';
-
-        const actor = $gameParty.members.find(m => m.name === speaker);
+        const actor = $gameParty.members.find(m => m.name === banter.speaker);
         const color = actor ? '#' + actor.color.toString(16) : '#fff';
 
-        el.innerHTML = `<span style="color:${color}; font-weight:bold; margin-right:5px;">${speaker}</span> ${text}`;
+        el.style.color = '#eee';
+        el.style.padding = '4px 8px';
+        el.style.marginBottom = '4px';
+        // Improved styling: semi-transparent dark backing for readability without being a "box"
+        el.style.background = 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)';
+        el.style.textShadow = '1px 1px 0 #000';
+        el.style.fontSize = '14px';
+        el.style.fontFamily = "'Share Tech Mono', monospace";
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(-10px)';
+        el.style.transition = 'all 0.3s ease-out';
+        el.style.borderLeft = `3px solid ${color}`;
+
+        el.innerHTML = `<span style="color:${color}; font-weight:bold; margin-right:8px;">${banter.speaker}</span>${banter.text}`;
 
         this.container.appendChild(el);
-        requestAnimationFrame(() => el.style.opacity = '1');
 
-        this.activeLines.push({ text, speaker, timer: 120, element: el, opacity: 1, xOffset: 0 });
+        // Trigger reflow for transition
+        requestAnimationFrame(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateX(0)';
+        });
+
+        this.activeLine = {
+            element: el,
+            timer: this.DISPLAY_TIME,
+            opacity: 1
+        };
+
+        // Set Cooldowns
+        this.cooldowns.global = this.GLOBAL_COOLDOWN;
+        this.cooldowns.actors[banter.speaker] = this.ACTOR_COOLDOWN;
+
+        // Handle Replies / Chains
+        if (banter.reply) {
+            this.scheduleReply(banter.reply);
+        }
+    }
+
+    /**
+     * Schedules a reply banter.
+     * @param {Object|Array} replyData
+     */
+    scheduleReply(replyData) {
+        // Support array of possible replies? Or just one?
+        // Let's assume it's a single object for now or array of options.
+        let replyDef = Array.isArray(replyData) ? replyData[Math.floor(Math.random() * replyData.length)] : replyData;
+
+        // Check if responder exists and is alive
+        const responder = $gameParty.members.find(m => m.name === replyDef.speaker);
+        if (!responder || responder.isDead()) return;
+
+        // Create new banter object for queue
+        const replyBanter = {
+            speaker: replyDef.speaker,
+            text: replyDef.text,
+            priority: 100, // Replies are high priority to keep flow
+            isReply: true,
+            reply: replyDef.reply // Supports multi-chain
+        };
+
+        // Add to queue immediately?
+        // We want a slight delay visually, but queue logic handles sequential display.
+        // If we just push to queue with high priority, it will play next.
+        this.queue.push(replyBanter);
+    }
+
+    clearActive() {
+        if (this.activeLine && this.activeLine.element) {
+            this.activeLine.element.remove();
+        }
+        this.activeLine = null;
     }
 }
