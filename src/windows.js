@@ -202,10 +202,14 @@ class UIManager {
 
     floatText(text, x, y, color) {
         const pos = Renderer.projectToScreen(x, 0.5, y);
+        // Add random jitter to prevent overlap when multiple hits occur
+        const jitterX = (Math.random() - 0.5) * 40;
+        const jitterY = (Math.random() - 0.5) * 20;
+
         const container = document.createElement('div');
         container.className = 'float-text-container';
-        container.style.left = pos.x + 'px';
-        container.style.top = pos.y + 'px';
+        container.style.left = (pos.x + jitterX) + 'px';
+        container.style.top = (pos.y + jitterY) + 'px';
         const chars = text.toString().split('');
         chars.forEach((char, i) => {
             const s = document.createElement('span');
