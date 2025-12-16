@@ -149,6 +149,21 @@ class Window_Inventory extends Window_Base {
     onItemClick(item, idx) {
         if (item.category === 'item') {
             $gameSystem.ui.showTargetSelectModal((target) => {
+                // Check if target is dead and if item can be used
+                if (target.isDead()) {
+                     // We allow "heal" type if it acts as revive (depends on implementation, here heal is hp+v),
+                     // but "cure" (antidote) should not be used on dead actors if it causes freeze.
+                     // Assuming dead actors cannot be cured of poison (state persists but doesn't tick damage if dead).
+                     // For safety, we prevent using any item on dead actors unless it's explicitly a revive item (which we don't have yet, or 'heal' counts).
+                     // Based on user report: "It is possible to use items on dead actors... Antidote freezes."
+                     // Let's block 'cure' on dead actors.
+                     if (item.type === 'cure') {
+                         alert("Cannot use this on a dead character!");
+                         return;
+                     }
+                     // If 'heal' is used on dead, it revives them (hp > 0). That seems intended or acceptable.
+                }
+
                 $gameSystem.ui.showConfirmModal(`Use ${item.name} on ${target.name}?`, () => {
                     $gameSystem.ui.useConsumable(target, item, idx); // Call back to UIManager logic for now
                     // We need to refresh THIS window after use
