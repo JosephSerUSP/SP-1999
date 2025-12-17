@@ -323,6 +323,7 @@ class Game_Enemy extends Game_Battler {
         this.hp = hp;
         this.mhp = hp;
         this.alerted = false;
+        this.direction = {x: 0, y: 1};
         // this.def = 0; // Handled by super default
         // this.equip = {}; // Handled by super default, though super sets it to {weapon:null, armor:null} which is compatible
         // this.states = []; // Handled by super
@@ -749,61 +750,106 @@ class Game_Map {
             if(dist < 7) e.alerted = true;
 
             // Flee Logic
-            if(e.hp < e.mhp * 0.3) e.ai = "flee";
+            if(e.hp < e.mhp * 0.3 && e.ai !== 'turret') e.ai = "flee";
 
-            if(e.alerted || e.ai === "patrol") {
+            if(e.alerted || e.ai === "patrol" || e.ai === "turret" || e.ai === "tactical") {
                 let dx = 0, dy = 0;
+                let action = "move";
+
+                const vx = this.playerX - e.x;
+                const vy = this.playerY - e.y;
+                const sx = Math.sign(vx);
+                const sy = Math.sign(vy);
 
                 // AI BEHAVIORS
                 if(e.ai === "turret") {
-                    // Turret: Doesn't move. Attacks if in range.
-                    if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
-                        // Remote Attack
-                        const target = $gameParty.active();
-                        // Turrets shoot, so maybe less damage variation or distinct effect?
-                        // Using standard calcDamage for now but could be a skill.
-                        const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
-                        target.takeDamage(dmg);
-                        EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
-                        await Sequencer.sleep(100);
-                        EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                        EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                    action = "wait";
+                    // Turret: Tracking and Ranged Attack
+                    if (dist <= 6 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
+                        // Determine desired facing
+                        let desiredDir = {x: 0, y: 1};
+                        if (Math.abs(vx) > Math.abs(vy)) desiredDir = {x: sx, y: 0};
+                        else desiredDir = {x: 0, y: sy};
+
+                        if (e.direction.x !== desiredDir.x || e.direction.y !== desiredDir.y) {
+                            e.direction = desiredDir; // Turn takes the turn
+                            action = "wait";
+                        } else {
+                            action = "attack_ranged";
+                        }
                     }
-                    continue; // Skip movement
+                } else if (e.ai === "tactical") {
+                    if (dist === 1) {
+                        action = "attack_melee";
+                        e.direction = {x: sx, y: sy}; // Face target for melee
+                    } else if (dist <= 5 && (vx === 0 || vy === 0) && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
+                         // Ranged Opportunity (Orthogonal)
+                         let desiredDir = {x: sx, y: sy};
+                         if (e.direction.x !== desiredDir.x || e.direction.y !== desiredDir.y) {
+                             e.direction = desiredDir;
+                             action = "wait"; // Turn takes action
+                         } else {
+                             action = "attack_ranged";
+                         }
+                    } else {
+                        // Chase
+                        dx = sx; dy = sy;
+                         // Bias towards axis with greater distance to align for shot
+                         if (Math.abs(vx) > Math.abs(vy)) dy = 0; else dx = 0;
+                         // Add slight randomness to unstick
+                         if (dx === 0 && dy === 0 && dist > 1) { dx = Math.random()<0.5?1:-1; }
+                    }
                 } else if (e.ai === "flee") {
-                     // Move AWAY from player
-                     dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
-                     // Add randomness to avoid getting stuck in corners?
+                     dx = -sx; dy = -sy;
                      if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
                 } else if(e.ai === "patrol" && !e.alerted) {
-                     // Random walk
                      if(Math.random() < 0.3) {
                          const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
                          const dir = dirs[Math.floor(Math.random()*dirs.length)];
                          dx = dir.x; dy = dir.y;
                      }
-                } else if(e.ai === "hunter" || e.ai === "ambush" || (e.ai === "patrol" && e.alerted)) {
-                    // Chase Player
-                    dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                } else {
+                    // Default Hunter/Ambush/Patrol(Alerted)
+                    dx = sx; dy = sy;
                     if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
                 }
 
-                // MOVEMENT EXECUTION
-                const nx = e.x + dx; const ny = e.y + dy;
+                // EXECUTE ACTION
+                if (action === "attack_ranged") {
+                    const target = $gameParty.active();
+                    const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
+                    target.takeDamage(dmg);
+                    EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
+                    await Sequencer.sleep(100);
+                    EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                    EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                } else if (action === "attack_melee") {
+                     const target = $gameParty.active();
+                     const dmg = BattleManager.calcDamage(e, target);
+                     target.takeDamage(dmg);
+                     EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: this.playerX, ty: this.playerY });
+                     EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                     EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                } else if (dx !== 0 || dy !== 0) {
+                    const nx = e.x + dx; const ny = e.y + dy;
+                    // Update Direction
+                    e.direction = {x: dx, y: dy};
 
-                // Attack if adjacent (Melee) - Turrets handled above
-                if(nx === this.playerX && ny === this.playerY) {
-                    if (e.ai !== "flee") { // Fleeing enemies shouldn't attack just because they bumped you
-                        const target = $gameParty.active();
-                        const dmg = BattleManager.calcDamage(e, target);
-                        target.takeDamage(dmg);
-                        EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
-                        EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                        EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                    // Collision Check
+                    if(nx === this.playerX && ny === this.playerY) {
+                         // Bump Attack (Melee) - Fallback if action was 'move' but bumped
+                         if (e.ai !== "flee") {
+                            const target = $gameParty.active();
+                            const dmg = BattleManager.calcDamage(e, target);
+                            target.takeDamage(dmg);
+                            EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
+                            EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                            EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                        }
+                    } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
+                        e.x = nx; e.y = ny;
+                        EventBus.emit('sync_enemies');
                     }
-                } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
-                    e.x = nx; e.y = ny;
-                    EventBus.emit('sync_enemies');
                 }
             }
         }
@@ -861,24 +907,16 @@ class Game_Map {
             }
             // Execute even if no target (miss)
         } else {
-            // Default melee range 1 (or single target skill with range > 1 but not 'line')
-            // Actually 'target' type skills are ranged single target.
-            // But this block is "default melee range 1" IF no skill.
-            // If skill is present and type is 'target', we should look up to skill range.
-            const range = skill ? skill.range : 1;
-            // For now, simpler logic: if it's a 'target' skill, we look for closest enemy in direction or just front?
-            // Original logic was just front. Let's keep it simple for 'target' type: it acts like melee but extended range?
-            // Or should it be directional like 'line' but stops at first? That's what 'line' does.
-            // Let's assume 'target' means "Hit enemy at Cursor" but we don't have cursor.
-            // So we'll treat it as directional line for now (stops at first target).
-
+             // For skills with type 'target' or basic melee attacks, we enforce directional line of sight.
+             // This treats 'target' skills as directional shots in the absence of a cursor.
+             const range = skill ? skill.range : 1;
              const dx = actor.direction.x; const dy = actor.direction.y;
-             // Check along the line up to range
+
              for (let i=1; i<=range; i++) {
                  const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break; // Blocked by wall
                  const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
+                 if (e) { target = e; break; } // Hit first target
              }
         }
 
