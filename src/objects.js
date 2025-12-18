@@ -857,6 +857,9 @@ class Game_Map {
             // Even if we become panting, the current move is allowed.
             // The restriction applies to the NEXT turn.
 
+            // Visual Move
+            EventBus.emit('play_animation', 'move', { toX: nx, toY: ny });
+
             // Move
             this.playerX = nx; this.playerY = ny;
             this.revealZone(this.playerX, this.playerY, 6);
@@ -906,18 +909,18 @@ class Game_Map {
                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#808");
                 if(actor.isDead()) {
                      $gameSystem.log(`${actor.name} collapsed.`);
-                     // Force rotation immediately if active actor died
-                     if($gameParty.active() === actor) {
-                         $gameParty.rotate();
-                         EventBus.emit('refresh_ui');
-                         // If everyone is dead, rotate() calls gameOver(), so we are good.
-                     }
                 }
             }
             if(s.duration <= 0) {
                 actor.removeState(s.id);
                 $gameSystem.log(`${actor.name}'s ${s.name} faded.`);
             }
+        }
+
+        // Force rotation if active actor is dead
+        if($gameParty.active().isDead()) {
+             $gameParty.rotate();
+             EventBus.emit('refresh_ui');
         }
     }
 

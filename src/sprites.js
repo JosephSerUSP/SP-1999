@@ -339,13 +339,14 @@ class Renderer3D {
      * @param {Object} data - Parameters for the animation.
      */
     playAnimation(type, data) {
-        if (type === 'move_switch') {
+        if (type === 'move_switch' || type === 'move') {
             this.moveLerpStart.copy(this.playerMesh.position);
             this.moveLerpEnd.set(data.toX, 0.5, data.toY);
-            this.nextColor = data.nextColor;
+            this.nextColor = data.nextColor; // Undefined for simple move, checked below
             this.moveLerpProgress = 0;
             this.playerTarget.set(data.toX, 0.5, data.toY);
             this.isAnimating = true; // Lock input during move
+            this.animationType = type; // Track type for render loop
         } else if (type === 'ascend') {
             this.isAscending = true;
             this.ascendProgress = 0;
@@ -481,10 +482,16 @@ class Renderer3D {
 
                 this.playerMesh.position.lerpVectors(this.moveLerpStart, this.moveLerpEnd, this.moveLerpProgress);
 
-                if (this.moveLerpProgress >= 0.5 && this.matPlayer.color.getHex() !== this.nextColor) {
-                    this.matPlayer.color.setHex(this.nextColor);
+                if (this.animationType === 'move_switch') {
+                    if (this.moveLerpProgress >= 0.5 && this.nextColor !== undefined && this.matPlayer.color.getHex() !== this.nextColor) {
+                        this.matPlayer.color.setHex(this.nextColor);
+                    }
+                    this.playerMesh.rotation.y = this.moveLerpProgress * Math.PI * 2;
+                } else {
+                    // Simple Move: Face direction? Or just slide.
+                    // Slide is fine for now.
+                    this.playerMesh.rotation.y = 0;
                 }
-                this.playerMesh.rotation.y = this.moveLerpProgress * Math.PI * 2;
             } else {
                 this.playerMesh.rotation.y = 0;
                 if (this.lungeTarget) this.playerMesh.position.lerp(this.lungeTarget, 0.3);
