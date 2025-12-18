@@ -184,6 +184,12 @@ class BattleManager {
                 target.takeDamage(dmg);
                 EventBus.emit('float_text', dmg, target.x, target.y, target.uid === 'player' ? "#f00" : "#fff");
                 EventBus.emit('play_animation', 'hit', { uid: target.uid });
+
+                // Trigger Enemy Info Update for "Affected by Ability"
+                if (target.uid !== 'player') {
+                     EventBus.emit('enemy_affected', { target: target, duration: 2000 });
+                }
+
                 if(target.hp <= 0 && target.uid !== 'player') await $gameMap.killEnemy(target);
                 break;
             case EFFECT_HEAL:
@@ -194,6 +200,10 @@ class BattleManager {
                 if(Math.random() < (effect.chance || 1.0)) {
                     target.addState(effect.dataId);
                     EventBus.emit('float_text', $dataStates[effect.dataId].name.toUpperCase(), target.x, target.y, "#ff0");
+                    // Trigger Enemy Info Update for State Add
+                    if (target.uid !== 'player') {
+                        EventBus.emit('enemy_affected', { target: target, duration: 2000 });
+                    }
                 }
                 break;
             case EFFECT_RECOVER_PE:

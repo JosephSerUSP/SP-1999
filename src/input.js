@@ -16,13 +16,14 @@ class InputManager {
             RIGHT: ['ArrowRight', 'd', 'D'],
             OK: ['Enter', ' ', 'z', 'Z'],
             CANCEL: ['Escape', 'x', 'X', 'Backspace'],
-            MENU: ['Tab', 'c', 'C']
+            MENU: ['Tab', 'c', 'C'],
+            CYCLE: ['Shift', 'v', 'V']
         };
 
         // Current logical state
         this.state = {
             UP: false, DOWN: false, LEFT: false, RIGHT: false,
-            OK: false, CANCEL: false, MENU: false
+            OK: false, CANCEL: false, MENU: false, CYCLE: false
         };
         this.lastState = { ...this.state };
 
@@ -32,6 +33,8 @@ class InputManager {
             1: 'CANCEL',  // B / Circle
             2: 'MENU',    // X / Square (Using X for menu for now, or Y?)
             3: 'MENU',    // Y / Triangle
+            4: 'CYCLE',   // L1 / LB
+            5: 'CYCLE',   // R1 / RB
             12: 'UP',     // D-Pad Up
             13: 'DOWN',   // D-Pad Down
             14: 'LEFT',   // D-Pad Left

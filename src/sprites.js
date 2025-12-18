@@ -602,6 +602,15 @@ class Renderer3D {
             m.position.set(c.x, 0.02, c.y);
             this.rangeGroup.add(m);
         });
+
+        // Trigger Target Update
+        const targets = [];
+        coords.forEach(c => {
+            const e = $gameMap.enemies.find(en => en.x === c.x && en.y === c.y);
+            if (e && !targets.includes(e)) targets.push(e);
+        });
+        if (targets.length > 0) EventBus.emit('targets_updated', targets);
+        else EventBus.emit('targets_cleared');
     }
 
     /**
@@ -611,6 +620,7 @@ class Renderer3D {
         if (this.currentRangeSkill === null) return;
         this.currentRangeSkill = null;
         if (this.rangeGroup) this.rangeGroup.clear();
+        EventBus.emit('targets_cleared');
     }
 
     /**
