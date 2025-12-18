@@ -323,9 +323,100 @@ class Game_Enemy extends Game_Battler {
         this.hp = hp;
         this.mhp = hp;
         this.alerted = false;
-        // this.def = 0; // Handled by super default
-        // this.equip = {}; // Handled by super default, though super sets it to {weapon:null, armor:null} which is compatible
-        // this.states = []; // Handled by super
+        // AI State
+        this.aiConfig = d.aiConfig; // Ensure config is passed
+        this.cooldowns = {}; // skillId -> turns remaining
+        this.customState = {}; // For flags like 'rangedDisabled'
+        this.turnCount = 0;
+        this.direction = {x:0, y:1}; // Enemies need direction for cones
+    }
+
+    /**
+     * Decides the best action to take.
+     * @returns {Object} Action definition { type: 'move'|'skill', data: ... }
+     */
+    decideAction() {
+        if (!this.aiConfig) {
+             // Fallback for legacy data (simple AI strings)
+             return { type: 'legacy', ai: this.ai };
+        }
+
+        // 1. Process Cooldowns (done in update, but checked here)
+        // 2. Evaluate Actions
+        const validActions = [];
+        const distToPlayer = Math.abs(this.x - $gameMap.playerX) + Math.abs(this.y - $gameMap.playerY);
+
+        for (const action of (this.aiConfig.actions || [])) {
+            // Check Cooldown
+            if (this.cooldowns[action.skill] > 0) continue;
+
+            // Check Range (if specified in action, or derived from skill)
+            // Ideally action defines condition range, skill defines effect range.
+            if (action.condition) {
+                if (action.condition.range) {
+                    const min = action.condition.range[0];
+                    const max = action.condition.range[1];
+                    if (distToPlayer < min || distToPlayer > max) continue;
+                }
+
+                // Custom flag checks
+                if (action.condition.state) {
+                    const key = action.condition.state;
+                    const val = action.condition.value;
+                    // e.g. state: 'rangedMode', value: true
+                    if (this.customState[key] !== val) continue;
+                }
+
+                // NOT state check (e.g. !rangedMode)
+                if (action.condition.notState) {
+                    if (this.customState[action.condition.notState]) continue;
+                }
+
+                // Turn interval check
+                if (action.condition.interval) {
+                    if (this.turnCount % action.condition.interval !== 0) continue;
+                }
+            }
+
+            validActions.push(action);
+        }
+
+        // Sort by priority
+        validActions.sort((a,b) => (b.priority || 0) - (a.priority || 0));
+
+        if (validActions.length > 0) {
+            return { type: 'skill', skillId: validActions[0].skill, config: validActions[0] };
+        }
+
+        // Default: Move
+        return { type: 'move', behavior: this.aiConfig.movement || 'hunter' };
+    }
+
+    /**
+     * Updates internal state after an action.
+     */
+    onActionTaken(action) {
+        if (action.type === 'skill') {
+            const conf = action.config;
+            if (conf.cooldown) {
+                this.cooldowns[conf.skill] = conf.cooldown;
+            }
+
+            // Apply self-state changes defined in AI config
+            if (conf.onUse) {
+                if (conf.onUse.setState) {
+                    this.customState[conf.onUse.setState] = true;
+                }
+                if (conf.onUse.clearState) {
+                    delete this.customState[conf.onUse.clearState];
+                }
+            }
+        }
+        this.turnCount++;
+        // Tick cooldowns
+        for(let k in this.cooldowns) {
+            if(this.cooldowns[k] > 0) this.cooldowns[k]--;
+        }
     }
 }
 
@@ -618,6 +709,44 @@ class Game_Map {
     }
 
     /**
+     * Gets valid tiles for a specific shape.
+     * @param {number} ox - Origin X
+     * @param {number} oy - Origin Y
+     * @param {string} shape - Shape type (line, cone, circle, target)
+     * @param {number} range - Range
+     * @param {Object} dir - Direction vector
+     * @returns {Array<{x:number, y:number}>}
+     */
+    getTilesInShape(ox, oy, shape, range, dir) {
+        let tiles = [];
+        if (shape === 'line' || shape === 'target') {
+            // Target is treated as line for first-hit, but if AoE target, use Line?
+            // "target" in data implies single target.
+            // "line" implies penetrating line.
+            // Using Geometry.getLine extended to range
+            tiles = Geometry.getLine(ox, oy, ox + dir.x * range, oy + dir.y * range);
+        } else if (shape === 'cone') {
+            tiles = Geometry.getCone(ox, oy, dir, range);
+        } else if (shape === 'circle') {
+            tiles = Geometry.getCircle(ox, oy, range);
+        } else {
+            // Default adjacent
+            tiles = [{x: ox + dir.x, y: oy + dir.y}];
+        }
+
+        // Filter valid and LOS
+        // Note: For 'cone' and 'circle', do we respect LOS for every tile?
+        // Usually, yes. Explosion shouldn't go through walls unless specified.
+        return tiles.filter(t => {
+            if (!this.isValid(t.x, t.y)) return false;
+            if (this.tiles[t.x][t.y] === 1) return false; // Wall
+            // LOS Check from Origin
+            if (t.x === ox && t.y === oy) return true; // Self/Origin
+            return this.checkLineOfSight(ox, oy, t.x, t.y);
+        });
+    }
+
+    /**
      * Processes a game turn based on player movement.
      * @param {number} dx - Change in x.
      * @param {number} dy - Change in y.
@@ -748,62 +877,87 @@ class Game_Map {
             const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
             if(dist < 7) e.alerted = true;
 
-            // Flee Logic
-            if(e.hp < e.mhp * 0.3) e.ai = "flee";
+            // Flee Override for low HP (if not controlled by specific AI actions)
+            if(!e.aiConfig && e.hp < e.mhp * 0.3) e.ai = "flee";
 
             if(e.alerted || e.ai === "patrol") {
-                let dx = 0, dy = 0;
+                // Decide Action
+                // If enemy has decideAction method (Game_Enemy), use it.
+                // But we are inside Game_Map.updateEnemies and 'e' is Game_Enemy instance.
 
-                // AI BEHAVIORS
-                if(e.ai === "turret") {
-                    // Turret: Doesn't move. Attacks if in range.
-                    if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
-                        // Remote Attack
-                        const target = $gameParty.active();
-                        // Turrets shoot, so maybe less damage variation or distinct effect?
-                        // Using standard calcDamage for now but could be a skill.
-                        const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
-                        target.takeDamage(dmg);
-                        EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
-                        await Sequencer.sleep(100);
-                        EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                        EventBus.emit('play_animation', 'hit', { uid: 'player' });
-                    }
-                    continue; // Skip movement
-                } else if (e.ai === "flee") {
-                     // Move AWAY from player
-                     dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
-                     // Add randomness to avoid getting stuck in corners?
-                     if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
-                } else if(e.ai === "patrol" && !e.alerted) {
-                     // Random walk
-                     if(Math.random() < 0.3) {
-                         const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
-                         const dir = dirs[Math.floor(Math.random()*dirs.length)];
-                         dx = dir.x; dy = dir.y;
-                     }
-                } else if(e.ai === "hunter" || e.ai === "ambush" || (e.ai === "patrol" && e.alerted)) {
-                    // Chase Player
-                    dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
-                    if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
+                let action = { type: 'move', behavior: e.ai };
+
+                if (e.decideAction) {
+                    action = e.decideAction();
                 }
 
-                // MOVEMENT EXECUTION
-                const nx = e.x + dx; const ny = e.y + dy;
+                if (action.type === 'skill') {
+                    // Execute Skill
+                    // Need to set direction first if it matters?
+                    // Usually direction points to player if attacking player.
+                    let dx = Math.sign(this.playerX - e.x);
+                    let dy = Math.sign(this.playerY - e.y);
+                    if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
 
-                // Attack if adjacent (Melee) - Turrets handled above
-                if(nx === this.playerX && ny === this.playerY) {
-                    if (e.ai !== "flee") { // Fleeing enemies shouldn't attack just because they bumped you
-                        const target = $gameParty.active();
-                        const dmg = BattleManager.calcDamage(e, target);
-                        target.takeDamage(dmg);
-                        EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
-                        EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                        EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                    await BattleManager.executeSkill(e, action.skillId, null); // Targets auto-resolved
+                    e.onActionTaken(action);
+
+                } else if (action.type === 'move' || action.type === 'legacy') {
+                    // Fallback to Movement Logic (Original)
+                    let dx = 0, dy = 0;
+                    let behavior = action.behavior || e.ai; // Use decided behavior or default 'ai' property
+
+                    // LEGACY MOVEMENT MAPPING
+                    if(behavior === "turret") {
+                         // Still need to shoot if legacy turret
+                         if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
+                            // Using standard calcDamage for legacy support
+                            const target = $gameParty.active();
+                            const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
+                            target.takeDamage(dmg);
+                            EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
+                            await Sequencer.sleep(100);
+                            EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                            EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                        }
+                        // Turrets don't move
+                    } else if (behavior === "flee") {
+                         dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
+                         if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
+                    } else if(behavior === "patrol" && !e.alerted) {
+                         if(Math.random() < 0.3) {
+                             const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
+                             const dir = dirs[Math.floor(Math.random()*dirs.length)];
+                             dx = dir.x; dy = dir.y;
+                         }
+                    } else if(behavior === "hunter" || behavior === "ambush" || (behavior === "patrol" && e.alerted)) {
+                        dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                        if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
                     }
-                } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
-                    e.x = nx; e.y = ny;
-                    EventBus.emit('sync_enemies');
+
+                    // Execute Move
+                    const nx = e.x + dx; const ny = e.y + dy;
+
+                    // Update Direction
+                    if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
+
+                    // Attack if adjacent (Melee) - ONLY if legacy behavior or standard move bump
+                    // If AI was 'move', we assume it intends to close distance or melee if close.
+                    if(nx === this.playerX && ny === this.playerY) {
+                        if (behavior !== "flee") {
+                            const target = $gameParty.active();
+                            const dmg = BattleManager.calcDamage(e, target);
+                            target.takeDamage(dmg);
+                            EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
+                            EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                            EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                            e.onActionTaken({ type: 'melee_bump' }); // Tick counters
+                        }
+                    } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
+                        e.x = nx; e.y = ny;
+                        EventBus.emit('sync_enemies');
+                        e.onActionTaken({ type: 'move' });
+                    }
                 }
             }
         }

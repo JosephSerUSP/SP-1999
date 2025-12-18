@@ -108,7 +108,13 @@ const $dataSkills = {
     "heal": { name: "Heal", cost: 15, range: 0, type: "self", effects: [{code: EFFECT_HEAL, value: 30}], desc: () => "Restore 30 HP." },
     "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.0}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.5}], desc: (a) => "Melee shock. Chance to stun." },
     "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 60, fixed: true}], desc: () => "Discharge all PE. 60 DMG." },
-    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` }
+    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` },
+
+    // New Skills for AI/Player Shape Testing
+    "cone_shot": { name: "Scatter Shot", cost: 10, range: 3, type: "cone", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Cone AoE attack." },
+    "spin_slash": { name: "Spin Slash", cost: 15, range: 1, type: "circle", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => "Hit all adjacent units." },
+    "charge_blade": { name: "Charge Blade", cost: 0, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 2.0}], desc: (a) => "Heavy Melee attack." },
+    "tactical_shot": { name: "Tac Shot", cost: 0, range: 6, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Ranged shot. Triggers Melee Mode." }
 };
 
 /**
@@ -240,13 +246,74 @@ const $dataClasses = {
  * @type {Array<Object>}
  */
 const $dataEnemies = [
-    { id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter" },
+    {
+        id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter",
+        aiConfig: {
+            movement: "hunter",
+            actions: [
+                { skill: "stun", priority: 10, condition: { range: [1,1] } } // Bite
+            ]
+        }
+    },
     { id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
     { id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush" },
-    { id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret" },
-    { id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3, ai: "hunter" },
+    {
+        id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret",
+        aiConfig: {
+            movement: "stationary", // Use stationary to avoid fallback turret logic
+            actions: [
+                {
+                    skill: "gunshot",
+                    priority: 20,
+                    condition: { range: [2,6], interval: 2 } // Shoots every 2 turns
+                }
+            ]
+        }
+    },
+    {
+        id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3, ai: "hunter",
+        aiConfig: {
+            movement: "hunter",
+            actions: [
+                { skill: "cone_shot", priority: 20, cooldown: 3, condition: { range: [1, 3] } }
+            ]
+        }
+    },
     { id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter" },
-    { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" }
+    { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" },
+
+    // NEW ENEMY: Tactical Trooper
+    // Shoots then charges (Switching behavior)
+    {
+        id: 8, name: "Tac Trooper", hp: 50, atk: 8, exp: 35, color: 0x008888, scale: 0.7, ai: "tactical",
+        aiConfig: {
+            movement: "hunter",
+            actions: [
+                // If in melee mode, use Charge Blade
+                {
+                    skill: "charge_blade",
+                    priority: 30,
+                    condition: { range: [1,1], state: 'meleeMode', value: true },
+                    onUse: { clearState: 'meleeMode' } // Switch back after hit? Or stay? "Land 2 hits" logic requires counter.
+                    // For demo: Switch back immediately (shoot once, charge once, repeat)
+                },
+                // If adjacent but NOT in melee mode yet? Force switch if close?
+                {
+                    skill: "charge_blade",
+                    priority: 25,
+                    condition: { range: [1,1] }, // Use melee if close anyway
+                    onUse: { setState: 'meleeMode' }
+                },
+                // Ranged attack - Triggers melee mode
+                {
+                    skill: "tactical_shot",
+                    priority: 20,
+                    condition: { range: [2,6], notState: 'meleeMode' },
+                    onUse: { setState: 'meleeMode' } // Switch to melee after shooting
+                }
+            ]
+        }
+    }
 ];
 
 /**
