@@ -439,6 +439,7 @@ class Game_Actor extends Game_Battler {
         this.pe = d.pe;
         this.mstamina = 100;
         this.stamina = this.mstamina;
+        this.isExhausted = false;
         // this.equip, this.states initialized in super
         this.level = 1;
         this.exp = 0;
@@ -465,13 +466,17 @@ class Game_Actor extends Game_Battler {
     /**
      * Consumes stamina for an action.
      * @param {number} amount - The amount of stamina to consume.
-     * @returns {boolean} True if the actor is exhausted (panting) after this action.
+     * @returns {boolean} True if the actor is exhausted after this action.
      */
     payStamina(amount) {
         if (amount <= 0) return false;
 
-        const exhausted = this.stamina < amount;
         this.stamina = Math.max(0, this.stamina - amount);
+
+        if (this.stamina === 0 && !this.isExhausted) {
+            this.isExhausted = true;
+            $gameParty.checkExhaustionSwap();
+        }
 
         // Trigger regen for other party members
         // Regenerate half of what was spent (so if spent 10, others get 5)
@@ -482,12 +487,7 @@ class Game_Actor extends Game_Battler {
             }
         });
 
-        if (exhausted) {
-             $gameSystem.log(`${this.name} is panting!`);
-             this.addState('panting');
-        }
-
-        return exhausted;
+        return this.isExhausted;
     }
 
     /**
@@ -496,6 +496,9 @@ class Game_Actor extends Game_Battler {
      */
     gainStamina(amount) {
         this.stamina = Math.min(this.mstamina, this.stamina + amount);
+        if (this.isExhausted && this.stamina >= this.mstamina / 2) {
+            this.isExhausted = false;
+        }
     }
 
     /**
@@ -577,7 +580,11 @@ class Game_Party {
         do {
             this.index = (this.index + dir + 3) % 3;
             s--;
-        } while (this.active().isDead() && s > 0);
+        } while ((this.active().isDead() || this.active().isExhausted) && s > 0);
+
+        // If we wrapped around and everyone else is validly skipped (dead or exhausted)
+        // We might end up on an exhausted member if they are the only one left.
+        // That is acceptable per rules.
 
         // If we wrapped around to same person (e.g. others dead), that's fine.
         if (this.index !== originalIndex) {
@@ -592,6 +599,35 @@ class Game_Party {
                 nextColor: this.active().color
             });
         }
+    }
+
+    /**
+     * Checks if the active member is exhausted and forces a swap if possible.
+     */
+    checkExhaustionSwap() {
+        const active = this.active();
+        if (!active.isExhausted) return;
+
+        // Find next available member (not dead, not exhausted)
+        // We check in cycle order
+        let offset = 1;
+        while (offset < 3) {
+            const nextIndex = (this.index + offset) % 3;
+            const member = this.members[nextIndex];
+            if (!member.isDead() && !member.isExhausted) {
+                this.index = nextIndex;
+                EventBus.emit('refresh_ui');
+                $gameSystem.log(`${active.name} exhausted! Swapping.`);
+                EventBus.emit('play_animation', 'move_switch', {
+                    fromX: $gameMap.playerX, fromY: $gameMap.playerY,
+                    toX: $gameMap.playerX, toY: $gameMap.playerY,
+                    nextColor: this.active().color
+                });
+                return;
+            }
+            offset++;
+        }
+        // If we get here, no one else is available. Stay on exhausted actor.
     }
 
     /**

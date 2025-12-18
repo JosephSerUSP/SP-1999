@@ -17,12 +17,9 @@ class Window_Party extends Window_Base {
             const staPct = (m.stamina / m.mstamina) * 100;
             const clr = pct < 30 ? 'var(--pe-red)' : pct < 60 ? 'var(--pe-gold)' : 'var(--pe-green)';
 
-            // Stamina Color with Gradient (Simulated by CSS class in future, here using hex)
-            // User requested: "White or off-white teal" + "shifting gradient"
-            // We can pass a style object to Gauge if it supports it, or just a color.
-            // Since Gauge uses backgroundColor, we might need a custom class if we want animation.
-            // For now, let's use a distinct teal-white color.
-            const staColor = '#ccffff';
+            // Stamina Color
+            // White/Teal usually, Red if exhausted
+            const staColor = m.isExhausted ? 'var(--pe-red)' : '#ccffff';
 
             return {
                 type: 'container',
