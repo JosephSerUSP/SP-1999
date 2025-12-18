@@ -323,6 +323,8 @@ class Game_Enemy extends Game_Battler {
         this.hp = hp;
         this.mhp = hp;
         this.alerted = false;
+        this.cooldown = 0;
+        this.mode = 'range';
         // this.def = 0; // Handled by super default
         // this.equip = {}; // Handled by super default, though super sets it to {weapon:null, armor:null} which is compatible
         // this.states = []; // Handled by super
@@ -601,6 +603,74 @@ class Game_Map {
     }
 
     /**
+     * Returns a list of valid coordinates within a specific geometric shape.
+     * @param {number} ox - Origin X
+     * @param {number} oy - Origin Y
+     * @param {Object} dir - Direction {x,y}
+     * @param {string} type - 'line', 'cone', 'circle', 'target'
+     * @param {number} range - Range/Radius
+     * @returns {Array<Object>} List of {x,y}
+     */
+    getTilesInShape(ox, oy, dir, type, range) {
+        const tiles = [];
+        if (type === 'self') {
+            tiles.push({x: ox, y: oy});
+            return tiles;
+        }
+
+        // Optimization: limit search to bounding box
+        const xMin = ox - range; const xMax = ox + range;
+        const yMin = oy - range; const yMax = oy + range;
+
+        for (let x = xMin; x <= xMax; x++) {
+            for (let y = yMin; y <= yMax; y++) {
+                if (!this.isValid(x, y)) continue;
+
+                let match = false;
+                const dx = x - ox;
+                const dy = y - oy;
+                const dist = Math.abs(dx) + Math.abs(dy); // Manhattan
+                const euc = Math.sqrt(dx*dx + dy*dy);
+
+                if (type === 'line') {
+                    // Exact line in direction
+                    if (dx === 0 && dy === 0) continue;
+                    if (dist > range) continue;
+                    // Check alignment
+                    if (dir.x !== 0) { if (dy === 0 && Math.sign(dx) === dir.x) match = true; }
+                    else if (dir.y !== 0) { if (dx === 0 && Math.sign(dy) === dir.y) match = true; }
+                    // LOS Check
+                    if (match && !this.checkLineOfSight(ox, oy, x, y)) match = false;
+
+                } else if (type === 'cone') {
+                    // 90 degree cone
+                    if (dist > range) continue;
+                    if (dx === 0 && dy === 0) continue;
+                    // Dot product >= Cross product logic for grid
+                    // Dot: dx*dir.x + dy*dir.y (Length along forward axis)
+                    // Cross: |dx*dir.y - dy*dir.x| (Lateral deviation)
+                    // For 90 degree cone (45 deg half-angle), Dot >= Cross
+                    const dot = dx * dir.x + dy * dir.y;
+                    const cross = Math.abs(dx * dir.y - dy * dir.x);
+                    if (dot > 0 && dot >= cross && this.checkLineOfSight(ox, oy, x, y)) match = true;
+
+                } else if (type === 'circle') {
+                    // Euclidean radius
+                    if (euc <= range && this.checkLineOfSight(ox, oy, x, y)) match = true;
+
+                } else if (type === 'target') {
+                    // Standard Diamond range (Manhattan), must have LOS
+                    // Usually 'target' means single target, but as a shape it's a range area.
+                    if (dist <= range && this.checkLineOfSight(ox, oy, x, y)) match = true;
+                }
+
+                if (match) tiles.push({x, y});
+            }
+        }
+        return tiles;
+    }
+
+    /**
      * Reveals a zone on the minimap.
      * @param {number} cx - Center X.
      * @param {number} cy - Center Y.
@@ -735,6 +805,9 @@ class Game_Map {
      */
     async updateEnemies() {
         for(const e of this.enemies) {
+            // Cooldown Update
+            if (e.cooldown > 0) e.cooldown--;
+
             // Enemy State Logic
             let restricted = false;
             for(let i = e.states.length - 1; i >= 0; i--) {
@@ -753,27 +826,57 @@ class Game_Map {
 
             if(e.alerted || e.ai === "patrol") {
                 let dx = 0, dy = 0;
+                let acted = false;
 
                 // AI BEHAVIORS
                 if(e.ai === "turret") {
-                    // Turret: Doesn't move. Attacks if in range.
-                    if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
-                        // Remote Attack
+                    // Turret: Doesn't move. Attacks if in range AND off cooldown.
+                    // Rarer shots: 1 in 3 turns
+                    if (e.cooldown === 0 && dist <= 6 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
                         const target = $gameParty.active();
-                        // Turrets shoot, so maybe less damage variation or distinct effect?
-                        // Using standard calcDamage for now but could be a skill.
                         const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
                         target.takeDamage(dmg);
                         EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
                         await Sequencer.sleep(100);
                         EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
                         EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                        e.cooldown = 2; // Cooldown for turret
+                        acted = true;
                     }
                     continue; // Skip movement
+                } else if (e.ai === "tactical") {
+                     // Ranged then Melee switch
+                     if (e.mode === 'range') {
+                         if (e.cooldown === 0 && dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
+                             // Shoot
+                             const target = $gameParty.active();
+                             const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.7);
+                             target.takeDamage(dmg);
+                             EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
+                             await Sequencer.sleep(100);
+                             EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                             EventBus.emit('play_animation', 'hit', { uid: 'player' });
+
+                             // Switch to Melee after shot
+                             e.mode = 'melee';
+                             e.cooldown = 1;
+                             acted = true;
+                         } else {
+                             // Try to get in range or line up?
+                             // Just chase if not in range
+                             if (dist > 5) {
+                                 dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                                 if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
+                             }
+                         }
+                     } else {
+                         // Melee Mode - Chase aggressive
+                         dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                         if(Math.random() < 0.2 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0; // Less random, more direct
+                     }
                 } else if (e.ai === "flee") {
                      // Move AWAY from player
                      dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
-                     // Add randomness to avoid getting stuck in corners?
                      if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
                 } else if(e.ai === "patrol" && !e.alerted) {
                      // Random walk
@@ -788,12 +891,17 @@ class Game_Map {
                     if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
                 }
 
+                if (acted) continue;
+
                 // MOVEMENT EXECUTION
                 const nx = e.x + dx; const ny = e.y + dy;
 
-                // Attack if adjacent (Melee) - Turrets handled above
+                // Update Facing
+                if (dx!==0 || dy!==0) e.direction = {x:dx, y:dy};
+
+                // Attack if adjacent (Melee)
                 if(nx === this.playerX && ny === this.playerY) {
-                    if (e.ai !== "flee") { // Fleeing enemies shouldn't attack just because they bumped you
+                    if (e.ai !== "flee") {
                         const target = $gameParty.active();
                         const dmg = BattleManager.calcDamage(e, target);
                         target.takeDamage(dmg);
@@ -851,43 +959,42 @@ class Game_Map {
              return;
         }
 
-        if (skill && skill.type === 'line') {
-            const dx = actor.direction.x; const dy = actor.direction.y;
-            for (let i=1; i<=skill.range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
-            }
-            // Execute even if no target (miss)
-        } else {
-            // Default melee range 1 (or single target skill with range > 1 but not 'line')
-            // Actually 'target' type skills are ranged single target.
-            // But this block is "default melee range 1" IF no skill.
-            // If skill is present and type is 'target', we should look up to skill range.
-            const range = skill ? skill.range : 1;
-            // For now, simpler logic: if it's a 'target' skill, we look for closest enemy in direction or just front?
-            // Original logic was just front. Let's keep it simple for 'target' type: it acts like melee but extended range?
-            // Or should it be directional like 'line' but stops at first? That's what 'line' does.
-            // Let's assume 'target' means "Hit enemy at Cursor" but we don't have cursor.
-            // So we'll treat it as directional line for now (stops at first target).
+        if (skill && (skill.type === 'cone' || skill.type === 'circle' || skill.type === 'line' || skill.type === 'target')) {
+             const type = skill.type;
+             const range = skill.range;
+             const dir = actor.direction;
+             const tiles = this.getTilesInShape(this.playerX, this.playerY, dir, type, range);
 
-             const dx = actor.direction.x; const dy = actor.direction.y;
-             // Check along the line up to range
-             for (let i=1; i<=range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
+             // Identify enemies in these tiles
+             const potentialTargets = this.enemies.filter(e => tiles.some(t => t.x === e.x && t.y === e.y));
+
+             if (potentialTargets.length > 0) {
+                 if (type === 'line' || type === 'target') {
+                     // Line/Target hits FIRST enemy in path
+                     // Sort by distance
+                     potentialTargets.sort((a,b) => (Math.abs(a.x-this.playerX)+Math.abs(a.y-this.playerY)) - (Math.abs(b.x-this.playerX)+Math.abs(b.y-this.playerY)));
+                     target = potentialTargets[0];
+                 } else {
+                     // AOE (Cone, Circle) hits ALL
+                     target = potentialTargets;
+                 }
              }
+        } else {
+            // Default Melee (no skill)
+             const dx = actor.direction.x; const dy = actor.direction.y;
+             const tx = this.playerX + dx; const ty = this.playerY + dy;
+             target = this.enemies.find(en => en.x === tx && en.y === ty);
         }
 
         if (skillIdToExec) {
-            if (!target) {
+            // Check for empty array if target is array
+            const empty = !target || (Array.isArray(target) && target.length === 0);
+
+            if (empty) {
                 // MISS VISUAL
                 $gameSystem.log(`${actor.name} attacks empty air.`);
                 const dx = actor.direction.x; const dy = actor.direction.y;
-                Renderer.playAnimation('projectile', { x1: this.playerX, y1: this.playerY, x2: this.playerX + dx*5, y2: this.playerY + dy*5, color: actor.color });
+                if(typeof Renderer !== 'undefined') Renderer.playAnimation('projectile', { x1: this.playerX, y1: this.playerY, x2: this.playerX + dx*5, y2: this.playerY + dy*5, color: actor.color });
                 await Sequencer.sleep(300);
             } else {
                 await BattleManager.executeSkill(actor, skillIdToExec, target);
