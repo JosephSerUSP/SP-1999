@@ -212,18 +212,28 @@ class BattleManager {
     }
 
     /**
-     * Executes a skill by an actor.
+     * Executes a skill by an actor or enemy.
      * @static
      * @async
-     * @param {Game_Actor} a - The actor using the skill.
+     * @param {Game_Battler} a - The user (Actor or Enemy).
      * @param {string} k - The key/ID of the skill.
      * @param {Game_Battler} [target=null] - An optional specific target override.
      * @returns {Promise<boolean>} Resolves to true if skill was executed successfully, false otherwise.
      */
     static async executeSkill(a, k, target = null) {
         const s = $dataSkills[k];
-        if(a.pe < s.cost) { $gameSystem.log("No PE."); return false; }
-        a.pe -= s.cost; $gameSystem.log(`${a.name} uses ${s.name}!`);
+        const isPlayer = a.uid === 'player' || a instanceof Game_Actor;
+
+        // Cost Check (PE)
+        // Enemies might not use PE strictly yet, or have infinite?
+        // Let's enforce it if they have 'pe' property, else free.
+        if(a.pe !== undefined && a.pe < s.cost) {
+            if(isPlayer) $gameSystem.log("No PE.");
+            return false;
+        }
+        if(a.pe !== undefined) a.pe -= s.cost;
+
+        $gameSystem.log(`${a.name} uses ${s.name}!`);
         EventBus.emit('play_animation', 'flash', { color: a.color });
         await Sequencer.sleep(300);
 
@@ -231,8 +241,10 @@ class BattleManager {
         const runEffects = async (tgt) => {
             if (!tgt) return;
             // Visuals first (projectile) if needed
-            if (s.type !== 'self' && s.type !== 'all_enemies') {
-                EventBus.emit('play_animation', 'projectile', { x1: $gameMap.playerX, y1: $gameMap.playerY, x2: tgt.x, y2: tgt.y, color: a.color });
+            // Only animate projectile if distance > 1
+            const dist = Math.abs(a.x - tgt.x) + Math.abs(a.y - tgt.y);
+            if (s.type !== 'self' && s.type !== 'all_enemies' && dist > 1) {
+                EventBus.emit('play_animation', 'projectile', { x1: a.x, y1: a.y, x2: tgt.x, y2: tgt.y, color: a.color });
                 await Sequencer.sleep(100);
             }
 
@@ -243,40 +255,84 @@ class BattleManager {
         };
 
         if (target) {
-            // Direct target provided (e.g. Bump attack override)
+            // Direct target provided
             await runEffects(target);
         } else {
-            // Resolve Targets based on Type
-            if (s.type === 'self') {
-                await runEffects(a);
-            } else if (s.type === 'all_enemies') {
-                // All enemies
-                // We use Promise.all to animate simultaneously or loop with delay?
-                // Loop with slight delay looks better
-                const targets = [...$gameMap.enemies]; // Copy list
-                for(let e of targets) {
-                    await runEffects(e);
-                    await Sequencer.sleep(100);
-                }
-                EventBus.emit('play_animation', 'shake');
-            } else {
-                // Single target logic (Line or Range)
-                // Filter enemies in range
-                const targets = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) <= s.range);
+            // Resolve Targets based on Shape/Type
+            let targets = [];
 
-                if (targets.length > 0) {
-                    const count = s.count || 1;
-                    for (let i = 0; i < count; i++) {
-                        // For rapid fire, we might want random targets from the list
-                        // For snipe, just the closest or first? Original logic was first.
-                        const t = targets[Math.floor(Math.random() * targets.length)];
-                        await runEffects(t);
-                        await Sequencer.sleep(200);
-                        if(targets.length === 0) break; // All dead?
-                    }
+            if (s.type === 'self') {
+                targets = [a];
+            } else if (s.type === 'all_enemies') {
+                // If player uses it: All Enemies.
+                // If enemy uses it: All Players? (Only active player exists on map)
+                // Let's assume 'all_enemies' contextually means "All Hostiles".
+                if (isPlayer) {
+                    targets = [...$gameMap.enemies];
                 } else {
-                    $gameSystem.log("No targets in range.");
+                    targets = [$gameParty.active()];
                 }
+            } else {
+                // Geometric Targeting (Cone, Line, Circle, Target)
+                // Use getTilesInShape
+                const dir = a.direction || {x:0, y:1};
+                const tiles = $gameMap.getTilesInShape(a.x, a.y, s.type, s.range, dir);
+
+                // Find valid targets on these tiles
+                if (isPlayer) {
+                    // Player targets Enemies
+                    targets = $gameMap.enemies.filter(e => tiles.some(t => t.x === e.x && t.y === e.y));
+                } else {
+                    // Enemy targets Player
+                    // Currently only active player is on map
+                    const p = $gameParty.active();
+                    if (tiles.some(t => t.x === $gameMap.playerX && t.y === $gameMap.playerY)) {
+                        targets = [p];
+                    }
+                }
+            }
+
+            // Apply Logic
+            if (targets.length > 0) {
+                if (s.type === 'target') {
+                     // Single Target Logic (Pick one if multiple overlap, e.g. stacked? usually not)
+                     // Or "Hit all in shape" vs "Hit first in shape"
+                     // 'target' usually means Single Target. 'cone'/'circle' means AOE.
+                     // But getTilesInShape for 'target' returns a line.
+                     // We should pick the closest one for 'target'/'line'.
+                     // For Cone/Circle, hit ALL.
+
+                     if (s.type === 'line' || s.type === 'target') {
+                         // Sort by distance
+                         targets.sort((t1, t2) => (Math.abs(t1.x - a.x) + Math.abs(t1.y - a.y)) - (Math.abs(t2.x - a.x) + Math.abs(t2.y - a.y)));
+                         // Hit first (penetrating? if type is line... maybe. default to single for now unless specified)
+                         // Original logic was single for line.
+                         const count = s.count || 1;
+                         for(let i=0; i<count; i++) {
+                             // Hit same target multiple times?
+                             // Or multiple targets?
+                             // Standard interpretation: count = multi-hit on single target.
+                             await runEffects(targets[0]);
+                             await Sequencer.sleep(200);
+                             if(targets[0].isDead()) break;
+                         }
+                     } else {
+                         // AOE (Cone, Circle) - Hit ALL
+                         for(let t of targets) {
+                             await runEffects(t);
+                             // Small delay for drama?
+                             // await Sequencer.sleep(50);
+                         }
+                         if(targets.length > 2) EventBus.emit('play_animation', 'shake');
+                     }
+                } else {
+                    // AOE Fallback
+                     for(let t of targets) {
+                         await runEffects(t);
+                     }
+                }
+            } else {
+                $gameSystem.log("Missed.");
             }
         }
 
