@@ -572,35 +572,22 @@ class Renderer3D {
         if (!skill) return;
         const geo = new THREE.PlaneGeometry(0.9, 0.9);
         const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-        const px = $gameMap.playerX; const py = $gameMap.playerY; const coords = [];
 
-        if (skill.type === 'all_enemies') { $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y})); }
-        else if (skill.range > 0) {
-            if (skill.type === 'line') {
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                for(let i=1; i<=skill.range; i++) {
-                    const tx = px + dx*i; const ty = py + dy*i;
-                    if (!$gameMap.isValid(tx, ty) || $gameMap.tiles[tx][ty] === 1) break;
-                    coords.push({x: tx, y: ty});
-                }
-            } else if (skill.range === 1) {
-                // Directional melee indicator
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                const tx = px + dx; const ty = py + dy;
-                if ($gameMap.isValid(tx, ty) && $gameMap.tiles[tx][ty] !== 1) coords.push({x: tx, y: ty});
-            } else {
-                for(let x = px - skill.range; x <= px + skill.range; x++) {
-                    for(let y = py - skill.range; y <= py + skill.range; y++) {
-                        if (Math.abs(x - px) + Math.abs(y - py) <= skill.range && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] === 0) coords.push({x, y});
-                    }
-                }
-            }
+        // Use Game_Map helper for consistency
+        const coords = $gameMap.getTilesInShape($gameMap.playerX, $gameMap.playerY, actor.direction, skill.type, skill.range);
+        // Also handle 'all_enemies' which might not be fully handled by getTilesInShape if we want it global
+        if (skill.type === 'all_enemies') {
+             $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y}));
         }
+
         coords.forEach(c => {
-            const m = new THREE.Mesh(geo, mat);
-            m.rotation.x = -Math.PI / 2;
-            m.position.set(c.x, 0.02, c.y);
-            this.rangeGroup.add(m);
+            // Check validity again just in case (e.g. walls should not be highlighted usually, but getTilesInShape handles it)
+            if ($gameMap.isValid(c.x, c.y) && $gameMap.tiles[c.x][c.y] !== 1) {
+                const m = new THREE.Mesh(geo, mat);
+                m.rotation.x = -Math.PI / 2;
+                m.position.set(c.x, 0.02, c.y);
+                this.rangeGroup.add(m);
+            }
         });
     }
 

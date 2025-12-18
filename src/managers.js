@@ -243,32 +243,39 @@ class BattleManager {
         };
 
         if (target) {
-            // Direct target provided (e.g. Bump attack override)
-            await runEffects(target);
+            if (Array.isArray(target)) {
+                 // AOE target list passed explicitly
+                 for(let t of target) {
+                     await runEffects(t);
+                     await Sequencer.sleep(100);
+                 }
+                 if(target.length > 1) EventBus.emit('play_animation', 'shake');
+            } else {
+                // Direct single target provided
+                await runEffects(target);
+            }
         } else {
-            // Resolve Targets based on Type
+            // Resolve Targets based on Type (fallback if no target passed)
+            // This path is used if playerAttack calls executeSkill with null target (e.g. self/all_enemies)
+            // or if AI calls it blindly.
+
             if (s.type === 'self') {
                 await runEffects(a);
             } else if (s.type === 'all_enemies') {
-                // All enemies
-                // We use Promise.all to animate simultaneously or loop with delay?
-                // Loop with slight delay looks better
-                const targets = [...$gameMap.enemies]; // Copy list
+                const targets = [...$gameMap.enemies];
                 for(let e of targets) {
                     await runEffects(e);
                     await Sequencer.sleep(100);
                 }
                 EventBus.emit('play_animation', 'shake');
             } else {
-                // Single target logic (Line or Range)
+                // Legacy Fallback for "Closest in Range" (used by old AI or default calls)
                 // Filter enemies in range
                 const targets = $gameMap.enemies.filter(e => Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY) <= s.range);
 
                 if (targets.length > 0) {
                     const count = s.count || 1;
                     for (let i = 0; i < count; i++) {
-                        // For rapid fire, we might want random targets from the list
-                        // For snipe, just the closest or first? Original logic was first.
                         const t = targets[Math.floor(Math.random() * targets.length)];
                         await runEffects(t);
                         await Sequencer.sleep(200);
