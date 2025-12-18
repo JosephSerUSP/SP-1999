@@ -437,6 +437,8 @@ class Game_Actor extends Game_Battler {
         this.hp = this.mhp;
         this.mpe = 100;
         this.pe = d.pe;
+        this.mstamina = 100;
+        this.stamina = this.mstamina;
         // this.equip, this.states initialized in super
         this.level = 1;
         this.exp = 0;
@@ -459,6 +461,42 @@ class Game_Actor extends Game_Battler {
      * Regenerates PE (Power Energy).
      */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
+
+    /**
+     * Consumes stamina for an action.
+     * @param {number} amount - The amount of stamina to consume.
+     * @returns {boolean} True if the actor is exhausted (panting) after this action.
+     */
+    payStamina(amount) {
+        if (amount <= 0) return false;
+
+        const exhausted = this.stamina < amount;
+        this.stamina = Math.max(0, this.stamina - amount);
+
+        // Trigger regen for other party members
+        // Regenerate half of what was spent (so if spent 10, others get 5)
+        const regenAmount = Math.floor(amount / 2);
+        $gameParty.members.forEach(m => {
+            if (m !== this && !m.isDead()) {
+                m.gainStamina(regenAmount);
+            }
+        });
+
+        if (exhausted) {
+             $gameSystem.log(`${this.name} is panting!`);
+             this.addState('panting');
+        }
+
+        return exhausted;
+    }
+
+    /**
+     * Gains stamina.
+     * @param {number} amount
+     */
+    gainStamina(amount) {
+        this.stamina = Math.min(this.mstamina, this.stamina + amount);
+    }
 
     /**
      * Adds experience points to the actor.
@@ -520,10 +558,40 @@ class Game_Party {
 
     /**
      * Rotates to the next living party member.
+     * Note: Now only used for forced rotation on death. Manual rotation uses cycleActive.
      */
     rotate() {
         let s = 3; do { this.index = (this.index + 1) % 3; s--; } while(this.active().isDead() && s > 0);
         if(this.active().isDead()) SceneManager.gameOver();
+    }
+
+    /**
+     * Manually cycles the active party member.
+     * @param {number} dir - Direction (1 for next, -1 for prev).
+     */
+    cycleActive(dir) {
+        if (this.members.every(m => m.isDead())) return;
+
+        const originalIndex = this.index;
+        let s = 3;
+        do {
+            this.index = (this.index + dir + 3) % 3;
+            s--;
+        } while (this.active().isDead() && s > 0);
+
+        // If we wrapped around to same person (e.g. others dead), that's fine.
+        if (this.index !== originalIndex) {
+            EventBus.emit('refresh_ui');
+            // Trigger visual switch effect at current player position?
+            // Actually map update handles visuals usually, but we are just swapping locally.
+            // Maybe just float text "Swap"?
+            // Or trigger the 'move_switch' animation in place?
+            EventBus.emit('play_animation', 'move_switch', {
+                fromX: $gameMap.playerX, fromY: $gameMap.playerY,
+                toX: $gameMap.playerX, toY: $gameMap.playerY,
+                nextColor: this.active().color
+            });
+        }
     }
 
     /**
@@ -782,16 +850,19 @@ class Game_Map {
         if(enemy) {
              this.playerAttack();
         } else {
-            // TRIGGER VISUAL SWAP
-            EventBus.emit('play_animation', 'move_switch', {
-                fromX: this.playerX, fromY: this.playerY,
-                toX: nx, toY: ny,
-                nextColor: $gameParty.nextActive().color
-            });
+            // Consume Stamina for Move (10)
+            actor.payStamina(10);
+
+            // Check if we became restricted just now (Panting)
+            // Even if we become panting, the current move is allowed.
+            // The restriction applies to the NEXT turn.
+
+            // Visual Move
+            EventBus.emit('play_animation', 'move', { toX: nx, toY: ny });
+
+            // Move
             this.playerX = nx; this.playerY = ny;
             this.revealZone(this.playerX, this.playerY, 6);
-
-            // NO SLEEP - allow continuous input buffer via Renderer flag
 
             const itemIdx = this.loot.findIndex(i => i.x === nx && i.y === ny);
             if(itemIdx > -1) {
@@ -813,16 +884,10 @@ class Game_Map {
                 return;
             }
 
-            // End of action for the actor who moved/acted (which is technically the one leaving)
-            // But wait, $gameParty.rotate() changes active member.
-            // Logic: Current actor moves. Then we rotate.
-            // Should states update on the actor who just acted?
-            // Yes.
-            await this.processTurnEnd($gameParty.active());
-
-            $gameParty.rotate();
             EventBus.emit('refresh_ui');
-            this.updateEnemies();
+            await this.updateEnemies();
+            await this.processTurnEnd(actor); // States update
+
             $gameBanter.trigger('walk', {x: this.playerX, y: this.playerY});
             $gameBanter.trigger('surrounded', {x: this.playerX, y: this.playerY});
         }
@@ -844,18 +909,18 @@ class Game_Map {
                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#808");
                 if(actor.isDead()) {
                      $gameSystem.log(`${actor.name} collapsed.`);
-                     // Force rotation immediately if active actor died
-                     if($gameParty.active() === actor) {
-                         $gameParty.rotate();
-                         EventBus.emit('refresh_ui');
-                         // If everyone is dead, rotate() calls gameOver(), so we are good.
-                     }
                 }
             }
             if(s.duration <= 0) {
                 actor.removeState(s.id);
                 $gameSystem.log(`${actor.name}'s ${s.name} faded.`);
             }
+        }
+
+        // Force rotation if active actor is dead
+        if($gameParty.active().isDead()) {
+             $gameParty.rotate();
+             EventBus.emit('refresh_ui');
         }
     }
 
@@ -985,6 +1050,15 @@ class Game_Map {
         $gameSystem.isBusy = true;
         const actor = $gameParty.active();
 
+        if (actor.isRestricted()) {
+            $gameSystem.log(`${actor.name} is stunned!`);
+            EventBus.emit('refresh_ui');
+            await this.updateEnemies();
+            await this.processTurnEnd(actor);
+            $gameSystem.isBusy = false;
+            return;
+        }
+
         // Determine skill
         const attackSkillId = actor.getAttackSkill();
         const skill = attackSkillId ? $dataSkills[attackSkillId] : null;
@@ -992,12 +1066,15 @@ class Game_Map {
         let target = null;
         let skillIdToExec = attackSkillId;
 
+        // STAMINA COST CHECK (Skill/Attack = 20)
+        // Check if we can attack. If not enough stamina, we still attack but get exhausted.
+        actor.payStamina(20);
+
         if (skill && (skill.type === 'self' || skill.type === 'all_enemies')) {
              // For self/all_enemies, we don't need to resolve a single target here.
              // BattleManager handles it.
              await BattleManager.executeSkill(actor, skillIdToExec, null);
              // Skip the rest of the targeting logic
-             $gameParty.rotate();
              EventBus.emit('refresh_ui');
              await this.updateEnemies();
              $gameSystem.isBusy = false;
@@ -1065,7 +1142,6 @@ class Game_Map {
             }
         }
 
-        $gameParty.rotate();
         EventBus.emit('refresh_ui');
         await this.updateEnemies();
         $gameSystem.isBusy = false;
