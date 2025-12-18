@@ -89,6 +89,7 @@ const PARAM_DEF = 3;
 const $dataStates = {
     "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
     "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
+    "panting": { name: "Panting", duration: 2, icon: "😓", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
     "poison": { name: "Poison", duration: 5, icon: "☠️", traits: [] }
 };
 

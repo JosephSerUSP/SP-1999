@@ -69,6 +69,8 @@ class SceneManager {
              else if(InputManager.isPressed('OK') && !InputManager.isTriggered('OK')) { /* Prevent auto-repeat attack spam if desired, or allow hold? Original logic allowed hold. Keeping hold. */ $gameMap.playerAttack(); }
              else if(InputManager.isTriggered('OK')) $gameMap.playerAttack(); // Ensure tap also works
              else if(InputManager.isTriggered('MENU')) { UI.focusWindow('tactics'); }
+             else if(InputManager.isTriggered('PREV_ACTOR')) { $gameParty.cycleActive(-1); }
+             else if(InputManager.isTriggered('NEXT_ACTOR')) { $gameParty.cycleActive(1); }
         }
     }
 
