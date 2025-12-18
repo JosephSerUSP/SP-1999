@@ -560,12 +560,41 @@ class Game_Party {
     nextActive() { return this.members[(this.index + 1) % 3]; }
 
     /**
+     * Updates the active index and handles events.
+     * @param {number} newIndex - The new party index.
+     * @param {boolean} [animate=true] - Whether to play the swap animation.
+     */
+    setIndex(newIndex, animate = true) {
+        if (this.index === newIndex) return;
+        this.index = newIndex;
+        EventBus.emit('refresh_ui');
+
+        if (animate) {
+            EventBus.emit('play_animation', 'move_switch', {
+                fromX: $gameMap.playerX, fromY: $gameMap.playerY,
+                toX: $gameMap.playerX, toY: $gameMap.playerY,
+                nextColor: this.active().color
+            });
+        }
+    }
+
+    /**
      * Rotates to the next living party member.
      * Note: Now only used for forced rotation on death. Manual rotation uses cycleActive.
      */
     rotate() {
-        let s = 3; do { this.index = (this.index + 1) % 3; s--; } while(this.active().isDead() && s > 0);
-        if(this.active().isDead()) SceneManager.gameOver();
+        let s = 3;
+        let newIdx = this.index;
+        do {
+            newIdx = (newIdx + 1) % 3;
+            s--;
+        } while(this.members[newIdx].isDead() && s > 0);
+
+        if (this.members[newIdx].isDead()) {
+             SceneManager.gameOver();
+        } else {
+             this.setIndex(newIdx, true);
+        }
     }
 
     /**
@@ -576,28 +605,15 @@ class Game_Party {
         if (this.members.every(m => m.isDead())) return;
 
         const originalIndex = this.index;
+        let newIdx = this.index;
         let s = 3;
         do {
-            this.index = (this.index + dir + 3) % 3;
+            newIdx = (newIdx + dir + 3) % 3;
             s--;
-        } while ((this.active().isDead() || this.active().isExhausted) && s > 0);
+        } while ((this.members[newIdx].isDead() || this.members[newIdx].isExhausted) && s > 0);
 
-        // If we wrapped around and everyone else is validly skipped (dead or exhausted)
-        // We might end up on an exhausted member if they are the only one left.
-        // That is acceptable per rules.
-
-        // If we wrapped around to same person (e.g. others dead), that's fine.
-        if (this.index !== originalIndex) {
-            EventBus.emit('refresh_ui');
-            // Trigger visual switch effect at current player position?
-            // Actually map update handles visuals usually, but we are just swapping locally.
-            // Maybe just float text "Swap"?
-            // Or trigger the 'move_switch' animation in place?
-            EventBus.emit('play_animation', 'move_switch', {
-                fromX: $gameMap.playerX, fromY: $gameMap.playerY,
-                toX: $gameMap.playerX, toY: $gameMap.playerY,
-                nextColor: this.active().color
-            });
+        if (newIdx !== originalIndex) {
+            this.setIndex(newIdx, true);
         }
     }
 
@@ -608,21 +624,13 @@ class Game_Party {
         const active = this.active();
         if (!active.isExhausted) return;
 
-        // Find next available member (not dead, not exhausted)
-        // We check in cycle order
         let offset = 1;
         while (offset < 3) {
             const nextIndex = (this.index + offset) % 3;
             const member = this.members[nextIndex];
             if (!member.isDead() && !member.isExhausted) {
-                this.index = nextIndex;
-                EventBus.emit('refresh_ui');
                 $gameSystem.log(`${active.name} exhausted! Swapping.`);
-                EventBus.emit('play_animation', 'move_switch', {
-                    fromX: $gameMap.playerX, fromY: $gameMap.playerY,
-                    toX: $gameMap.playerX, toY: $gameMap.playerY,
-                    nextColor: this.active().color
-                });
+                this.setIndex(nextIndex, true);
                 return;
             }
             offset++;
