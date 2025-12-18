@@ -41,12 +41,16 @@ class UIManager {
 
         // Viewport (Optical Feed)
         this.windows.view = new Window_View();
+
+        // Enemy Info Overlay
+        this.windows.enemyInfo = new Window_EnemyInfo();
     }
 
     refresh() {
         if (this.windows.status) this.windows.status.refresh();
         if (this.windows.cmd) this.windows.cmd.refresh();
         if (this.windows.log) this.windows.log.refresh();
+        if (this.windows.enemyInfo) this.windows.enemyInfo.update();
         this.refreshMinimap();
 
         if (this.focusedWindow) {
