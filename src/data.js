@@ -128,6 +128,7 @@ const $dataSkills = {
 const $dataClasses = {
     "Aya": {
         job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
+        portrait: "img/portraits/Aya.png",
         banter: [
             // KILL
             { text: "Got one.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Kyle", text: "Nice shot.", chance: 0.5 } },
@@ -168,6 +169,7 @@ const $dataClasses = {
     },
     "Kyle": {
         job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
+        portrait: "img/portraits/Kyle.png",
         banter: [
             // KILL
             { text: "Target neutralized.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Aya", text: "Clean.", chance: 0.4 } },
@@ -204,6 +206,7 @@ const $dataClasses = {
     },
     "Eve": {
         job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
+        portrait: "img/portraits/Eve.png",
         banter: [
             // KILL
             { text: "Burn.", trigger: "kill", chance: 0.5, priority: 20 },
