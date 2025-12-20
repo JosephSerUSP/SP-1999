@@ -126,117 +126,117 @@ const $dataSkills = {
  * @type {Object.<string, Object>}
  */
 const $dataClasses = {
-    "Aya": {
-        job: "Detective", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
+    "Julia": {
+        job: "Agent", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
         banter: [
             // KILL
-            { text: "Got one.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Kyle", text: "Nice shot.", chance: 0.5 } },
-            { text: "Messy work.", trigger: "kill", chance: 0.2, priority: 10 },
-            { text: "Down you go.", trigger: "kill", chance: 0.2, priority: 10 },
-            { text: "Target down.", trigger: "kill", chance: 0.2, priority: 10 },
+            { text: "Threat neutralized.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Miguel", text: "Nice work, Julia.", chance: 0.5 } },
+            { text: "Done.", trigger: "kill", chance: 0.2, priority: 10 },
+            { text: "Messy.", trigger: "kill", chance: 0.2, priority: 10 },
+            { text: "One less variable.", trigger: "kill", chance: 0.2, priority: 10 },
 
             // WALK
             { text: "Checking corners.", trigger: "walk", chance: 0.05, priority: 10 },
             { text: "Watch your step.", trigger: "walk", chance: 0.05, priority: 10 },
-            { text: "Quiet...", trigger: "walk", chance: 0.05, priority: 10, reply: { speaker: "Eve", text: "It's never quiet.", chance: 0.5 } },
-            { text: "Scanning area.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "Quiet.", trigger: "walk", chance: 0.05, priority: 10, reply: { speaker: "Rebus", text: "The static hums...", chance: 0.5 } },
+            { text: "Scanning sector.", trigger: "walk", chance: 0.05, priority: 10 },
 
             // SURROUNDED (High Priority)
-            { text: "Too many of them!", trigger: "surrounded", chance: 0.6, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Kyle", text: "Hold the line!", chance: 1.0 } },
-            { text: "Back to back!", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Too many of them.", trigger: "surrounded", chance: 0.6, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Miguel", text: "I-I'm trying to cover you!", chance: 1.0 } },
+            { text: "Back to back.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
 
             // LOOT
-            { text: "Found something.", trigger: "loot", chance: 0.5, priority: 30 },
+            { text: "Secured.", trigger: "loot", chance: 0.5, priority: 30 },
             { text: "Useful.", trigger: "loot", chance: 0.3, priority: 30 },
-            { text: "Evidence?", trigger: "loot", chance: 0.2, priority: 30 },
+            { text: "Might be evidence.", trigger: "loot", chance: 0.2, priority: 30 },
 
             // HURT
-            { text: "Damn it!", trigger: "hurt", chance: 0.4, priority: 50 },
-            { text: "Need a medic!", trigger: "hurt", chance: 0.3, priority: 50, reply: { speaker: "Kyle", text: "Sit tight.", chance: 0.6 } },
+            { text: "Tch.", trigger: "hurt", chance: 0.4, priority: 50 },
+            { text: "Careless.", trigger: "hurt", chance: 0.3, priority: 50, reply: { speaker: "Miguel", text: "Julia! Are you okay?", chance: 0.6 } },
 
             // LOW HP
-            { text: "I'm bleeding bad.", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Vision blurring...", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "I'm bleeding.", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Focus... stay focused.", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
 
             // LEVEL UP
-            { text: "Stronger.", trigger: "level_up", chance: 1.0, priority: 70 },
+            { text: "Efficiency increased.", trigger: "level_up", chance: 1.0, priority: 70 },
 
             // START (New)
-            { text: "Let's move.", trigger: "start", chance: 1.0, priority: 50 },
-            { text: "Stay focused.", trigger: "start", chance: 0.5, priority: 50, reply: { speaker: "Eve", text: "Focus...", chance: 0.4 } }
+            { text: "Let's move. Recording started.", trigger: "start", chance: 1.0, priority: 50 },
+            { text: "Stay focused.", trigger: "start", chance: 0.5, priority: 50, reply: { speaker: "Rebus", text: "I am... watching.", chance: 0.4 } }
         ]
     },
-    "Kyle": {
-        job: "Trooper", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
+    "Miguel": {
+        job: "Analyst", hp: 70, atk: 3, def: 4, pe: 20, color: 0x0088ff, skills: ["blast", "barrier", "stun"],
         banter: [
             // KILL
-            { text: "Target neutralized.", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Aya", text: "Clean.", chance: 0.4 } },
-            { text: "Hostile down.", trigger: "kill", chance: 0.3, priority: 10 },
-            { text: "Threat cleared.", trigger: "kill", chance: 0.3, priority: 10 },
+            { text: "Oh, wow. Did I do that?", trigger: "kill", chance: 0.4, priority: 20, reply: { speaker: "Julia", text: "Don't hesitate.", chance: 0.4 } },
+            { text: "Safe... for now.", trigger: "kill", chance: 0.3, priority: 10 },
+            { text: "Is it... dead?", trigger: "kill", chance: 0.3, priority: 10 },
 
             // WALK
-            { text: "Moving out.", trigger: "walk", chance: 0.05, priority: 10 },
-            { text: "Stay sharp.", trigger: "walk", chance: 0.05, priority: 10, reply: { speaker: "Aya", text: "Always.", chance: 0.5 } },
-            { text: "Check your six.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "My heart's racing.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "Did you hear that?", trigger: "walk", chance: 0.05, priority: 10, reply: { speaker: "Julia", text: "Nothing on thermal.", chance: 0.5 } },
+            { text: "I wish Olavo was here.", trigger: "walk", chance: 0.05, priority: 10 },
 
             // SURROUNDED
-            { text: "We are surrounded!", trigger: "surrounded", chance: 0.6, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Eve", text: "Good. More to burn.", chance: 0.7 } },
-            { text: "Suppressing fire!", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "Guys? Guys?!", trigger: "surrounded", chance: 0.6, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Rebus", text: "They congregate.", chance: 0.7 } },
+            { text: "I don't like these odds!", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
 
             // LOOT
-            { text: "Supplies secured.", trigger: "loot", chance: 0.6, priority: 30 },
-            { text: "Asset acquired.", trigger: "loot", chance: 0.4, priority: 30 },
+            { text: "Found something!", trigger: "loot", chance: 0.6, priority: 30 },
+            { text: "Can we use this?", trigger: "loot", chance: 0.4, priority: 30 },
 
             // HURT
-            { text: "Taking fire!", trigger: "hurt", chance: 0.5, priority: 50 },
-            { text: "Armor hit!", trigger: "hurt", chance: 0.4, priority: 50 },
+            { text: "Ah! Not the face!", trigger: "hurt", chance: 0.5, priority: 50 },
+            { text: "I think I broke something...", trigger: "hurt", chance: 0.4, priority: 50 },
 
             // LOW HP
-            { text: "Critical condition.", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Need evac...", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "I don't want to die here...", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "Everything's spinning...", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
 
             // LEVEL UP
-            { text: "Combat efficiency up.", trigger: "level_up", chance: 1.0, priority: 70 },
+            { text: "I think I'm getting the hang of this.", trigger: "level_up", chance: 1.0, priority: 70 },
 
              // START
-            { text: "We have a job to do.", trigger: "start", chance: 1.0, priority: 50 }
+            { text: "Systems nominal. I think? Olavo is watching, right?", trigger: "start", chance: 1.0, priority: 50 }
         ]
     },
-    "Eve": {
-        job: "Subject", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
+    "Rebus": {
+        job: "Entity", hp: 35, atk: 6, def: 1, pe: 80, color: 0xff0044, skills: ["combust", "drain", "nuke", "heal"],
         banter: [
             // KILL
-            { text: "Burn.", trigger: "kill", chance: 0.5, priority: 20 },
-            { text: "Gone.", trigger: "kill", chance: 0.4, priority: 10 },
-            { text: "Ashes.", trigger: "kill", chance: 0.3, priority: 10 },
-            { text: "It screamed.", trigger: "kill", chance: 0.3, priority: 20, reply: { speaker: "Kyle", text: "Easy, Eve.", chance: 0.6 } },
+            { text: "Deleted.", trigger: "kill", chance: 0.5, priority: 20 },
+            { text: "It returns to the code.", trigger: "kill", chance: 0.4, priority: 10 },
+            { text: "Zeroes and ones.", trigger: "kill", chance: 0.3, priority: 10 },
+            { text: "Silence.", trigger: "kill", chance: 0.3, priority: 20, reply: { speaker: "Miguel", text: "Uh, good job?", chance: 0.6 } },
 
             // WALK
-            { text: "It calls to me.", trigger: "walk", chance: 0.05, priority: 10 },
-            { text: "So dark...", trigger: "walk", chance: 0.05, priority: 10 },
-            { text: "The stack breathes.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "This place... it remembers.", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "So many layers...", trigger: "walk", chance: 0.05, priority: 10 },
+            { text: "I feel... heavy.", trigger: "walk", chance: 0.05, priority: 10 },
 
             // SURROUNDED
-            { text: "So many souls.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
-            { text: "I'll burn them all.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Aya", text: "Don't hit us!", chance: 0.8 } },
+            { text: "The data is loud.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 } },
+            { text: "They want to be real.", trigger: "surrounded", chance: 0.5, priority: 60, condition: { type: "enemy_count_range", range: 5, min: 3 }, reply: { speaker: "Julia", text: "Focus on the target!", chance: 0.8 } },
 
             // LOOT
-            { text: "Pretty.", trigger: "loot", chance: 0.5, priority: 30 },
-            { text: "Mine.", trigger: "loot", chance: 0.5, priority: 30 },
+            { text: "A fragment.", trigger: "loot", chance: 0.5, priority: 30 },
+            { text: "It shines.", trigger: "loot", chance: 0.5, priority: 30 },
 
             // HURT
-            { text: "Pain...", trigger: "hurt", chance: 0.5, priority: 50 },
-            { text: "Don't touch me!", trigger: "hurt", chance: 0.5, priority: 50 },
+            { text: "Interference.", trigger: "hurt", chance: 0.5, priority: 50 },
+            { text: "This vessel... fragile.", trigger: "hurt", chance: 0.5, priority: 50 },
 
             // LOW HP
-            { text: "Fading...", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
-            { text: "Help me.", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 }, reply: { speaker: "Kyle", text: "I've got you.", chance: 1.0 } },
+            { text: "Unspooling...", trigger: "low_hp", chance: 0.8, priority: 80, condition: { type: "hp_below_pct", value: 0.3 } },
+            { text: "The signal... fading.", trigger: "low_hp", chance: 0.6, priority: 80, condition: { type: "hp_below_pct", value: 0.3 }, reply: { speaker: "Miguel", text: "Stay with us, Rebus!", chance: 1.0 } },
 
             // LEVEL UP
-            { text: "Power growing.", trigger: "level_up", chance: 1.0, priority: 70 },
+            { text: "My definition expands.", trigger: "level_up", chance: 1.0, priority: 70 },
 
             // START
-            { text: "It's cold here.", trigger: "start", chance: 1.0, priority: 50 }
+            { text: "I am... here again.", trigger: "start", chance: 1.0, priority: 50 }
         ]
     }
 };
@@ -286,7 +286,7 @@ const $dataEnemies = [
     // NEW ENEMY: Tactical Trooper
     // Shoots then charges (Switching behavior)
     {
-        id: 8, name: "Tac Trooper", hp: 50, atk: 8, exp: 35, color: 0x008888, scale: 0.7, ai: "tactical",
+        id: 8, name: "Simulacrum", hp: 50, atk: 8, exp: 35, color: 0x008888, scale: 0.7, ai: "tactical",
         aiConfig: {
             movement: "hunter",
             actions: [
@@ -341,7 +341,11 @@ const $dataLootTable = {
  * @type {Object}
  */
 const $dataFloors = {
-    1: { width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro', generator: 'dungeon' },
+    // VELDT Simulation: Green/Matrix aesthetic
+    1: {
+        width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro', generator: 'dungeon',
+        colors: { floor: 0x001100, wall: 0x003300, fog: 0x001000, bg: 0x000500 }
+    },
     2: { width: 40, height: 40, rooms: 15, enemies: 10, loot: 8, generator: 'dungeon' },
     3: { width: 50, height: 50, rooms: 20, enemies: 15, loot: 12, generator: 'cave', density: 0.45 },
     default: { width: 60, height: 60, rooms: 25, enemies: 20, loot: 15, generator: 'dungeon' }
@@ -355,8 +359,13 @@ const $dataFloors = {
 const $dataCutscenes = {
     'intro': [
         { type: 'wait', time: 500 },
-        { type: 'dialog', text: "Target area reached. The stack goes deep.", speaker: "KYLE" },
-        { type: 'dialog', text: "My mitochondria... they're screaming.", speaker: "AYA" },
+        { type: 'log', text: "São Paulo, 1999." },
+        { type: 'wait', time: 1000 },
+        { type: 'log', text: "INTRA Facility - VR Training Module [VELDT]" },
+        { type: 'wait', time: 1000 },
+        { type: 'dialog', text: "Recording started. Simulation VELDT initialized.", speaker: "JULIA" },
+        { type: 'dialog', text: "It feels so... empty in here. Olavo is monitoring the feed, right?", speaker: "MIGUEL" },
+        { type: 'dialog', text: "The code... it breathes.", speaker: "REBUS" },
         { type: 'log', text: "Mission Start." }
     ]
 };
