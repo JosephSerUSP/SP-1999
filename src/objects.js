@@ -446,8 +446,8 @@ class Game_Actor extends Game_Battler {
         this.nextExp = 50;
         this.inventory = [];
 
-        if(name === "Aya") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
-        if(name === "Kyle") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
+        if(name === "Julia") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
+        if(name === "Miguel") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
         this.uid = 'player';
         this.direction = {x:0, y:1};
     }
@@ -538,7 +538,7 @@ class Game_Party {
      */
     constructor() {
         /** @type {Array<Game_Actor>} */
-        this.members = [new Game_Actor("Aya"), new Game_Actor("Kyle"), new Game_Actor("Eve")];
+        this.members = [new Game_Actor("Julia"), new Game_Actor("Miguel"), new Game_Actor("Rebus")];
         /** @type {number} */
         this.index = 0;
         /** @type {Array<Game_Item|Game_Weapon|Game_Armor>} */
