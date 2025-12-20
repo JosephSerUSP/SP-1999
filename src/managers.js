@@ -84,20 +84,66 @@ class CutsceneManager {
      * @param {string} [cmd.speaker] - The speaker name for dialog.
      * @param {string} [cmd.color] - The color of the speaker name.
      * @param {number} [cmd.time] - Duration to wait in milliseconds.
+     * @param {number} [cmd.emotion] - The emotion index for the portrait.
      */
     processCommand(cmd) {
         switch(cmd.type) {
             case 'dialog':
+                // Resolve Portrait
+                let portraitUrl = '';
+                let bgPos = '0 0';
+                if ($dataClasses[cmd.speaker]) {
+                    portraitUrl = $dataClasses[cmd.speaker].portrait || '';
+                    if (cmd.emotion) {
+                        bgPos = `0 -${cmd.emotion * 192}px`;
+                    }
+                }
+
+                // Construct HTML with new Layout
+                // We use flex container .cutscene-layout
                 this.dialogEl.innerHTML = `
-                    <div style="border-bottom:1px solid #444; margin-bottom:5px; padding-bottom:2px; font-weight:bold; color:${cmd.color || '#0ff'}">${cmd.speaker || 'SYSTEM'}</div>
-                    <div style="font-size:14px; margin-bottom:10px;">${cmd.text}</div>
-                    <div style="font-size:10px; color:#666;">[CLICK / PRESS OK TO CONTINUE]</div>
+                    <div class="cutscene-layout">
+                        ${portraitUrl ? `<div class="portrait-box" style="background-image:url('${portraitUrl}'); background-position:${bgPos}"></div>` : ''}
+                        <div class="dialog-content">
+                            <div class="dialog-speaker" style="color:${cmd.color || '#0ff'}">${cmd.speaker || 'SYSTEM'}</div>
+                            <div class="dialog-text"></div>
+                            <div class="dialog-footer">[CLICK / PRESS OK TO CONTINUE]</div>
+                        </div>
+                    </div>
                 `;
                 this.dialogEl.style.display = 'block';
+
+                const textEl = this.dialogEl.querySelector('.dialog-text');
+                const fullText = cmd.text || '';
+                let charIndex = 0;
+                let isTyping = true;
+                let typeInterval = null;
+
+                const finishTyping = () => {
+                    clearInterval(typeInterval);
+                    textEl.innerHTML = fullText + '<span class="blink-cursor"></span>';
+                    isTyping = false;
+                };
+
+                // Typewriter Effect
+                typeInterval = setInterval(() => {
+                    charIndex++;
+                    textEl.innerHTML = fullText.substring(0, charIndex) + '<span class="blink-cursor"></span>';
+                    if (charIndex >= fullText.length) {
+                        finishTyping();
+                    }
+                }, 20); // Very short delay (20ms)
 
                 let advanced = false;
                 const advance = () => {
                     if (advanced) return;
+
+                    if (isTyping) {
+                        // Skip typing
+                        finishTyping();
+                        return;
+                    }
+
                     advanced = true;
                     this.dialogEl.style.display = 'none';
                     document.removeEventListener('click', advance);
@@ -107,20 +153,15 @@ class CutsceneManager {
                 // Allow mouse click
                 setTimeout(() => document.addEventListener('click', advance), 100);
 
-                // Allow keyboard Input (need to hook into update loop or just poll here?
-                // Since this blocks input, SceneManager loop is still running but game map updates are blocked.
-                // But SceneManager.loop calls InputManager.update().
-                // We need a way to check input here.
-                // We can't easily hook into the loop from here without a callback or polling interval.
-                // Let's use a polling interval for this specific blocking state.
+                // Polling for Input
                 const checkInput = setInterval(() => {
                     if (advanced) { clearInterval(checkInput); return; }
-                    // We need to check InputManager state. InputManager updates in SceneManager loop.
-                    if (InputManager.isTriggered('OK')) {
-                        clearInterval(checkInput);
+                    if (InputManager.isTriggered('OK') || InputManager.isTriggered('CANCEL')) {
+                        // Debounce slightly to prevent accidental double skips if holding?
+                        // But Triggered checks once per press.
                         advance();
                     }
-                }, 100);
+                }, 50);
 
                 break;
             case 'wait':
