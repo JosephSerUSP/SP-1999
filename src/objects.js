@@ -324,7 +324,8 @@ class Game_Enemy extends Game_Battler {
         this.mhp = hp;
         this.alerted = false;
         // AI State
-        this.aiConfig = d.aiConfig; // Ensure config is passed
+        // Deep clone aiConfig to allow per-instance state (like fleeThreshold logic) and prevent shared state mutation
+        this.aiConfig = d.aiConfig ? JSON.parse(JSON.stringify(d.aiConfig)) : null;
         this.cooldowns = {}; // skillId -> turns remaining
         this.customState = {}; // For flags like 'rangedDisabled'
         this.turnCount = 0;
@@ -337,8 +338,13 @@ class Game_Enemy extends Game_Battler {
      */
     decideAction() {
         if (!this.aiConfig) {
-             // Fallback for legacy data (simple AI strings)
-             return { type: 'legacy', ai: this.ai };
+             // Fallback for missing config (should not happen if data is correct, but safe)
+             return { type: 'move', behavior: 'hunter' };
+        }
+
+        // Flee Check
+        if (this.aiConfig.fleeThreshold && this.hp < this.mhp * this.aiConfig.fleeThreshold) {
+             return { type: 'move', behavior: 'flee' };
         }
 
         // 1. Process Cooldowns (done in update, but checked here)
@@ -986,19 +992,11 @@ class Game_Map {
             const dist = Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY);
             if(dist < 7) e.alerted = true;
 
-            // Flee Override for low HP (if not controlled by specific AI actions)
-            if(!e.aiConfig && e.hp < e.mhp * 0.3) e.ai = "flee";
+            const alwaysActive = e.aiConfig && (e.aiConfig.movement === 'patrol' || e.aiConfig.alwaysActive);
 
-            if(e.alerted || e.ai === "patrol") {
+            if(e.alerted || alwaysActive) {
                 // Decide Action
-                // If enemy has decideAction method (Game_Enemy), use it.
-                // But we are inside Game_Map.updateEnemies and 'e' is Game_Enemy instance.
-
-                let action = { type: 'move', behavior: e.ai };
-
-                if (e.decideAction) {
-                    action = e.decideAction();
-                }
+                let action = e.decideAction();
 
                 if (action.type === 'skill') {
                     // Execute Skill
@@ -1011,10 +1009,10 @@ class Game_Map {
                     await BattleManager.executeSkill(e, action.skillId, null); // Targets auto-resolved
                     e.onActionTaken(action);
 
-                } else if (action.type === 'move' || action.type === 'legacy') {
-                    // Fallback to Movement Logic (Original)
+                } else if (action.type === 'move') {
+                    // Movement Logic
                     let dx = 0, dy = 0;
-                    let behavior = action.behavior || e.ai; // Use decided behavior or default 'ai' property
+                    let behavior = action.behavior || 'hunter';
 
                     // LEGACY MOVEMENT MAPPING
                     if(behavior === "turret") {

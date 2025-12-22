@@ -256,12 +256,18 @@ const $dataEnemies = [
             ]
         }
     },
-    { id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol" },
-    { id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush" },
+    {
+        id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol",
+        aiConfig: { movement: "patrol", fleeThreshold: 0.3 }
+    },
+    {
+        id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush",
+        aiConfig: { movement: "ambush", fleeThreshold: 0.3 }
+    },
     {
         id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret",
         aiConfig: {
-            movement: "stationary", // Use stationary to avoid fallback turret logic
+            movement: "turret", // Turret behavior logic
             actions: [
                 {
                     skill: "gunshot",
@@ -280,8 +286,14 @@ const $dataEnemies = [
             ]
         }
     },
-    { id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter" },
-    { id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol" },
+    {
+        id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter",
+        aiConfig: { movement: "hunter", fleeThreshold: 0.3 }
+    },
+    {
+        id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol",
+        aiConfig: { movement: "patrol", fleeThreshold: 0.3 }
+    },
 
     // NEW ENEMY: Tactical Trooper
     // Shoots then charges (Switching behavior)
