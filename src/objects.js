@@ -698,17 +698,21 @@ class Game_Map {
 
         // Determine Mode
         if (skill.type === 'target') {
-            this.targetingState.mode = 'cursor';
-            // Auto-select best target if any
-            const enemiesInRange = this.enemies.filter(e =>
-                (Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY)) <= skill.range
-            );
-            if (enemiesInRange.length > 0) {
-                 // Sort by closest
-                 enemiesInRange.sort((a,b) => (Math.abs(a.x - this.playerX) + Math.abs(a.y - this.playerY)) - (Math.abs(b.x - this.playerX) + Math.abs(b.y - this.playerY)));
-                 this.targetingState.cursor = { x: enemiesInRange[0].x, y: enemiesInRange[0].y };
+            this.targetingState.mode = 'target_cycle';
+            // Find valid targets
+            this.targetingState.targets = this.enemies.filter(e =>
+                (Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY)) <= skill.range &&
+                this.checkLineOfSight(this.playerX, this.playerY, e.x, e.y)
+            ).sort((a,b) => (Math.abs(a.x - this.playerX) + Math.abs(a.y - this.playerY)) - (Math.abs(b.x - this.playerX) + Math.abs(b.y - this.playerY)));
+
+            this.targetingState.targetIndex = 0;
+
+            if (this.targetingState.targets.length > 0) {
+                 const t = this.targetingState.targets[0];
+                 this.targetingState.cursor = { x: t.x, y: t.y };
+                 EventBus.emit('target_selected', t);
             } else {
-                 // Start at player + direction * range (or just player)
+                 // No targets?
                  this.targetingState.cursor = { x: this.playerX, y: this.playerY };
             }
         } else {
@@ -717,9 +721,6 @@ class Game_Map {
             // Ensure direction is valid
             const a = $gameParty.active();
             if (!a.direction) a.direction = {x:0, y:1};
-            // Cursor visualization follows player? No, cursor is usually hidden in direction mode or put at end of line.
-            // But we use cursorMesh in Renderer.
-            // Let's set cursor to player for now, relying on Range display to show direction.
         }
         $gameSystem.log("Select Target...");
     }
@@ -741,29 +742,19 @@ class Game_Map {
 
         if (InputManager.isTriggered('OK')) {
             // Confirm
-            if (this.targetingState.mode === 'cursor') {
+            if (this.targetingState.mode === 'target_cycle') {
+                if (this.targetingState.targets && this.targetingState.targets.length > 0) {
+                     this.endTargeting(this.targetingState.targets[this.targetingState.targetIndex]);
+                } else {
+                     $gameSystem.log("No target.");
+                }
+            } else if (this.targetingState.mode === 'cursor') {
                 // Return target at cursor
                 const t = this.enemies.find(e => e.x === this.targetingState.cursor.x && e.y === this.targetingState.cursor.y);
-                // If skill requires target and none found?
-                // Some target skills might be ground target? "Manual select a target... caster pick one target"
-                // Usually implies an entity.
-                // But let's allow selecting the tile, BattleManager will handle "Miss" or validity.
-                // Actually, let's look at executeSkill. It expects a target object or null.
-                // If we pass an object, it runs effects on it.
-                // If we pass null, it runs "Resolve Targets based on Shape".
-                // We should pass the Entity if found.
-                // If no entity found, we should probably warn or cancel? Or fire and miss?
-                // User said "Selecting a skill... manually select a target".
-                // If I click empty ground, valid?
-                // Let's assume we need a valid target for 'target' type.
                 if (t) {
                     this.endTargeting(t);
                 } else {
                     $gameSystem.log("No target.");
-                    // Allow firing at empty air?
-                    // executeSkill logic: "If target... runEffects(target)".
-                    // If we pass a dummy object with x,y it might work?
-                    // But 'target' type usually means "Unit".
                 }
             } else {
                 // Direction mode
@@ -781,7 +772,15 @@ class Game_Map {
         else if (InputManager.isTriggered('RIGHT')) dx = 1;
 
         if (dx !== 0 || dy !== 0) {
-            if (this.targetingState.mode === 'direction') {
+            if (this.targetingState.mode === 'target_cycle') {
+                if (this.targetingState.targets.length > 0) {
+                    let dir = (dx + dy) > 0 ? 1 : -1;
+                    this.targetingState.targetIndex = (this.targetingState.targetIndex + dir + this.targetingState.targets.length) % this.targetingState.targets.length;
+                    const t = this.targetingState.targets[this.targetingState.targetIndex];
+                    this.targetingState.cursor = { x: t.x, y: t.y };
+                    EventBus.emit('target_selected', t);
+                }
+            } else if (this.targetingState.mode === 'direction') {
                 actor.direction = { x: dx, y: dy };
                 // Also update cursor to "look" like it's in that direction (optional, for visual feedback)
                 this.targetingState.cursor = { x: this.playerX + dx, y: this.playerY + dy };

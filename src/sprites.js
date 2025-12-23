@@ -579,10 +579,19 @@ class Renderer3D {
                 this.playerLight.position.copy(this.playerMesh.position).add(new THREE.Vector3(0, 1, 0));
 
                 if(this.camera) {
-                    const lx = this.playerTarget.x; const lz = this.playerTarget.z;
+                    let lx = this.playerTarget.x; let lz = this.playerTarget.z;
+                    let tx = this.playerTarget.x; let tz = this.playerTarget.z + 6; let ty = 6;
+
+                    // Camera follows cursor in Target Cycle Mode
+                    if ($gameMap.targetingState && $gameMap.targetingState.active && $gameMap.targetingState.mode === 'target_cycle') {
+                        const cur = $gameMap.targetingState.cursor;
+                        lx = cur.x; lz = cur.y;
+                        tx = cur.x; tz = cur.y + 5; ty = 5; // Slightly closer zoom for targeting
+                    }
+
                     this.cameraLookCurrent.x += (lx - this.cameraLookCurrent.x) * 0.1;
                     this.cameraLookCurrent.z += (lz - this.cameraLookCurrent.z) * 0.1;
-                    const tx = this.playerTarget.x; const tz = this.playerTarget.z + 6; const ty = 6;
+
                     this.camera.position.x += (tx - this.camera.position.x) * 0.1;
                     this.camera.position.z += (tz - this.camera.position.z) * 0.1;
                     this.camera.position.y += (ty - this.camera.position.y) * 0.1;
