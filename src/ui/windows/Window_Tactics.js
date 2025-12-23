@@ -63,18 +63,37 @@ class Window_Tactics extends Window_Base {
                 disabled: disabled,
                 onClick: () => {
                     if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !disabled) {
+                         // Smart Targeting Logic
+                         if (skill && (skill.type === 'line' || skill.type === 'cone' || skill.type === 'target')) {
+                            // Check current direction first
+                            const currentTiles = $gameMap.getTilesInShape(actor.x, actor.y, skill.type, skill.range, actor.direction);
+                            const hasTargets = $gameMap.enemies.some(e => currentTiles.some(t => t.x === e.x && t.y === e.y));
+
+                            if (!hasTargets) {
+                                // Scan other directions
+                                const dirs = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
+                                for (let d of dirs) {
+                                    if (d.x === actor.direction.x && d.y === actor.direction.y) continue;
+                                    const tiles = $gameMap.getTilesInShape(actor.x, actor.y, skill.type, skill.range, d);
+                                    if ($gameMap.enemies.some(e => tiles.some(t => t.x === e.x && t.y === e.y))) {
+                                        actor.direction = d; // Auto-turn
+                                        break;
+                                    }
+                                }
+                            }
+                         }
                          callback();
                     }
                 },
                 onMouseEnter: (e) => {
                     if (skill) {
-                        Renderer.showRange(skill);
+                        Renderer.setPreviewOverride(skill);
                         $gameSystem.ui.showTooltip(e, `<b>${skill.name}</b><br>${skill.desc(actor)}`);
                     }
                 },
                 onMouseLeave: () => {
                     if (skill) {
-                        Renderer.clearRange();
+                        Renderer.clearPreviewOverride();
                         $gameSystem.ui.hideTooltip();
                     }
                 }

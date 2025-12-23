@@ -132,6 +132,7 @@ class Renderer3D {
         this.instancedFloor = null;
         this.instancedWalls = null;
         this.currentRangeSkill = null;
+        this.previewOverride = null;
 
         // Shared resources for danger zones to prevent memory leaks
         this.dangerGeo = new THREE.PlaneGeometry(0.9, 0.9);
@@ -569,7 +570,9 @@ class Renderer3D {
         this.particles.update();
 
         // Idle Range Display
-        if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !this.isAnimating) {
+        if (this.previewOverride) {
+            this.showRange(this.previewOverride);
+        } else if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !this.isAnimating) {
             const actor = $gameParty.active();
             const skillId = actor.getAttackSkill();
 
@@ -581,6 +584,21 @@ class Renderer3D {
         }
 
         this.renderer.render(this.scene, this.camera);
+    }
+
+    /**
+     * Sets a manual override for the range preview (e.g. from UI hover).
+     * @param {Object} skill
+     */
+    setPreviewOverride(skill) {
+        this.previewOverride = skill;
+    }
+
+    /**
+     * Clears the manual range preview override.
+     */
+    clearPreviewOverride() {
+        this.previewOverride = null;
     }
 
     /**
