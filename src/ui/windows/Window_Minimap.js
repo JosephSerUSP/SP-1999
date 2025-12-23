@@ -4,7 +4,7 @@
 
 class Window_Minimap extends Window_Base {
     constructor() {
-        super('minimap', { top: '2%', right: '2%', width: '20%', height: '0' }, "MINIMAP");
+        super('minimap', { top: '2%', right: '2%', width: '20%', height: '0', zIndex: '10' }, "MINIMAP");
         // Height is initialized to 0, will be updated in show/refresh
         this.show();
     }

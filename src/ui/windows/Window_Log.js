@@ -7,7 +7,7 @@ class Window_Log extends Window_Base {
         // Dynamic top position calculation based on minimap width
         // In original UIManager: top:`calc(2% + ${mmW + 8}px)`
         const top = `calc(2% + ${minimapWidth + 8}px)`;
-        super('log', { top: top, right: '2%', width: '20%', bottom: '2%' }, "SYSTEM LOG");
+        super('log', { top: top, right: '2%', width: '20%', bottom: '2%', zIndex: '10' }, "SYSTEM LOG");
         this.show();
     }
 
