@@ -5,82 +5,126 @@
 class Window_Party extends Window_Base {
     constructor() {
         super('status', {top:'2%', left:'2%', width:'20%', height:'50%'}, "SQUADRON");
+        this.gauges = {}; // Map of { memberIndex: { hp: Gauge, hpText: Label, pe: Gauge, exp: Gauge, sta: Gauge, slot: Container } }
         this.show(); // Always visible
     }
 
-    defineLayout() {
-        const members = $gameParty.members.map((m, i) => {
+    // Override refresh completely for this window to handle Optimized Updates
+    refresh() {
+        // Ensure root is mounted (logic from Window_Base.refresh)
+        if (!this.root.el) {
+            this.root.mount(this.contentEl);
+            this.root.el.style.width = '100%';
+            this.root.el.style.height = '100%';
+        }
+
+        if (this.root.children.length === 0) {
+            this.buildLayout();
+        }
+        this.updateValues();
+    }
+
+    // Explicitly define layout logic imperatively to capture component references
+    buildLayout() {
+        this.gauges = {};
+        const container = this.root;
+        // Ensure the root container acts as a column flex container
+        container.update({ layout: new FlexLayout({ direction: 'column', gap: 0 }) });
+
+        $gameParty.members.forEach((m, i) => {
+            const cache = {};
+            this.gauges[i] = cache;
+
+            // Slot Container
+            const slot = new UIContainer({
+                className: 'party-slot',
+                onClick: () => {
+                    if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked) {
+                        $gameSystem.ui.showStatusModal(m);
+                    }
+                },
+                layout: new FlexLayout({ direction: 'row', gap: 4 })
+            });
+            cache.slot = slot;
+
+            // Icon
+            slot.add(new Label({
+                text: m.name[0],
+                style: { color: '#' + m.color.toString(16), width: '20px', fontWeight: 'bold' }
+            }));
+
+            // Bars Container
+            const barsParams = new UIContainer({
+                props: { flex: '1' },
+                layout: new FlexLayout({ direction: 'column', gap: 2 })
+            });
+
+            // Header (Name + HP)
+            const header = new UIContainer({
+                layout: new FlexLayout({ direction: 'row', justify: 'space-between' })
+            });
+            header.add(new Label({ text: m.name }));
+            const hpText = new Label({ text: "", color: '#fff' }); // Value set in updateValues
+            cache.hpText = hpText;
+            header.add(hpText);
+            barsParams.add(header);
+
+            // HP Gauge
+            const hpGauge = new Gauge({ height: '4px' });
+            cache.hp = hpGauge;
+            barsParams.add(hpGauge);
+
+            // Stamina Gauge
+            const staGauge = new Gauge({ height: '4px' });
+            cache.sta = staGauge;
+            barsParams.add(staGauge);
+
+            // PE/EXP Row
+            const row = new UIContainer({
+                layout: new FlexLayout({ direction: 'row', gap: 2 })
+            });
+            const peGauge = new Gauge({ height: '2px', style: {flex: '1'}, color: 'var(--pe-cyan)' });
+            cache.pe = peGauge;
+            row.add(peGauge);
+
+            const expGauge = new Gauge({ height: '2px', style: {flex: '1'}, color: '#888' });
+            cache.exp = expGauge;
+            row.add(expGauge);
+
+            barsParams.add(row);
+            slot.add(barsParams);
+
+            container.add(slot);
+        });
+    }
+
+    updateValues() {
+        $gameParty.members.forEach((m, i) => {
+            const cache = this.gauges[i];
+            if (!cache) return;
+
             const active = i === $gameParty.index;
             const pct = (m.hp / m.mhp) * 100;
             const pePct = (m.pe / m.mpe) * 100;
             const expPct = (m.exp / m.nextExp) * 100;
             const staPct = (m.stamina / m.mstamina) * 100;
             const clr = pct < 30 ? 'var(--pe-red)' : pct < 60 ? 'var(--pe-gold)' : 'var(--pe-green)';
-
-            // Stamina Color
-            // White/Teal usually, Red if exhausted
             const staColor = m.isExhausted ? 'var(--pe-red)' : '#ccffff';
 
-            return {
-                type: 'container',
-                props: {
-                    className: `party-slot ${active ? 'active' : ''}`,
-                    onClick: () => {
-                        if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked) {
-                            $gameSystem.ui.showStatusModal(m);
-                        }
-                    }
-                },
-                layout: new FlexLayout({ direction: 'row', gap: 4 }),
-                children: [
-                    // Icon / Initial
-                    {
-                        component: Label,
-                        props: {
-                            text: m.name[0],
-                            style: { color: '#' + m.color.toString(16), width: '20px', fontWeight: 'bold' }
-                        }
-                    },
-                    // Bars Container
-                    {
-                        type: 'container',
-                        props: { flex: '1' },
-                        layout: new FlexLayout({ direction: 'column', gap: 2 }),
-                        children: [
-                            // Name & HP Text
-                            {
-                                type: 'container',
-                                layout: new FlexLayout({ direction: 'row', justify: 'space-between' }),
-                                children: [
-                                    { component: Label, props: { text: m.name } },
-                                    { component: Label, props: { text: `${m.hp}/${m.mhp}`, color: clr } }
-                                ]
-                            },
-                            // HP Bar
-                            { component: Gauge, props: { percent: pct, color: clr, height: '4px' } },
+            if (cache.slot && cache.slot.el) {
+                // Manually toggle class because applyProps overwrites
+                if (active) cache.slot.el.classList.add('active');
+                else cache.slot.el.classList.remove('active');
+            }
 
-                            // Stamina Bar (New)
-                            { component: Gauge, props: { percent: staPct, color: staColor, height: '4px' } },
-
-                            // PE & EXP (Shared Line)
-                            {
-                                type: 'container',
-                                layout: new FlexLayout({ direction: 'row', gap: 2 }),
-                                children: [
-                                    { component: Gauge, props: { percent: pePct, color: 'var(--pe-cyan)', height: '2px', style: {flex: '1'} } },
-                                    { component: Gauge, props: { percent: expPct, color: '#888', height: '2px', style: {flex: '1'} } }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            };
+            if (cache.hpText) cache.hpText.update({ text: `${m.hp}/${m.mhp}`, color: clr });
+            if (cache.hp) cache.hp.update({ percent: pct, color: clr });
+            if (cache.sta) cache.sta.update({ percent: staPct, color: staColor });
+            if (cache.pe) cache.pe.update({ percent: pePct });
+            if (cache.exp) cache.exp.update({ percent: expPct });
         });
-
-        return {
-            type: 'container',
-            layout: new FlexLayout({ direction: 'column', gap: 0 }),
-            children: members
-        };
     }
+
+    // We do not need defineLayout as we override refresh()
+    defineLayout() { return null; }
 }
