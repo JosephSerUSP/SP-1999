@@ -694,7 +694,18 @@ class Game_Map {
         this.targetingState.active = true;
         this.targetingState.skill = skill;
         this.targetingState.callback = callback;
-        this.targetingState.cursor = { x: this.playerX, y: this.playerY };
+
+        // Default cursor to front of player
+        const actor = $gameParty.active();
+        const dx = actor.direction.x;
+        const dy = actor.direction.y;
+        const cx = this.playerX + dx;
+        const cy = this.playerY + dy;
+        if (this.isValid(cx, cy)) {
+            this.targetingState.cursor = { x: cx, y: cy };
+        } else {
+            this.targetingState.cursor = { x: this.playerX, y: this.playerY };
+        }
 
         // Determine Mode
         if (skill.type === 'target') {
@@ -712,15 +723,13 @@ class Game_Map {
                  this.targetingState.cursor = { x: t.x, y: t.y };
                  EventBus.emit('target_selected', t);
             } else {
-                 // No targets?
-                 this.targetingState.cursor = { x: this.playerX, y: this.playerY };
+                 // No targets? Keep default cursor (front of player)
             }
         } else {
             // Directional (Line, Cone, Circle, Basic Attack)
             this.targetingState.mode = 'direction';
             // Ensure direction is valid
-            const a = $gameParty.active();
-            if (!a.direction) a.direction = {x:0, y:1};
+            if (!actor.direction) actor.direction = {x:0, y:1};
         }
         $gameSystem.log("Select Target...");
     }
@@ -1236,8 +1245,9 @@ class Game_Map {
 
     /**
      * Executes the player's attack action.
+     * @param {Game_Battler} [forcedTarget] - Optional specific target to attack.
      */
-    async playerAttack() {
+    async playerAttack(forcedTarget = null) {
         if ($gameSystem.isBusy || $gameSystem.isInputBlocked || (Renderer && Renderer.isAnimating)) return;
         $gameSystem.isBusy = true;
         const actor = $gameParty.active();
@@ -1255,7 +1265,7 @@ class Game_Map {
         const attackSkillId = actor.getAttackSkill();
         const skill = attackSkillId ? $dataSkills[attackSkillId] : null;
 
-        let target = null;
+        let target = forcedTarget;
         let skillIdToExec = attackSkillId;
 
         // STAMINA COST CHECK (Skill/Attack = 20)
@@ -1276,25 +1286,27 @@ class Game_Map {
              return;
         }
 
-        if (skill && (skill.type === 'line' || skill.type === 'target')) {
-            const dx = actor.direction.x; const dy = actor.direction.y;
-            for (let i=1; i<=skill.range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
+        if (!target) {
+            if (skill && (skill.type === 'line' || skill.type === 'target')) {
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                for (let i=1; i<=skill.range; i++) {
+                     const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
+                     if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                     const e = this.enemies.find(en => en.x === tx && en.y === ty);
+                     if (e) { target = e; break; }
+                }
+            } else {
+                // Default melee range 1
+                const range = skill ? skill.range : 1;
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                 // Check along the line up to range
+                 for (let i=1; i<=range; i++) {
+                     const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
+                     if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                     const e = this.enemies.find(en => en.x === tx && en.y === ty);
+                     if (e) { target = e; break; }
+                 }
             }
-        } else {
-            // Default melee range 1
-            const range = skill ? skill.range : 1;
-            const dx = actor.direction.x; const dy = actor.direction.y;
-             // Check along the line up to range
-             for (let i=1; i<=range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
-             }
         }
 
         if (skillIdToExec) {

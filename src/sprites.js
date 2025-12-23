@@ -708,30 +708,22 @@ class Renderer3D {
         if (!skill) return;
         const geo = new THREE.PlaneGeometry(0.9, 0.9);
         const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-        const px = $gameMap.playerX; const py = $gameMap.playerY; const coords = [];
 
-        if (skill.type === 'all_enemies') { $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y})); }
-        else if (skill.range > 0) {
-            if (skill.type === 'line') {
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                for(let i=1; i<=skill.range; i++) {
-                    const tx = px + dx*i; const ty = py + dy*i;
-                    if (!$gameMap.isValid(tx, ty) || $gameMap.tiles[tx][ty] === 1) break;
-                    coords.push({x: tx, y: ty});
-                }
-            } else if (skill.range === 1) {
-                // Directional melee indicator
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                const tx = px + dx; const ty = py + dy;
-                if ($gameMap.isValid(tx, ty) && $gameMap.tiles[tx][ty] !== 1) coords.push({x: tx, y: ty});
-            } else {
-                for(let x = px - skill.range; x <= px + skill.range; x++) {
-                    for(let y = py - skill.range; y <= py + skill.range; y++) {
-                        if (Math.abs(x - px) + Math.abs(y - py) <= skill.range && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] === 0) coords.push({x, y});
-                    }
-                }
-            }
+        // Use Game_Map's geometry logic to ensure consistency and LOS checking
+        let coords = [];
+        if (skill.type === 'all_enemies') {
+             $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y}));
+        } else {
+             // Handle 'target' and melee as directional for preview if range > 0
+             // But getTilesInShape handles 'target' as line.
+             // If skill.range === 1, getTilesInShape default is adjacent.
+             // We must pass the correct shape.
+             // For preview, we assume 'target' implies 'line' logic (can target anything in line).
+             // However, getTilesInShape('target') uses Geometry.getLine.
+             // Let's rely on getTilesInShape.
+             coords = $gameMap.getTilesInShape($gameMap.playerX, $gameMap.playerY, skill.type, skill.range, actor.direction);
         }
+
         coords.forEach(c => {
             const m = new THREE.Mesh(geo, mat);
             m.rotation.x = -Math.PI / 2;
