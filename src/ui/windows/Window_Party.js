@@ -4,8 +4,24 @@
 
 class Window_Party extends Window_Base {
     constructor() {
-        super('status', {top:'2%', left:'2%', width:'20%', height:'50%'}, "SQUADRON");
+        // Changed title to "PARTY", kept position/size but might need adjustment if overlapping with view content
+        // View is now full screen behind everything.
+        super('status', {top:'2%', left:'2%', width:'20%', height:'50%', zIndex: '10'}, "PARTY");
         this.gauges = {}; // Map of { memberIndex: { hp: Gauge, hpText: Label, pe: Gauge, exp: Gauge, sta: Gauge, slot: Container } }
+
+        // Remove frame styles
+        this.el.style.background = 'transparent';
+        this.el.style.border = 'none';
+        this.el.style.boxShadow = 'none';
+
+        // Override header styles if it exists
+        if (this.headerEl) {
+             this.headerEl.style.background = 'transparent';
+             this.headerEl.style.border = 'none';
+             this.headerEl.style.textShadow = '1px 1px 2px #000'; // Make text pop against game view
+             this.headerEl.style.fontSize = '14px'; // Slightly bigger
+        }
+
         this.show(); // Always visible
     }
 
@@ -45,12 +61,21 @@ class Window_Party extends Window_Base {
                 },
                 layout: new FlexLayout({ direction: 'row', gap: 4 })
             });
+            // Override slot styles to be more seamless
+            // .party-slot class has background/border. We might want to keep it or make it more subtle.
+            // User said "The 'squadron' window should not have a background or frame anymore".
+            // This implies the main window container. The slots might still need some background for readability?
+            // "seamlessly overlap with the game view."
+            // I'll assume individual slots can have backgrounds, but maybe more transparent?
+            // The class `.party-slot` in css has `background: rgba(0,0,0,0.3)`. This is already semi-transparent.
+            // I will leave the slot styling as is for now, as it provides readability.
+
             cache.slot = slot;
 
             // Icon
             slot.add(new Label({
                 text: m.name[0],
-                style: { color: '#' + m.color.toString(16), width: '20px', fontWeight: 'bold' }
+                style: { color: '#' + m.color.toString(16), width: '20px', fontWeight: 'bold', textShadow: '1px 1px 0 #000' }
             }));
 
             // Bars Container
@@ -63,8 +88,8 @@ class Window_Party extends Window_Base {
             const header = new UIContainer({
                 layout: new FlexLayout({ direction: 'row', justify: 'space-between' })
             });
-            header.add(new Label({ text: m.name }));
-            const hpText = new Label({ text: "", color: '#fff' }); // Value set in updateValues
+            header.add(new Label({ text: m.name, style: { textShadow: '1px 1px 0 #000' } }));
+            const hpText = new Label({ text: "", color: '#fff', style: { textShadow: '1px 1px 0 #000' } }); // Value set in updateValues
             cache.hpText = hpText;
             header.add(hpText);
             barsParams.add(header);

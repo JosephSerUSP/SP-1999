@@ -4,7 +4,7 @@
 
 class Window_Tactics extends Window_Base {
     constructor() {
-        super('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%'}, "TACTICS");
+        super('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%', zIndex: '10'}, "TACTICS");
         this.show();
     }
 
