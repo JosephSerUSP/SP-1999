@@ -31,7 +31,10 @@ class Window_Tactics extends Window_Base {
             this.viewState = 'main';
             this.refresh();
             $gameSystem.ui.focusIndex = 0;
-            setTimeout(() => $gameSystem.ui.collectFocusables(), 0);
+            setTimeout(() => {
+                $gameSystem.ui.collectFocusables();
+                $gameSystem.ui.setFocus(0);
+            }, 0);
             return true;
         }
         return false;
@@ -58,7 +61,10 @@ class Window_Tactics extends Window_Base {
             this.viewState = 'ability';
             this.refresh();
             $gameSystem.ui.focusIndex = 0;
-            setTimeout(() => $gameSystem.ui.collectFocusables(), 0);
+            setTimeout(() => {
+                $gameSystem.ui.collectFocusables();
+                $gameSystem.ui.setFocus(0);
+            }, 0);
         }));
 
         // Item
