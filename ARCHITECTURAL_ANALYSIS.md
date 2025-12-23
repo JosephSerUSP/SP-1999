@@ -9,7 +9,8 @@
 The application now follows a strict modular structure inspired by RPG Maker MZ, ensuring separation of concerns and maintainability.
 
 *   **Objects (Model):** `Game_System`, `Game_Party`, `Game_Map`, `Game_Actor`, `Game_Enemy`. Located in `src/objects.js`.
-*   **Sprites/Windows (View):** `Renderer3D` (Three.js) in `src/sprites.js`, `UIManager` (DOM) in `src/windows.js`.
+*   **Sprites (View):** `Renderer3D` (Three.js) in `src/sprites.js`.
+*   **UI (View):** `UIManager` in `src/windows.js` (Orchestration), with components and layouts in `src/ui/`.
 *   **Managers (Controller):** `SceneManager`, `BattleManager`, `ItemManager`. Located in `src/managers.js`.
 *   **Core:** `EventBus`, `ConditionSystem`. Located in `src/core.js`.
 
