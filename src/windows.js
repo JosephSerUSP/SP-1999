@@ -67,7 +67,12 @@ class UIManager {
                 if (closeBtn) closeBtn.click();
                 else this.closeModal();
             } else if (this.focusedWindow) {
-                this.blurWindow();
+                const win = this.windows[this.focusedWindow];
+                if (win && win.onCancel && win.onCancel()) {
+                    // Handled by window
+                } else {
+                    this.blurWindow();
+                }
             }
             return;
         }

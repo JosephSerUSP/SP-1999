@@ -5,47 +5,83 @@
 class Window_Tactics extends Window_Base {
     constructor() {
         super('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%', zIndex: '10'}, "TACTICS");
+        this.viewState = 'main'; // 'main', 'ability'
         this.show();
+    }
+
+    onCancel() {
+        if (this.viewState === 'ability') {
+            this.viewState = 'main';
+            this.refresh();
+            $gameSystem.ui.focusIndex = 0;
+            setTimeout(() => $gameSystem.ui.collectFocusables(), 0);
+            return true;
+        }
+        return false;
     }
 
     defineLayout() {
         if (!$gameParty || !$gameParty.active()) return null; // Safety
-        const actor = $gameParty.active();
 
+        if (this.viewState === 'ability') return this.renderAbility();
+        return this.renderMain();
+    }
+
+    renderMain() {
         const children = [];
 
-        // Standard Commands
-        children.push(this.createCommand("WAIT", "", () => $gameMap.processTurn(0,0)));
-        children.push(this.createCommand("ITEM", "", () => $gameSystem.ui.showInventoryModal()));
-        children.push({ component: Separator });
+        // Attack
+        children.push(this.createCommand("ATTACK", "", () => {
+            $gameSystem.ui.blurWindow();
+            $gameMap.playerAttack();
+        }));
 
-        // Skills
-        actor.skills.forEach(k => {
-            const s = $dataSkills[k];
-            const disabled = actor.pe < s.cost;
-            children.push(this.createCommand(
-                s.name,
-                `${s.cost}PE`,
-                () => {
-                    if (!$gameSystem.isBusy) $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k));
-                    // Note: original code called processTurn AND executeSkill immediately?
-                    // Original: $gameMap.processTurn(0,0,()=>BattleManager.executeSkill(actor, k));
-                    // BattleManager.executeSkill(actor, k);
-                    // This looks like double execution in original code?
-                    // Ah, processTurn takes a callback.
-                    // But then it calls executeSkill AGAIN outside?
-                    // Wait, looking at src/windows.js original:
-                    // if(!$gameSystem.isBusy) $gameMap.processTurn(0,0,()=>BattleManager.executeSkill(actor, k));
-                    // BattleManager.executeSkill(actor, k);
-                    // That implies if NOT busy, do turn+skill. If BUSY, do skill immediately?
-                    // That seems wrong.
-                    // Let's assume processTurn is the correct path for action.
-                },
-                disabled,
-                s,
-                actor
-            ));
-        });
+        // Ability
+        children.push(this.createCommand("ABILITY", "", () => {
+            this.viewState = 'ability';
+            this.refresh();
+            $gameSystem.ui.focusIndex = 0;
+            setTimeout(() => $gameSystem.ui.collectFocusables(), 0);
+        }));
+
+        // Item
+        children.push(this.createCommand("ITEM", "", () => $gameSystem.ui.showInventoryModal()));
+
+        return {
+            type: 'container',
+            layout: new FlexLayout({ direction: 'column', gap: 0 }),
+            children: children
+        };
+    }
+
+    renderAbility() {
+        const actor = $gameParty.active();
+        const children = [];
+
+        if (actor.skills && actor.skills.length > 0) {
+            actor.skills.forEach(k => {
+                const s = $dataSkills[k];
+                const disabled = actor.pe < s.cost;
+                children.push(this.createCommand(
+                    s.name,
+                    `${s.cost}PE`,
+                    () => {
+                        if (!$gameSystem.isBusy) {
+                             $gameSystem.ui.blurWindow();
+                             // Reset state for next time
+                             this.viewState = 'main';
+                             this.refresh();
+                             $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k));
+                        }
+                    },
+                    disabled,
+                    s,
+                    actor
+                ));
+            });
+        } else {
+             children.push(this.createCommand("No Abilities", "", () => {}, true));
+        }
 
         return {
             type: 'container',
