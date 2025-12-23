@@ -293,24 +293,44 @@ class UIManager {
         // Legacy imperative modal
         const overlay = document.createElement('div');
         overlay.style.position = 'absolute'; overlay.style.top = '20%'; overlay.style.left = '30%'; overlay.style.width = '40%'; overlay.style.background = 'var(--pe-panel-bg)'; overlay.style.border = '1px solid #444'; overlay.style.zIndex = '150'; overlay.style.padding = '10px';
-        overlay.innerHTML = "<div style='color:white; text-align:center; margin-bottom:10px;'>SELECT TARGET</div>";
+
+        const title = document.createElement('div');
+        title.style.color = 'white'; title.style.textAlign = 'center'; title.style.marginBottom = '10px'; title.innerText = 'SELECT TARGET';
+        overlay.appendChild(title);
 
         $gameParty.members.forEach(m => {
             const btn = document.createElement('div');
             btn.className = 'cmd-btn';
-            let txt = m.name;
+
+            // Safe Text Construction
+            const nameSpan = document.createElement('span');
+            nameSpan.innerText = m.name;
+            btn.appendChild(nameSpan);
+
             if(itemPreview) {
                 if(itemPreview.category === 'weapon') {
                     const currentAtk = m.getAtk(); const newAtk = m.getAtkWith(itemPreview); const diff = newAtk - currentAtk;
+                    const diffSpan = document.createElement('span');
                     const color = diff > 0 ? '#0f0' : (diff < 0 ? '#f00' : '#888');
-                    txt += ` (ATK: ${currentAtk} -> <span style='color:${color}'>${newAtk}</span>)`;
+                    diffSpan.style.color = color;
+                    diffSpan.innerText = newAtk;
+
+                    btn.appendChild(document.createTextNode(` (ATK: ${currentAtk} -> `));
+                    btn.appendChild(diffSpan);
+                    btn.appendChild(document.createTextNode(`)`));
                 } else if(itemPreview.category === 'armor') {
                     const currentDef = m.getDef(); const newDef = m.getDefWith(itemPreview); const diff = newDef - currentDef;
+                    const diffSpan = document.createElement('span');
                     const color = diff > 0 ? '#0f0' : (diff < 0 ? '#f00' : '#888');
-                    txt += ` (DEF: ${currentDef} -> <span style='color:${color}'>${newDef}</span>)`;
+                    diffSpan.style.color = color;
+                    diffSpan.innerText = newDef;
+
+                    btn.appendChild(document.createTextNode(` (DEF: ${currentDef} -> `));
+                    btn.appendChild(diffSpan);
+                    btn.appendChild(document.createTextNode(`)`));
                 }
             }
-            btn.innerHTML = txt;
+
             btn.style.color = '#'+m.color.toString(16);
             btn.onclick = () => { callback(m); overlay.remove(); };
             overlay.appendChild(btn);
@@ -341,7 +361,10 @@ class UIManager {
         // Legacy imperative modal
         const overlay = document.createElement('div');
         overlay.style.position = 'absolute'; overlay.style.top = '40%'; overlay.style.left = '35%'; overlay.style.width = '30%'; overlay.style.background = 'var(--pe-panel-bg)'; overlay.style.border = '1px solid #444'; overlay.style.zIndex = '160'; overlay.style.padding = '10px'; overlay.style.textAlign = 'center';
-        overlay.innerHTML = `<div style='color:white; margin-bottom:10px;'>${text}</div>`;
+
+        const msg = document.createElement('div');
+        msg.style.color = 'white'; msg.style.marginBottom = '10px'; msg.innerText = text;
+        overlay.appendChild(msg);
 
         const yes = document.createElement('button'); yes.innerText = "YES"; yes.className = "cmd-btn"; yes.style.display = "inline-block"; yes.style.width = "40%"; yes.style.marginRight = "10px";
         yes.onclick = () => { onConfirm(); overlay.remove(); };

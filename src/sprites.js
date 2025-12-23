@@ -3,6 +3,24 @@
 // ============================================================================
 
 /**
+ * Helper to properly dispose of a Three.js object and its children.
+ * @param {THREE.Object3D} obj
+ */
+function disposeHierarchy(obj) {
+    if (!obj) return;
+    obj.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+            if (Array.isArray(child.material)) {
+                child.material.forEach(m => m.dispose());
+            } else {
+                child.material.dispose();
+            }
+        }
+    });
+}
+
+/**
  * System for managing and rendering particle effects in the 3D scene.
  */
 class ParticleSystem {
@@ -194,6 +212,7 @@ class Renderer3D {
      * Rebuilds the level geometry (floor, walls) based on current map data.
      */
     rebuildLevel() {
+        disposeHierarchy(this.mapGroup);
         this.mapGroup.clear();
         const count = $gameMap.width * $gameMap.height;
         const geoFloor = new THREE.PlaneGeometry(0.95, 0.95);
@@ -258,7 +277,11 @@ class Renderer3D {
         const cIds = new Set($gameMap.enemies.map(e => e.uid));
         for(let i = this.enemyGroup.children.length - 1; i >= 0; i--) {
             const c = this.enemyGroup.children[i];
-            if(!cIds.has(c.userData.uid)) { this.enemyGroup.remove(c); this.enemyTargets.delete(c.userData.uid); }
+            if(!cIds.has(c.userData.uid)) {
+                disposeHierarchy(c);
+                this.enemyGroup.remove(c);
+                this.enemyTargets.delete(c.userData.uid);
+            }
         }
         $gameMap.enemies.forEach(e => {
             let mesh = this.enemyGroup.children.find(c => c.userData.uid === e.uid);
@@ -325,6 +348,7 @@ class Renderer3D {
      * Synchronizes 3D loot meshes with the logical game state.
      */
     syncLoot() {
+        disposeHierarchy(this.lootGroup);
         this.lootGroup.clear();
         $gameMap.loot.forEach(l => {
             const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), new THREE.MeshPhongMaterial({ color: 0xffd700, wireframe: true }));
