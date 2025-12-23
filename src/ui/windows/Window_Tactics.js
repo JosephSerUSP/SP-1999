@@ -4,9 +4,14 @@
 
 class Window_Tactics extends Window_Base {
     constructor() {
-        super('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%', zIndex: '10'}, "TACTICS");
+        // Positioned on the right for slide-in from right
+        // zIndex increased to 50 to ensure it overlaps Window_Log
+        super('cmd', {bottom:'2%', right:'2%', width:'20%', height:'44%', zIndex: '50'}, "TACTICS");
         this.viewState = 'main'; // 'main', 'ability'
         this.show();
+
+        // Add transition class and initial hidden state
+        this.el.classList.add('slide-transition', 'slide-hidden');
     }
 
     onCancel() {
@@ -27,19 +32,41 @@ class Window_Tactics extends Window_Base {
         return this.renderMain();
     }
 
+    // Hook into refresh to update visibility based on focus
+    refresh() {
+        super.refresh();
+        this.updateVisibility();
+    }
+
+    updateVisibility() {
+        // Safety check: $gameSystem.ui might not be initialized during constructor
+        if ($gameSystem && $gameSystem.ui && $gameSystem.ui.focusedWindow === 'cmd') {
+            this.el.classList.remove('slide-hidden');
+            this.el.classList.add('slide-visible');
+        } else {
+            this.el.classList.remove('slide-visible');
+            this.el.classList.add('slide-hidden');
+        }
+    }
+
     renderMain() {
         const children = [];
 
         // Attack
         children.push(this.createCommand("ATTACK", "", () => {
             $gameSystem.ui.blurWindow();
+            // Allow animation to finish or just rely on state change?
+            // Blur window will trigger refresh in UIManager?
+            // UIManager.blurWindow() clears focus.
+            // We need to ensure we re-evaluate visibility.
+            this.updateVisibility();
             $gameMap.playerAttack();
         }));
 
         // Ability
         children.push(this.createCommand("ABILITY", "", () => {
             this.viewState = 'ability';
-            this.refresh();
+            this.refresh(); // This will also call updateVisibility
             $gameSystem.ui.focusIndex = 0;
             setTimeout(() => $gameSystem.ui.collectFocusables(), 0);
         }));

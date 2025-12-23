@@ -52,7 +52,7 @@ body {
 .pe-window {
     position: absolute;
     background: var(--pe-panel-bg);
-    border: 1px solid #444;
+    border: 1px solid rgba(68, 68, 68, 0.5);
     box-shadow: 0 0 10px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
     display: flex;
     flex-direction: column;
@@ -67,7 +67,7 @@ body {
     padding: 2px 8px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    border-bottom: 1px solid #000;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
     text-shadow: 1px 1px 0 #000;
 }
 
@@ -147,7 +147,7 @@ body {
 
 .cmd-btn {
     padding: 8px; margin-bottom: 4px;
-    cursor: pointer; color: #aaa; border-left: 3px solid transparent;
+    cursor: pointer; color: #aaa; border-left: 1px solid transparent;
     background: rgba(0,0,0,0.2);
     display: flex; justify-content: space-between;
     align-items: center;
@@ -176,3 +176,20 @@ body {
 #game-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
 #minimap-canvas { image-rendering: pixelated; background: #000; }
+
+/* Slide Animations */
+.slide-transition {
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+}
+
+.slide-hidden {
+    transform: translateX(120%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.slide-visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
