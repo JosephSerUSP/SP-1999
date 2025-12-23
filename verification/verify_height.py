@@ -11,17 +11,13 @@ def run():
         page.goto(f'file://{pwd}/index.html')
 
         try:
-            page.wait_for_selector('#cmd', timeout=5000)
+            page.wait_for_selector('.cmd-btn', timeout=5000)
         except:
-             print('Timeout waiting for #cmd')
+             print('Timeout waiting for .cmd-btn')
              return
 
-        print('Pressing c...')
-        page.keyboard.press('c')
-        page.wait_for_timeout(1000)
-
-        classes = page.eval_on_selector('#cmd', 'el => el.className')
-        print(f'Focused Classes: {classes}')
+        height = page.eval_on_selector('.cmd-btn', 'el => window.getComputedStyle(el).height')
+        print(f'Button Height: {height}')
 
         browser.close()
 
