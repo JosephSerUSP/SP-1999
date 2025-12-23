@@ -1,5 +1,7 @@
 # Deep Refactor Plan: Stillnight Engine
 
+WHEN IMPLEMENTING THE REFACTOR, UPDATE THE DOCUMENT ACCORDINGLY.
+
 ## Executive Summary
 This document outlines the strategic refactoring plan to transform "Stillnight: Eve of the Stack" into a powerful, data-driven dungeon crawler engine. The focus is on decoupling procedural content generation, narrative logic, and entity behaviors from the core game loop, enabling rapid content expansion and robust storytelling capabilities.
 

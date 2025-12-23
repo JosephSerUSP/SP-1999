@@ -1,5 +1,7 @@
 # Stub Mechanics Implementation Plan
 
+WHEN IMPLEMENTING THE REFACTOR, UPDATE THE DOCUMENT ACCORDINGLY.
+
 ## Overview
 This document outlines the areas identified as "stub mechanics" (incomplete or missing implementations) within the codebase and the plan to address them.
 

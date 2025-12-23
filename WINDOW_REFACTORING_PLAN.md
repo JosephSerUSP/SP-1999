@@ -1,5 +1,7 @@
 # Window System Refactoring Plan
 
+WHEN IMPLEMENTING THE REFACTOR, UPDATE THE DOCUMENT ACCORDINGLY.
+
 ## 1. Executive Summary
 The current window system in `src/windows.js` relies on a monolithic `UIManager` that imperatively constructs DOM elements for various UI states (Inventory, Status, Target Selection). This "spaghetti code" approach tightly couples presentation logic with game state, making the UI brittle, difficult to maintain, and hard to customize.
 
