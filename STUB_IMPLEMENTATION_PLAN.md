@@ -8,19 +8,18 @@ This document outlines the areas identified as "stub mechanics" (incomplete or m
 ### 1. Enemy AI Behaviors
 **Location:** `src/objects.js` - `Game_Map.updateEnemies`
 
-*   **Current State:** Only `hunter` and `ambush` AI types are implemented. They share identical logic (move towards player if alerted).
+*   **Current State:** `hunter`, `ambush`, `turret`, `patrol`, and `flee` behaviors are implemented.
+    *   **Turret:** Checks line of sight and range (5) to attack from distance.
+    *   **Patrol:** Wanders randomly when not alerted.
+    *   **Flee:** Moves away from player when HP < threshold (if configured).
 *   **Missing Implementations:**
-    *   **Turret:** Defined in `$dataEnemies` (e.g., "Watcher"). Should be stationary but attack from a distance. Currently does nothing.
-    *   **Patrol:** Defined in `$dataEnemies` (e.g., "Ooze"). Should wander or move between points when not alerted. Currently does nothing.
-    *   **Flee:** Logic mentioned in memory (`flee_if_hurt`) but not present. Enemies should retreat when HP is critical.
     *   **Swarm/Explode:** Mentioned in memory but not critical for this pass.
 
 ### 2. Skill Logic & Targeting
 **Location:** `src/objects.js` - `Game_Map.playerAttack`
 
-*   **Current State:** The `playerAttack` method assumes a directional attack (melee or line). It attempts to find a target *before* executing the skill.
-*   **Issue:** Skills with `type: 'self'` (e.g., Heal, Scan) or `type: 'all_enemies'` (e.g., Blast, Combust) fail because `playerAttack` looks for a target in the facing direction. If none is found, it logs a "miss" and aborts, preventing the skill from triggering `BattleManager.executeSkill`.
-*   **Fix:** Refactor `playerAttack` to check `skill.type`. If it is `self` or `all_enemies`, bypass the target search and call `BattleManager` directly.
+*   **Current State:** The `playerAttack` method correctly handles `self` and `all_enemies` skill types by bypassing the directional target search.
+*   **Issue:** Resolved.
 
 ### 3. Death Handling in Turn Processing
 **Location:** `src/objects.js` - `Game_Map.processTurnEnd`
