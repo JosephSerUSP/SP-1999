@@ -110,14 +110,22 @@ class UIManager {
     }
 
     focusWindow(winKey) {
+        const prev = this.focusedWindow;
         this.focusedWindow = winKey;
         this.collectFocusables();
         this.setFocus(0);
+        if (winKey === 'cmd' || prev === 'cmd') {
+            this.refreshCmd();
+        }
     }
 
     blurWindow() {
+        const prev = this.focusedWindow;
         this.focusedWindow = null;
         this.clearFocus();
+        if (prev === 'cmd') {
+            this.refreshCmd();
+        }
     }
 
     collectFocusables() {

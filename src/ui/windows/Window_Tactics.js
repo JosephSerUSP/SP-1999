@@ -7,6 +7,23 @@ class Window_Tactics extends Window_Base {
         super('cmd', {bottom:'2%', left:'2%', width:'20%', height:'44%', zIndex: '10'}, "TACTICS");
         this.viewState = 'main'; // 'main', 'ability'
         this.show();
+        this.el.classList.add('window-slide-exit');
+    }
+
+    refresh() {
+        super.refresh();
+        const ui = $gameSystem.ui;
+        // Check if ui exists to avoid crash during initial load
+        const focused = ui && ui.focusedWindow === this.id;
+
+        // Remove both classes first
+        this.el.classList.remove('window-slide-enter', 'window-slide-exit');
+
+        if (focused) {
+            this.el.classList.add('window-slide-enter');
+        } else {
+            this.el.classList.add('window-slide-exit');
+        }
     }
 
     onCancel() {

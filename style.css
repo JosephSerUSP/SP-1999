@@ -146,11 +146,23 @@ body {
 }
 
 .cmd-btn {
-    padding: 8px; margin-bottom: 4px;
+    height: 40px; margin-bottom: 4px; padding: 0 8px;
     cursor: pointer; color: #aaa; border-left: 3px solid transparent;
     background: rgba(0,0,0,0.2);
     display: flex; justify-content: space-between;
     align-items: center;
+}
+
+.window-slide-enter {
+    transform: translateX(0);
+    opacity: 1;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.window-slide-exit {
+    transform: translateX(-120%);
+    opacity: 0;
+    transition: transform 0.3s ease-in, opacity 0.3s ease-in;
 }
 .cmd-btn:hover, .cmd-btn.focused { background: #222; color: #fff; border-left-color: var(--pe-gold); }
 .cmd-btn.disabled { opacity: 0.5; pointer-events: none; border-left-color: #333; }
