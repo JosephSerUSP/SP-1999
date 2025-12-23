@@ -22,7 +22,6 @@ class UIManager {
         EventBus.on('log_updated', () => this.refreshLog());
         EventBus.on('refresh_ui', () => this.refresh());
         EventBus.on('refresh_minimap', () => this.refreshMinimap());
-        EventBus.on('float_text', (t,x,y,c) => this.floatText(t,x,y,c));
     }
 
     createLayout() {
@@ -54,6 +53,7 @@ class UIManager {
         this.refreshMinimap();
 
         if (this.focusedWindow) {
+            this.collectFocusables();
             this.setFocus(this.focusIndex);
         }
     }
@@ -215,29 +215,6 @@ class UIManager {
 
     refreshCmd() {
         if (this.windows.cmd) this.windows.cmd.refresh();
-    }
-
-    floatText(text, x, y, color) {
-        const pos = Renderer.projectToScreen(x, 0.5, y);
-        // Add random jitter to prevent overlap when multiple hits occur
-        const jitterX = (Math.random() - 0.5) * 40;
-        const jitterY = (Math.random() - 0.5) * 20;
-
-        const container = document.createElement('div');
-        container.className = 'float-text-container';
-        container.style.left = (pos.x + jitterX) + 'px';
-        container.style.top = (pos.y + jitterY) + 'px';
-        const chars = text.toString().split('');
-        chars.forEach((char, i) => {
-            const s = document.createElement('span');
-            s.className = 'float-digit';
-            s.style.animationDelay = (i * 30) + 'ms';
-            s.style.color = color;
-            s.innerText = char;
-            container.appendChild(s);
-        });
-        document.getElementById('floating-text-layer').appendChild(container);
-        setTimeout(()=>container.remove(), 1200);
     }
 
     showInventoryModal() {
