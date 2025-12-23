@@ -138,6 +138,7 @@ class Renderer3D {
         this.dangerGeo = new THREE.PlaneGeometry(0.9, 0.9);
         this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
         this.dangerPool = [];
+        this.floatingTexts = [];
     }
 
     /**
@@ -207,6 +208,48 @@ class Renderer3D {
         EventBus.on('play_animation', (type, data) => this.playAnimation(type, data));
         EventBus.on('sync_enemies', () => this.syncEnemies());
         EventBus.on('sync_loot', () => this.syncLoot());
+        EventBus.on('float_text', (t,x,y,c) => this.spawnFloatText(t,x,y,c));
+    }
+
+    /**
+     * Spawns a floating text at the specified grid coordinates.
+     * @param {string} text - The text to display.
+     * @param {number} x - The grid X coordinate.
+     * @param {number} y - The grid Y coordinate.
+     * @param {string} color - The CSS color string.
+     */
+    spawnFloatText(text, x, y, color) {
+        const jitterX = (Math.random() - 0.5) * 40;
+        const jitterY = (Math.random() - 0.5) * 20;
+
+        const container = document.createElement('div');
+        container.className = 'float-text-container';
+
+        const pos = this.projectToScreen(x, 0.5, y);
+        container.style.left = (pos.x + jitterX) + 'px';
+        container.style.top = (pos.y + jitterY) + 'px';
+
+        const chars = text.toString().split('');
+        chars.forEach((char, i) => {
+            const s = document.createElement('span');
+            s.className = 'float-digit';
+            s.style.animationDelay = (i * 30) + 'ms';
+            s.style.color = color;
+            s.innerText = char;
+            container.appendChild(s);
+        });
+
+        const layer = document.getElementById('floating-text-layer');
+        if(layer) layer.appendChild(container);
+
+        this.floatingTexts.push({
+            el: container,
+            x: x,
+            y: y, // Grid Y is World Z in our coordinate system
+            jitterX: jitterX,
+            jitterY: jitterY,
+            life: 1.2
+        });
     }
 
     /**
@@ -568,6 +611,20 @@ class Renderer3D {
 
         this.lootGroup.children.forEach(l => { l.rotation.y += 0.02; l.rotation.x += 0.01; });
         this.particles.update();
+
+        // Update Floating Text Positions
+        this.floatingTexts.forEach((ft, i) => {
+            ft.life -= 0.016;
+            if(ft.life <= 0) {
+                if(ft.el.parentNode) ft.el.parentNode.removeChild(ft.el);
+                this.floatingTexts[i] = null;
+            } else {
+                const pos = this.projectToScreen(ft.x, 0.5, ft.y);
+                ft.el.style.left = (pos.x + ft.jitterX) + 'px';
+                ft.el.style.top = (pos.y + ft.jitterY) + 'px';
+            }
+        });
+        this.floatingTexts = this.floatingTexts.filter(ft => ft !== null);
 
         // Idle Range Display
         if (this.previewOverride) {
