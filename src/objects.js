@@ -1112,19 +1112,21 @@ class Game_Map {
         // Check if we can attack. If not enough stamina, we still attack but get exhausted.
         actor.payStamina(20);
 
-        if (skill && (skill.type === 'self' || skill.type === 'all_enemies')) {
-             // For self/all_enemies, we don't need to resolve a single target here.
-             // BattleManager handles it.
+        // DELEGATE AOE SKILLS TO BATTLEMANAGER
+        if (skill && (skill.type === 'self' || skill.type === 'all_enemies' || skill.type === 'cone' || skill.type === 'circle')) {
+             // For complex shapes, BattleManager handles geometry targeting.
              await BattleManager.executeSkill(actor, skillIdToExec, null);
-             // Skip the rest of the targeting logic
+
              EventBus.emit('refresh_ui');
              await this.updateEnemies();
+             // Emit refresh again to show results of enemy turn (damage to player)
+             EventBus.emit('refresh_ui');
              $gameSystem.isBusy = false;
              await this.processTurnEnd(actor);
              return;
         }
 
-        if (skill && skill.type === 'line') {
+        if (skill && (skill.type === 'line' || skill.type === 'target')) {
             const dx = actor.direction.x; const dy = actor.direction.y;
             for (let i=1; i<=skill.range; i++) {
                  const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
@@ -1132,20 +1134,10 @@ class Game_Map {
                  const e = this.enemies.find(en => en.x === tx && en.y === ty);
                  if (e) { target = e; break; }
             }
-            // Execute even if no target (miss)
         } else {
-            // Default melee range 1 (or single target skill with range > 1 but not 'line')
-            // Actually 'target' type skills are ranged single target.
-            // But this block is "default melee range 1" IF no skill.
-            // If skill is present and type is 'target', we should look up to skill range.
+            // Default melee range 1
             const range = skill ? skill.range : 1;
-            // For now, simpler logic: if it's a 'target' skill, we look for closest enemy in direction or just front?
-            // Original logic was just front. Let's keep it simple for 'target' type: it acts like melee but extended range?
-            // Or should it be directional like 'line' but stops at first? That's what 'line' does.
-            // Let's assume 'target' means "Hit enemy at Cursor" but we don't have cursor.
-            // So we'll treat it as directional line for now (stops at first target).
-
-             const dx = actor.direction.x; const dy = actor.direction.y;
+            const dx = actor.direction.x; const dy = actor.direction.y;
              // Check along the line up to range
              for (let i=1; i<=range; i++) {
                  const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
@@ -1186,6 +1178,8 @@ class Game_Map {
 
         EventBus.emit('refresh_ui');
         await this.updateEnemies();
+        // Emit refresh again to show results of enemy turn (damage to player)
+        EventBus.emit('refresh_ui');
         $gameSystem.isBusy = false;
         await this.processTurnEnd(actor);
     }

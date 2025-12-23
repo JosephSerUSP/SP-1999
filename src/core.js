@@ -95,6 +95,8 @@ class Geometry {
      */
     static getLine(x0, y0, x1, y1) {
         const points = [];
+        if (isNaN(x0) || isNaN(y0) || isNaN(x1) || isNaN(y1)) return points;
+
         let dx = Math.abs(x1 - x0);
         let dy = Math.abs(y1 - y0);
         let sx = (x0 < x1) ? 1 : -1;
@@ -102,7 +104,8 @@ class Geometry {
         let err = dx - dy;
 
         let cx = x0; let cy = y0;
-        while (true) {
+        let maxIter = 1000; // Safety break
+        while (maxIter-- > 0) {
             points.push({x: cx, y: cy});
             if (cx === x1 && cy === y1) break;
             let e2 = 2 * err;

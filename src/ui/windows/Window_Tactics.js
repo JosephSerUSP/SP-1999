@@ -68,13 +68,13 @@ class Window_Tactics extends Window_Base {
                 },
                 onMouseEnter: (e) => {
                     if (skill) {
-                        Renderer.showRange(skill);
+                        Renderer.setPreviewOverride(skill);
                         $gameSystem.ui.showTooltip(e, `<b>${skill.name}</b><br>${skill.desc(actor)}`);
                     }
                 },
                 onMouseLeave: () => {
                     if (skill) {
-                        Renderer.clearRange();
+                        Renderer.clearPreviewOverride();
                         $gameSystem.ui.hideTooltip();
                     }
                 }
