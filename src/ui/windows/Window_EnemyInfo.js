@@ -32,6 +32,7 @@ class Window_EnemyInfo extends Window_Base {
         // Custom Styles
         this.el.style.borderRadius = '4px';
 
+        this.selectedTarget = null; // Specifically selected by cursor
         this.initEvents();
     }
 
@@ -39,6 +40,7 @@ class Window_EnemyInfo extends Window_Base {
         EventBus.on('targets_updated', (targets) => this.onTargetsUpdated(targets));
         EventBus.on('targets_cleared', () => this.onTargetsCleared());
         EventBus.on('enemy_affected', (data) => this.onEnemyAffected(data));
+        EventBus.on('target_selected', (target) => this.onTargetSelected(target));
     }
 
     update() {
@@ -57,7 +59,7 @@ class Window_EnemyInfo extends Window_Base {
         }
 
         // Handle Cycling Input
-        if (this.visible && this.targets.length > 1 && !this.lockedTarget) {
+        if (this.visible && this.targets.length > 1 && !this.lockedTarget && !this.selectedTarget) {
              if (InputManager.isTriggered('CYCLE')) {
                  this.cycleTarget();
             }
@@ -70,6 +72,11 @@ class Window_EnemyInfo extends Window_Base {
         this.refresh();
     }
 
+    onTargetSelected(target) {
+        this.selectedTarget = target;
+        this.show();
+    }
+
     onTargetsUpdated(targets) {
         if (this.lockedTarget) return; // Don't override locked display (e.g. taking damage)
 
@@ -79,7 +86,14 @@ class Window_EnemyInfo extends Window_Base {
 
         this.targets = targets;
 
-        if (newIds !== oldIds) {
+        // If we have a selected target, ensure it is still valid
+        if (this.selectedTarget) {
+            if (!targets.find(t => t.uid === this.selectedTarget.uid)) {
+                this.selectedTarget = null;
+            }
+        }
+
+        if (newIds !== oldIds || this.selectedTarget) {
             this.currentTargetIndex = 0;
             if (targets.length > 0) {
                 this.show();
@@ -91,6 +105,7 @@ class Window_EnemyInfo extends Window_Base {
 
     onTargetsCleared() {
         this.targets = [];
+        this.selectedTarget = null;
         if (!this.lockedTarget) {
             this.hide();
         }
@@ -104,10 +119,10 @@ class Window_EnemyInfo extends Window_Base {
     }
 
     defineLayout() {
-        const target = this.lockedTarget || this.targets[this.currentTargetIndex];
+        const target = this.lockedTarget || this.selectedTarget || this.targets[this.currentTargetIndex];
         if (!target) return null;
 
-        const isMultiple = this.targets.length > 1 && !this.lockedTarget;
+        const isMultiple = this.targets.length > 1 && !this.lockedTarget && !this.selectedTarget;
 
         // Calculate HP Pct
         const hpPct = Math.floor((target.hp / target.mhp) * 100);
