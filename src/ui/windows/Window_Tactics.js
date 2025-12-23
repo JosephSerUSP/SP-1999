@@ -52,8 +52,29 @@ class Window_Tactics extends Window_Base {
 
         // Attack
         children.push(this.createCommand("ATTACK", "", () => {
+            // Check for custom attack skill or default basic
+            const actor = $gameParty.active();
+            const skillId = actor.getAttackSkill();
+            const skill = skillId ? $dataSkills[skillId] : { type: 'target', range: 1, name: 'Attack' };
+
+            // Basic attack is Directional (or Melee Target if adjacent? usually just directional lunge)
+            // But if we want to "decide direction", we treat it as directional.
+            // If it's a "target" type skill (manual select), we use cursor.
+            // Default basic attack in legacy was directional lunge.
+            // Let's use startTargeting.
+            // Construct a dummy skill object if needed for basic attack so startTargeting works.
+            const attackSkill = skillId ? $dataSkills[skillId] : { type: 'line', range: 1, name: 'Attack' };
+
             $gameSystem.ui.blurWindow();
-            $gameMap.playerAttack();
+
+            $gameMap.startTargeting(attackSkill, (target) => {
+                // If confirmed
+                if (target) {
+                    $gameMap.processTurn(0, 0, () => $gameMap.playerAttack());
+                } else {
+                    $gameSystem.ui.focusWindow('cmd');
+                }
+            });
         }));
 
         // Ability
@@ -94,7 +115,26 @@ class Window_Tactics extends Window_Base {
                              // Reset state for next time
                              this.viewState = 'main';
                              this.refresh();
-                             $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k));
+
+                             // Targeting Phase
+                             if (s.type === 'self' || s.type === 'all_enemies') {
+                                 // Immediate execution
+                                 $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k));
+                             } else {
+                                 // Enter Targeting
+                                 $gameMap.startTargeting(s, (target) => {
+                                     if (target) {
+                                         // Execute
+                                         // If target is string 'CONFIRM', it means Directional confirm (target is null/implicit)
+                                         const finalTarget = (target === 'CONFIRM') ? null : target;
+                                         $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k, finalTarget));
+                                     } else {
+                                         // Cancelled (implicit in updateTargeting but safety here if callback called with null)
+                                         // Actually cancel handles its own focus restore in updateTargeting.
+                                         // But if we return here with null...
+                                     }
+                                 });
+                             }
                         }
                     },
                     disabled,

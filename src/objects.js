@@ -674,6 +674,143 @@ class Game_Map {
         this.playerX = 1;
         this.playerY = 1;
         this.enemyIdCounter = 0;
+        this.targetingState = { active: false, mode: 'cursor', skill: null, cursor: {x:0, y:0}, callback: null };
+    }
+
+    /**
+     * Checks if targeting mode is active.
+     * @returns {boolean}
+     */
+    isTargeting() {
+        return this.targetingState.active;
+    }
+
+    /**
+     * Starts the targeting phase for a skill.
+     * @param {Object} skill - The skill being used.
+     * @param {Function} callback - Called on confirmation (args: target or null).
+     */
+    startTargeting(skill, callback) {
+        this.targetingState.active = true;
+        this.targetingState.skill = skill;
+        this.targetingState.callback = callback;
+        this.targetingState.cursor = { x: this.playerX, y: this.playerY };
+
+        // Determine Mode
+        if (skill.type === 'target') {
+            this.targetingState.mode = 'cursor';
+            // Auto-select best target if any
+            const enemiesInRange = this.enemies.filter(e =>
+                (Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY)) <= skill.range
+            );
+            if (enemiesInRange.length > 0) {
+                 // Sort by closest
+                 enemiesInRange.sort((a,b) => (Math.abs(a.x - this.playerX) + Math.abs(a.y - this.playerY)) - (Math.abs(b.x - this.playerX) + Math.abs(b.y - this.playerY)));
+                 this.targetingState.cursor = { x: enemiesInRange[0].x, y: enemiesInRange[0].y };
+            } else {
+                 // Start at player + direction * range (or just player)
+                 this.targetingState.cursor = { x: this.playerX, y: this.playerY };
+            }
+        } else {
+            // Directional (Line, Cone, Circle, Basic Attack)
+            this.targetingState.mode = 'direction';
+            // Ensure direction is valid
+            const a = $gameParty.active();
+            if (!a.direction) a.direction = {x:0, y:1};
+            // Cursor visualization follows player? No, cursor is usually hidden in direction mode or put at end of line.
+            // But we use cursorMesh in Renderer.
+            // Let's set cursor to player for now, relying on Range display to show direction.
+        }
+        $gameSystem.log("Select Target...");
+    }
+
+    /**
+     * Updates the targeting logic based on input.
+     */
+    updateTargeting() {
+        if (!this.targetingState.active) return;
+
+        const skill = this.targetingState.skill;
+        const actor = $gameParty.active();
+
+        if (InputManager.isTriggered('CANCEL')) {
+            this.endTargeting(null);
+            $gameSystem.ui.focusWindow('cmd'); // Return focus to UI
+            return;
+        }
+
+        if (InputManager.isTriggered('OK')) {
+            // Confirm
+            if (this.targetingState.mode === 'cursor') {
+                // Return target at cursor
+                const t = this.enemies.find(e => e.x === this.targetingState.cursor.x && e.y === this.targetingState.cursor.y);
+                // If skill requires target and none found?
+                // Some target skills might be ground target? "Manual select a target... caster pick one target"
+                // Usually implies an entity.
+                // But let's allow selecting the tile, BattleManager will handle "Miss" or validity.
+                // Actually, let's look at executeSkill. It expects a target object or null.
+                // If we pass an object, it runs effects on it.
+                // If we pass null, it runs "Resolve Targets based on Shape".
+                // We should pass the Entity if found.
+                // If no entity found, we should probably warn or cancel? Or fire and miss?
+                // User said "Selecting a skill... manually select a target".
+                // If I click empty ground, valid?
+                // Let's assume we need a valid target for 'target' type.
+                if (t) {
+                    this.endTargeting(t);
+                } else {
+                    $gameSystem.log("No target.");
+                    // Allow firing at empty air?
+                    // executeSkill logic: "If target... runEffects(target)".
+                    // If we pass a dummy object with x,y it might work?
+                    // But 'target' type usually means "Unit".
+                }
+            } else {
+                // Direction mode
+                // Confirm direction
+                this.endTargeting('CONFIRM'); // Signal proceed (BattleManager uses current actor direction)
+            }
+            return;
+        }
+
+        // Movement
+        let dx = 0, dy = 0;
+        if (InputManager.isTriggered('UP')) dy = -1;
+        else if (InputManager.isTriggered('DOWN')) dy = 1;
+        else if (InputManager.isTriggered('LEFT')) dx = -1;
+        else if (InputManager.isTriggered('RIGHT')) dx = 1;
+
+        if (dx !== 0 || dy !== 0) {
+            if (this.targetingState.mode === 'direction') {
+                actor.direction = { x: dx, y: dy };
+                // Also update cursor to "look" like it's in that direction (optional, for visual feedback)
+                this.targetingState.cursor = { x: this.playerX + dx, y: this.playerY + dy };
+            } else {
+                // Cursor Mode
+                const nx = this.targetingState.cursor.x + dx;
+                const ny = this.targetingState.cursor.y + dy;
+                // Clamp to range?
+                const dist = Math.abs(nx - this.playerX) + Math.abs(ny - this.playerY);
+                // Allow moving cursor anywhere within map? Or only valid range?
+                // Usually free cursor but constrained to map.
+                if (this.isValid(nx, ny)) {
+                    this.targetingState.cursor.x = nx;
+                    this.targetingState.cursor.y = ny;
+                }
+            }
+        }
+    }
+
+    /**
+     * Ends targeting and invokes the callback.
+     */
+    endTargeting(result) {
+        const cb = this.targetingState.callback;
+        this.targetingState.active = false;
+        this.targetingState.skill = null;
+        this.targetingState.callback = null;
+        EventBus.emit('targets_cleared');
+        if (cb && result) cb(result);
     }
 
     /**

@@ -133,6 +133,7 @@ class Renderer3D {
         this.instancedWalls = null;
         this.currentRangeSkill = null;
         this.previewOverride = null;
+        this.cursorMesh = null;
 
         // Shared resources for danger zones to prevent memory leaks
         this.dangerGeo = new THREE.PlaneGeometry(0.9, 0.9);
@@ -191,6 +192,13 @@ class Renderer3D {
         this.playerMesh = new THREE.Mesh(geo, this.matPlayer);
         this.playerMesh.userData.uid = 'player';
         this.scene.add(this.playerMesh);
+
+        // Cursor (Targeting Reticle)
+        const cursorGeo = new THREE.BoxGeometry(1, 1, 1);
+        const cursorMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true, transparent: true, opacity: 0.8 });
+        this.cursorMesh = new THREE.Mesh(cursorGeo, cursorMat);
+        this.cursorMesh.visible = false;
+        this.scene.add(this.cursorMesh);
 
         this.mapGroup = new THREE.Group(); this.enemyGroup = new THREE.Group(); this.lootGroup = new THREE.Group(); this.rangeGroup = new THREE.Group();
         this.scene.add(this.mapGroup); this.scene.add(this.enemyGroup); this.scene.add(this.lootGroup); this.scene.add(this.rangeGroup);
@@ -626,8 +634,21 @@ class Renderer3D {
         });
         this.floatingTexts = this.floatingTexts.filter(ft => ft !== null);
 
-        // Idle Range Display
-        if (this.previewOverride) {
+        // Update Cursor
+        if ($gameMap.targetingState && $gameMap.targetingState.active) {
+            this.cursorMesh.visible = true;
+            const t = $gameMap.targetingState.cursor;
+            this.cursorMesh.position.set(t.x, 0.5, t.y);
+            this.cursorMesh.material.opacity = 0.5 + Math.sin(Date.now() * 0.01) * 0.4; // Blink
+        } else {
+            this.cursorMesh.visible = false;
+        }
+
+        // Idle Range Display or Targeting Range
+        if ($gameMap.targetingState && $gameMap.targetingState.active) {
+            // Show range of the skill being targeted
+            this.showRange($gameMap.targetingState.skill);
+        } else if (this.previewOverride) {
             this.showRange(this.previewOverride);
         } else if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !this.isAnimating) {
             const actor = $gameParty.active();

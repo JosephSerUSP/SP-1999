@@ -60,7 +60,13 @@ class SceneManager {
             return;
         }
 
-        // 2. Map Gameplay
+        // 2. Targeting Mode
+        if ($gameMap.isTargeting()) {
+            $gameMap.updateTargeting();
+            return;
+        }
+
+        // 3. Map Gameplay
         if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !Renderer.isAnimating) {
              if(InputManager.isPressed('UP')) $gameMap.processTurn(0,-1);
              else if(InputManager.isPressed('DOWN')) $gameMap.processTurn(0,1);
