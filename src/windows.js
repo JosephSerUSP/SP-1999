@@ -289,6 +289,9 @@ class UIManager {
         callback();
     }
 
+    /**
+     * @deprecated Legacy imperative modal. Use Window_Target or similar component-based approach if available.
+     */
     showTargetSelectModal(callback, itemPreview = null) {
         // Legacy imperative modal
         const overlay = document.createElement('div');
@@ -357,6 +360,9 @@ class UIManager {
         };
     }
 
+    /**
+     * @deprecated Legacy imperative modal. Use Window_Confirm or similar component-based approach if available.
+     */
     showConfirmModal(text, onConfirm) {
         // Legacy imperative modal
         const overlay = document.createElement('div');

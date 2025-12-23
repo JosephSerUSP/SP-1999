@@ -334,7 +334,7 @@ class Game_Enemy extends Game_Battler {
 
     /**
      * Decides the best action to take.
-     * @returns {Object} Action definition { type: 'move'|'skill', data: ... }
+     * @returns {Object} Action definition (e.g., { type: 'move', behavior: string } or { type: 'skill', skillId: string, config: Object })
      */
     decideAction() {
         if (!this.aiConfig) {
@@ -868,7 +868,6 @@ class Game_Map {
      * Processes a game turn based on player movement.
      * @param {number} dx - Change in x.
      * @param {number} dy - Change in y.
-     * @param {Function} [action] - Optional action to execute.
      */
     async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
