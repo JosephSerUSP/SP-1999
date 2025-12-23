@@ -870,7 +870,7 @@ class Game_Map {
      * @param {number} dy - Change in y.
      * @param {Function} [action] - Optional action to execute.
      */
-    async processTurn(dx, dy) {
+    async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
 
         // Check Renderer state for Seamless Movement Throttling
@@ -890,6 +890,21 @@ class Game_Map {
              await this.processTurnEnd(actor);
              await this.updateEnemies();
              return;
+        }
+
+        // Handle External Action (Skills via UI)
+        if (action) {
+            $gameSystem.isBusy = true;
+            const result = await action();
+            if (result !== false) {
+                actor.payStamina(20);
+                EventBus.emit('refresh_ui');
+                await this.updateEnemies();
+                EventBus.emit('refresh_ui'); // Update after enemy actions
+                await this.processTurnEnd(actor);
+            }
+            $gameSystem.isBusy = false;
+            return;
         }
 
         const nx = this.playerX + dx; const ny = this.playerY + dy;
