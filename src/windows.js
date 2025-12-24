@@ -61,6 +61,11 @@ class UIManager {
     updateInput() {
         if (!InputManager.isTriggered) return;
 
+        // Update Minimap Toggle
+        if (this.windows.minimap && this.windows.minimap.update) {
+            this.windows.minimap.update();
+        }
+
         if (InputManager.isTriggered('CANCEL')) {
             if (this.activeModal) {
                 const closeBtn = this.activeModal.querySelector('#modal-close');
@@ -171,11 +176,17 @@ class UIManager {
 
         // Logic matches original
         const ts = 4;
+        // Set internal resolution based on map size
         c.width = $gameMap.width * ts;
         c.height = $gameMap.height * ts;
-        c.style.width = c.width + "px";
-        c.style.height = c.height + "px";
+
+        // Remove forced style sizing to allow CSS (width: 100%) to handle scaling
+        // c.style.width = c.width + "px";
+        // c.style.height = c.height + "px";
+
         const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height); // Clear previous frame (transparency)
+
         for(let x=0; x<$gameMap.width; x++) {
             for(let y=0; y<$gameMap.height; y++) {
                 if(!$gameMap.visited || !$gameMap.visited[x] || !$gameMap.visited[x][y]) continue;

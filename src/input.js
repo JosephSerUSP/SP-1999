@@ -16,7 +16,8 @@ class InputManager {
             RIGHT: ['ArrowRight', 'd', 'D'],
             OK: ['Enter', ' ', 'z', 'Z'],
             CANCEL: ['Escape', 'x', 'X', 'Backspace'],
-            MENU: ['Tab', 'c', 'C'],
+            MENU: ['c', 'C'], // Removed 'Tab' from MENU
+            MINIMAP: ['Tab', 'm', 'M'], // Added MINIMAP action
             CYCLE: ['Shift', 'v', 'V'],
             PREV_ACTOR: ['q', 'Q', 'PageUp'],
             NEXT_ACTOR: ['e', 'E', 'PageDown']
@@ -25,7 +26,7 @@ class InputManager {
         // Current logical state
         this.state = {
             UP: false, DOWN: false, LEFT: false, RIGHT: false,
-            OK: false, CANCEL: false, MENU: false, CYCLE: false,
+            OK: false, CANCEL: false, MENU: false, MINIMAP: false, CYCLE: false,
             PREV_ACTOR: false, NEXT_ACTOR: false
         };
         this.lastState = { ...this.state };
@@ -36,8 +37,10 @@ class InputManager {
             1: 'CANCEL',  // B / Circle
             2: 'MENU',    // X / Square (Using X for menu for now, or Y?)
             3: 'MENU',    // Y / Triangle
+            4: 'MINIMAP', // L1 / LB
             6: 'PREV_ACTOR', // L2 / LT
             7: 'NEXT_ACTOR', // R2 / RT
+            8: 'MINIMAP', // Select / Back
             12: 'UP',     // D-Pad Up
             13: 'DOWN',   // D-Pad Down
             14: 'LEFT',   // D-Pad Left

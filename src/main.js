@@ -54,9 +54,12 @@ class SceneManager {
         $gameBanter.update();
 
         // Delegate Input
+        // 0. Global UI Input (Minimap toggle)
+        UI.updateInput(); // Always check for global toggles even if not focused
+
         // 1. UI Navigation
         if (UI.activeModal || UI.focusedWindow) {
-            UI.updateInput();
+            // UI.updateInput() is already called above
             return;
         }
 
