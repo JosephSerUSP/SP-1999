@@ -1047,6 +1047,7 @@ class Game_Map {
      */
     async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
+        if($gameSystem.isBusy) return;
 
         // Check Renderer state for Seamless Movement Throttling
         if(Renderer && Renderer.isAnimating) return;
@@ -1070,15 +1071,18 @@ class Game_Map {
         // Handle External Action (Skills via UI)
         if (action) {
             $gameSystem.isBusy = true;
-            const result = await action();
-            if (result !== false) {
-                actor.payStamina(20);
-                EventBus.emit('refresh_ui');
-                await this.updateEnemies();
-                EventBus.emit('refresh_ui'); // Update after enemy actions
-                await this.processTurnEnd(actor);
+            try {
+                const result = await action();
+                if (result !== false) {
+                    actor.payStamina(20);
+                    EventBus.emit('refresh_ui');
+                    await this.updateEnemies();
+                    EventBus.emit('refresh_ui'); // Update after enemy actions
+                    await this.processTurnEnd(actor);
+                }
+            } finally {
+                $gameSystem.isBusy = false;
             }
-            $gameSystem.isBusy = false;
             return;
         }
 
@@ -1088,17 +1092,22 @@ class Game_Map {
         const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
 
         if(enemy) {
-             if (actor.isRestricted()) {
-                 $gameSystem.log(`${actor.name} is stunned!`, 'status');
-             } else {
-                 const skillId = actor.getAttackSkill();
-                 actor.payStamina(20);
-                 await BattleManager.executeSkill(actor, skillId, enemy);
+             $gameSystem.isBusy = true;
+             try {
+                 if (actor.isRestricted()) {
+                     $gameSystem.log(`${actor.name} is stunned!`, 'status');
+                 } else {
+                     const skillId = actor.getAttackSkill();
+                     actor.payStamina(20);
+                     await BattleManager.executeSkill(actor, skillId, enemy);
+                     EventBus.emit('refresh_ui');
+                 }
+                 await this.updateEnemies();
                  EventBus.emit('refresh_ui');
+                 await this.processTurnEnd(actor);
+             } finally {
+                 $gameSystem.isBusy = false;
              }
-             await this.updateEnemies();
-             EventBus.emit('refresh_ui');
-             await this.processTurnEnd(actor);
         } else {
             // Consume Stamina for Move (10)
             actor.payStamina(10);
