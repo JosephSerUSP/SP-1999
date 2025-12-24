@@ -137,7 +137,7 @@ class Renderer3D {
 
         // Shared resources for danger zones to prevent memory leaks
         this.dangerGeo = new THREE.PlaneGeometry(0.9, 0.9);
-        this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+        this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
         this.dangerPool = [];
         this.floatingTexts = [];
     }
