@@ -20,7 +20,7 @@ class UIManager {
 
     initEvents() {
         EventBus.on('log_updated', () => this.refreshLog());
-        EventBus.on('refresh_ui', () => this.refresh());
+        EventBus.on('actor_stats_updated', () => this.refresh());
         EventBus.on('refresh_minimap', () => this.refreshMinimap());
     }
 
