@@ -443,7 +443,7 @@ class Game_Actor extends Game_Battler {
         this.hp = this.mhp;
         this.mpe = 100;
         this.pe = d.pe;
-        this.mstamina = 100;
+        this.mstamina = 1000;
         this.stamina = this.mstamina;
         this.isExhausted = false;
         // this.equip, this.states initialized in super
