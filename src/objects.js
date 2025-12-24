@@ -1047,99 +1047,104 @@ class Game_Map {
      */
     async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
+        if($gameSystem.isBusy) return;
 
         // Check Renderer state for Seamless Movement Throttling
         if(Renderer && Renderer.isAnimating) return;
 
-        // Player State Logic
-        const actor = $gameParty.active();
+        $gameSystem.isBusy = true;
 
-        // Update Direction if moving
-        if (dx !== 0 || dy !== 0) {
-            $gameParty.members.forEach(m => m.direction = {x: dx, y: dy});
-        }
+        try {
+            // Player State Logic
+            const actor = $gameParty.active();
 
-        if(actor.isRestricted()) {
-             $gameSystem.log(`${actor.name} is stunned!`);
-             // Skip movement but process turn end for states
-             await this.processTurnEnd(actor);
-             await this.updateEnemies();
-             return;
-        }
+            // Update Direction if moving
+            if (dx !== 0 || dy !== 0) {
+                $gameParty.members.forEach(m => m.direction = {x: dx, y: dy});
+            }
 
-        // Handle External Action (Skills via UI)
-        if (action) {
-            $gameSystem.isBusy = true;
-            const result = await action();
-            if (result !== false) {
-                actor.payStamina(20);
-                EventBus.emit('refresh_ui');
-                await this.updateEnemies();
-                EventBus.emit('refresh_ui'); // Update after enemy actions
+            if(actor.isRestricted()) {
+                $gameSystem.log(`${actor.name} is stunned!`);
+                // Skip movement but process turn end for states
                 await this.processTurnEnd(actor);
-            }
-            $gameSystem.isBusy = false;
-            return;
-        }
-
-        const nx = this.playerX + dx; const ny = this.playerY + dy;
-        if(this.tiles[nx][ny] === 1) return;
-
-        const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
-
-        if(enemy) {
-             if (actor.isRestricted()) {
-                 $gameSystem.log(`${actor.name} is stunned!`, 'status');
-             } else {
-                 const skillId = actor.getAttackSkill();
-                 actor.payStamina(20);
-                 await BattleManager.executeSkill(actor, skillId, enemy);
-                 EventBus.emit('refresh_ui');
-             }
-             await this.updateEnemies();
-             EventBus.emit('refresh_ui');
-             await this.processTurnEnd(actor);
-        } else {
-            // Consume Stamina for Move (10)
-            actor.payStamina(10);
-
-            // Check if we became restricted just now (Panting)
-            // Even if we become panting, the current move is allowed.
-            // The restriction applies to the NEXT turn.
-
-            // Visual Move
-            EventBus.emit('play_animation', 'move', { toX: nx, toY: ny });
-
-            // Move
-            this.playerX = nx; this.playerY = ny;
-            this.revealZone(this.playerX, this.playerY, 6);
-
-            const itemIdx = this.loot.findIndex(i => i.x === nx && i.y === ny);
-            if(itemIdx > -1) {
-                $gameParty.gainItem(this.loot[itemIdx].item);
-                EventBus.emit('play_animation', 'itemGet', { x: nx, y: ny });
-                this.loot.splice(itemIdx, 1);
-                EventBus.emit('sync_loot');
-                $gameBanter.trigger('loot');
-            }
-
-            if(this.tiles[nx][ny] === 3) {
-                $gameSystem.log("Ascending...", 'exploration');
-                EventBus.emit('play_animation', 'ascend');
-                $gameSystem.isInputBlocked = true;
-                // Wait slightly more for dramatic effect before logic switch
-                await Sequencer.sleep(4000);
-                $gameSystem.isInputBlocked = false;
-                this.setup($gameSystem.floor + 1);
+                await this.updateEnemies();
                 return;
             }
 
-            EventBus.emit('refresh_ui');
-            await this.updateEnemies();
-            await this.processTurnEnd(actor); // States update
+            // Handle External Action (Skills via UI)
+            if (action) {
+                const result = await action();
+                if (result !== false) {
+                    actor.payStamina(20);
+                    EventBus.emit('refresh_ui');
+                    await this.updateEnemies();
+                    EventBus.emit('refresh_ui'); // Update after enemy actions
+                    await this.processTurnEnd(actor);
+                }
+                return;
+            }
 
-            $gameBanter.trigger('walk', {x: this.playerX, y: this.playerY});
-            $gameBanter.trigger('surrounded', {x: this.playerX, y: this.playerY});
+            const nx = this.playerX + dx; const ny = this.playerY + dy;
+            if(this.tiles[nx][ny] === 1) return;
+
+            const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
+
+            if(enemy) {
+                if (actor.isRestricted()) {
+                    $gameSystem.log(`${actor.name} is stunned!`, 'status');
+                } else {
+                    const skillId = actor.getAttackSkill();
+                    actor.payStamina(20);
+                    await BattleManager.executeSkill(actor, skillId, enemy);
+                    EventBus.emit('refresh_ui');
+                }
+                await this.updateEnemies();
+                EventBus.emit('refresh_ui');
+                await this.processTurnEnd(actor);
+            } else {
+                // Consume Stamina for Move (10)
+                actor.payStamina(10);
+
+                // Check if we became restricted just now (Panting)
+                // Even if we become panting, the current move is allowed.
+                // The restriction applies to the NEXT turn.
+
+                // Visual Move
+                EventBus.emit('play_animation', 'move', { toX: nx, toY: ny });
+
+                // Move
+                this.playerX = nx; this.playerY = ny;
+                this.revealZone(this.playerX, this.playerY, 6);
+
+                const itemIdx = this.loot.findIndex(i => i.x === nx && i.y === ny);
+                if(itemIdx > -1) {
+                    $gameParty.gainItem(this.loot[itemIdx].item);
+                    EventBus.emit('play_animation', 'itemGet', { x: nx, y: ny });
+                    this.loot.splice(itemIdx, 1);
+                    EventBus.emit('sync_loot');
+                    $gameBanter.trigger('loot');
+                }
+
+                if(this.tiles[nx][ny] === 3) {
+                    $gameSystem.log("Ascending...", 'exploration');
+                    EventBus.emit('play_animation', 'ascend');
+                    $gameSystem.isInputBlocked = true;
+                    // Wait slightly more for dramatic effect before logic switch
+                    await Sequencer.sleep(4000);
+                    $gameSystem.isInputBlocked = false;
+                    this.setup($gameSystem.floor + 1);
+                    return;
+                }
+
+                EventBus.emit('refresh_ui');
+                await this.updateEnemies();
+                await this.processTurnEnd(actor); // States update
+
+                $gameBanter.trigger('walk', {x: this.playerX, y: this.playerY});
+                $gameBanter.trigger('surrounded', {x: this.playerX, y: this.playerY});
+            }
+        } finally {
+            $gameSystem.isBusy = false;
         }
     }
 
