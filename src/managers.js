@@ -232,6 +232,7 @@ class BattleManager {
      * @returns {Promise<boolean>} Resolves to true if skill was executed successfully, false otherwise.
      */
     static async executeSkill(a, k, target = null) {
+        console.log("[BattleManager] executeSkill", k, "User:", a.name, "Target:", target);
         const s = $dataSkills[k];
         const isPlayer = a.uid === 'player' || a instanceof Game_Actor;
 
@@ -305,6 +306,7 @@ class BattleManager {
 
             // Apply Logic
             if (targets.length > 0) {
+                 console.log("[BattleManager] Resolving targets:", targets.length);
                  if (s.type === 'line' || s.type === 'target') {
                      // Sort by distance (Closest first)
                      targets.sort((t1, t2) => (Math.abs(t1.x - a.x) + Math.abs(t1.y - a.y)) - (Math.abs(t2.x - a.x) + Math.abs(t2.y - a.y)));

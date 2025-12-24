@@ -53,15 +53,24 @@ class Window_Tactics extends Window_Base {
         // Attack
         const actor = $gameParty.active();
         const skillId = actor.getAttackSkill();
-        const attackSkill = skillId ? $dataSkills[skillId] : { type: 'line', range: 1, name: 'Attack', desc: () => "Basic melee attack." };
+        const attackSkill = $dataSkills[skillId]; // Now guaranteed to exist via getAttackSkill default
 
         children.push(this.createCommand("ATTACK", "", () => {
             $gameSystem.ui.blurWindow();
             $gameMap.startTargeting(attackSkill, (target) => {
+                console.log("[Window_Tactics] Attack confirmed. Target:", target);
                 // If confirmed
                 if (target) {
-                    $gameMap.processTurn(0, 0, () => $gameMap.playerAttack());
+                    const finalTarget = (target === 'CONFIRM') ? null : target;
+                    // Face target if explicit
+                    if (finalTarget) {
+                        const dx = Math.sign(finalTarget.x - actor.x); const dy = Math.sign(finalTarget.y - actor.y);
+                        if (dx !== 0 || dy !== 0) actor.direction = {x: dx, y: dy};
+                    }
+                    console.log("[Window_Tactics] calling processTurn with executeSkill. finalTarget:", finalTarget);
+                    $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, skillId, finalTarget));
                 } else {
+                    console.log("[Window_Tactics] Target cancelled/null.");
                     $gameSystem.ui.focusWindow('cmd');
                 }
             });
@@ -117,6 +126,13 @@ class Window_Tactics extends Window_Base {
                                          // Execute
                                          // If target is string 'CONFIRM', it means Directional confirm (target is null/implicit)
                                          let finalTarget = (target === 'CONFIRM') ? null : target;
+
+                                     // Face target if explicit
+                                     if (finalTarget && finalTarget.x !== undefined) { // Check if object
+                                         const dx = Math.sign(finalTarget.x - actor.x); const dy = Math.sign(finalTarget.y - actor.y);
+                                         if (dx !== 0 || dy !== 0) actor.direction = {x: dx, y: dy};
+                                     }
+
                                          // If skill is AOE (e.g. circle), even if we selected a target for inspection, we want to hit the area.
                                          // Passing null forces BattleManager to calculate targets based on shape.
                                          if (s.type === 'circle' || s.type === 'cone') {
