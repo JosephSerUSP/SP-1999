@@ -696,6 +696,7 @@ class Game_Map {
         this.targetingState.skill = skill;
         this.targetingState.callback = callback;
         this.targetingState.cursor = { x: this.playerX, y: this.playerY };
+        this.targetingState.inputCooldown = 10; // Prevent immediate confirmation from same keypress
 
         // Determine Mode
         if (skill.type === 'target') {
@@ -723,7 +724,7 @@ class Game_Map {
             const a = $gameParty.active();
             if (!a.direction) a.direction = {x:0, y:1};
         }
-        $gameSystem.log("Select Target...");
+        $gameSystem.log(skill.type === 'target' ? "Select Enemy (Arrows + Enter)" : "Select Direction (Arrows + Enter)");
     }
 
     /**
@@ -731,6 +732,11 @@ class Game_Map {
      */
     updateTargeting() {
         if (!this.targetingState.active) return;
+        if (this.targetingState.inputCooldown > 0) {
+            this.targetingState.inputCooldown--;
+            // Clear inputs during cooldown to prevent buffering
+            return;
+        }
 
         const skill = this.targetingState.skill;
         const actor = $gameParty.active();
