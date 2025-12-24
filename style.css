@@ -193,3 +193,41 @@ body {
 #game-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
 #minimap-canvas { image-rendering: pixelated; background: #000; }
+
+/* --- LOG LINES --- */
+.log-line {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #fff !important;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    border-left: 3px solid var(--pe-gold);
+    margin-bottom: 2px;
+    width: fit-content;
+    max-width: 100%;
+    animation: log-pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    opacity: 0;
+    transform-origin: left center;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 0 #000;
+    pointer-events: none;
+    line-height: 1.2;
+    z-index: 10001;
+    white-space: nowrap;
+}
+
+.log-line-exit {
+    animation: log-fade 0.5s ease-in forwards;
+}
+
+@keyframes log-pop {
+    0% { opacity: 0; transform: translateX(-20px) scale(0.9); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes log-fade {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
