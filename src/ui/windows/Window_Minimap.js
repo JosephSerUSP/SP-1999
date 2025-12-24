@@ -33,10 +33,10 @@ class Window_Minimap extends Window_Base {
     }
 
     defineLayout() {
-        // Remove size constraints to allow content to overflow and be scrolled
+        // Ensure relative positioning for absolute child placement
         return {
             type: 'container',
-            props: { style: { padding: '0', overflow: 'hidden' } },
+            props: { style: { padding: '0', overflow: 'hidden', position: 'relative', width: '100%', height: '100%' } },
             children: [
                 {
                     component: MinimapCanvas
@@ -53,36 +53,44 @@ class Window_Minimap extends Window_Base {
 
         // Centering Logic
         if (this.visible && this.el && typeof $gameMap !== 'undefined' && this.contentEl) {
-            const mm = this.contentEl;
-            const c = mm.querySelector('canvas');
+            // Find the root container created by defineLayout, which is the direct child of contentEl
+            const mm = this.root.el;
+            const c = mm ? mm.querySelector('canvas') : null;
 
             if (c) {
                 const ts = (this.mode === 1) ? 12 : 4;
                 const pX = $gameMap.playerX * ts + (ts / 2);
                 const pY = $gameMap.playerY * ts + (ts / 2);
 
-                // Canvas Dimensions (explicitly set in refreshMinimap)
                 const cW = parseFloat(c.style.width) || c.width;
                 const cH = parseFloat(c.style.height) || c.height;
                 const winW = mm.clientWidth;
                 const winH = mm.clientHeight;
 
-                // Center via Margin if smaller than window
-                if (cW < winW) {
-                    c.style.marginLeft = Math.floor((winW - cW) / 2) + 'px';
-                    mm.scrollLeft = 0;
-                } else {
-                    c.style.marginLeft = '0px';
-                    mm.scrollLeft = pX - winW / 2;
-                }
+                c.style.position = 'absolute';
+                c.style.margin = '0'; // clear margin logic
 
-                if (cH < winH) {
-                    c.style.marginTop = Math.floor((winH - cH) / 2) + 'px';
-                    mm.scrollTop = 0;
-                } else {
-                    c.style.marginTop = '0px';
-                    mm.scrollTop = pY - winH / 2;
+                let targetLeft = (winW / 2) - pX;
+                let targetTop = (winH / 2) - pY;
+
+                // Mode 0 (Corner): Clamp to bounds to prevent seeing empty space (unless map is smaller)
+                if (this.mode === 0) {
+                    if (cW <= winW) {
+                        targetLeft = (winW - cW) / 2;
+                    } else {
+                        targetLeft = Math.max(winW - cW, Math.min(0, targetLeft));
+                    }
+
+                    if (cH <= winH) {
+                        targetTop = (winH - cH) / 2;
+                    } else {
+                        targetTop = Math.max(winH - cH, Math.min(0, targetTop));
+                    }
                 }
+                // Mode 1 (Overlay): Always center player (targetLeft/Top remain as calculated)
+
+                c.style.left = Math.floor(targetLeft) + 'px';
+                c.style.top = Math.floor(targetTop) + 'px';
             }
         }
     }
@@ -138,47 +146,13 @@ class Window_Minimap extends Window_Base {
 
     refresh() {
         super.refresh();
-        // Force height to match width to keep it square
-        if (this.el && this.mode !== 2) {
+        // Force height to match width to keep it square ONLY IN CORNER MODE
+        if (this.el && this.mode === 0) {
             const width = this.el.clientWidth;
             if (width > 0) {
                 this.el.style.height = width + 'px';
             }
-            // Trigger redraw of canvas content via event or direct call?
-            // UIManager calls refreshMinimap() on 'refresh_ui' or 'refresh_minimap'.
-            // We should ensure the canvas is resized correctly.
-            // UIManager.refreshMinimap() uses $gameMap.width * scale.
-            // It modifies the canvas width/height attributes and style.
-            // Wait, UIManager.refreshMinimap sets canvas width/height based on Map Grid Size * Scale (4px).
-            // It ignores the container size!
-            // The canvas style width is set to map size.
-            // If we want the map to scale to the window (container), we need to change UIManager.refreshMinimap
-            // OR change how the canvas is styled.
-
-            // Current UIManager.refreshMinimap:
-            // c.width = $gameMap.width * 4; ... c.style.width = c.width + "px";
-            // This fixes the size. If the window is 20% of screen (~192px), and map is large, it might overflow or be cut off.
-            // If the window is large (80%), the map might be too small.
-
-            // We should modify the canvas style to fill the container (width: 100%; height: 100%)
-            // and let the internal resolution be whatever matches the map or higher.
-            // MinimapCanvas creates canvas with style.width = '100%'.
-            // But UIManager.refreshMinimap overwrites c.style.width!
-
-            // We need to fix UIManager.refreshMinimap as well, or modify it here.
-            // But UIManager is in a different file.
-            // However, I can override the behavior if I can.
-            // Or I can emit an event to request refresh.
         }
-        // Emit refresh event so UIManager redraws the content
-        // But UIManager.refreshMinimap is what draws it.
-        // I should probably fix UIManager.refreshMinimap to NOT set style.width/height if I want it to stretch.
-        // OR I set the canvas internal size to match the container.
-
-        // Let's defer UIManager changes to the next step if needed.
-        // For now, let's just trigger the refresh.
-        // EventBus.emit('refresh_minimap'); // This might cause infinite loop if called from refresh()?
-        // No, refresh() is called by Window_Base logic.
     }
 }
 
