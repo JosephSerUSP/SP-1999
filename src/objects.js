@@ -460,6 +460,18 @@ class Game_Actor extends Game_Battler {
     }
 
     /**
+     * Gets the x-coordinate of the actor (player position).
+     * @returns {number}
+     */
+    get x() { return $gameMap ? $gameMap.playerX : 0; }
+
+    /**
+     * Gets the y-coordinate of the actor (player position).
+     * @returns {number}
+     */
+    get y() { return $gameMap ? $gameMap.playerY : 0; }
+
+    /**
      * Heals the actor.
      * @param {number} v - Amount to heal.
      */
