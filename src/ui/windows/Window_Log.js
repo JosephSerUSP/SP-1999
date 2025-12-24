@@ -7,7 +7,7 @@ class Window_Log extends Window_Base {
         // Position at Top Left (2%, 220px)
         // We override standard window shell creation to make it transparent
         // Moved down further to approx 220px to leave room for Help window
-        super('log', { position: 'absolute', top: '220px', left: '2%', width: '30%', height: 'auto', zIndex: '10000' }, null);
+        super('log', { position: 'absolute', top: '64px', left: '2%', width: '30%', height: 'auto', zIndex: '10000' }, null);
 
         // Remove standard window classes and styling
         this.el.classList.remove('pe-window');
