@@ -201,8 +201,18 @@ class Renderer3D {
         this.scene.add(this.cursorMesh);
 
         // Secondary Cursors (for AoE targets)
+        this.cursorPool = [];
         this.cursorGroup = new THREE.Group();
         this.scene.add(this.cursorGroup);
+        // Pre-allocate secondary cursors
+        const subCursorGeo = new THREE.BoxGeometry(1, 1, 1);
+        const subCursorMat = new THREE.MeshBasicMaterial({ color: 0xffff88, wireframe: true, transparent: true, opacity: 0.2 });
+        for(let i=0; i<20; i++) {
+            const m = new THREE.Mesh(subCursorGeo, subCursorMat);
+            m.visible = false;
+            this.cursorGroup.add(m);
+            this.cursorPool.push(m);
+        }
 
         this.mapGroup = new THREE.Group(); this.enemyGroup = new THREE.Group(); this.lootGroup = new THREE.Group(); this.rangeGroup = new THREE.Group();
         this.scene.add(this.mapGroup); this.scene.add(this.enemyGroup); this.scene.add(this.lootGroup); this.scene.add(this.rangeGroup);
@@ -590,7 +600,20 @@ class Renderer3D {
                     if ($gameMap.targetingState && $gameMap.targetingState.active && $gameMap.targetingState.mode === 'target_cycle') {
                         const cur = $gameMap.targetingState.cursor;
                         lx = cur.x; lz = cur.y;
-                        tx = cur.x; tz = cur.y + 8; ty = 12; // Zoom OUT (Higher Y, Further Z)
+                        tx = cur.x; tz = cur.y + 5; ty = 5; // Default Zoom
+                        if (this.camera) {
+                            this.targetFov = 60; // Increase FOV slightly
+                        }
+                    } else {
+                        if (this.camera) {
+                            this.targetFov = 50; // Reset FOV
+                        }
+                    }
+
+                    // FOV Lerp
+                    if (this.camera && this.targetFov) {
+                        this.camera.fov += (this.targetFov - this.camera.fov) * 0.1;
+                        this.camera.updateProjectionMatrix();
                     }
 
                     this.cameraLookCurrent.x += (lx - this.cameraLookCurrent.x) * 0.1;
@@ -648,7 +671,8 @@ class Renderer3D {
         this.floatingTexts = this.floatingTexts.filter(ft => ft !== null);
 
         // Update Cursor
-        this.cursorGroup.clear();
+        // Reset pool
+        this.cursorPool.forEach(m => m.visible = false);
         if ($gameMap.targetingState && $gameMap.targetingState.active) {
             this.cursorMesh.visible = true;
             const t = $gameMap.targetingState.cursor;
@@ -658,16 +682,15 @@ class Renderer3D {
             // Secondary Cursors for other targets in AoE
             if ($gameMap.targetingState.mode === 'target_cycle' && $gameMap.targetingState.targets) {
                  const targets = $gameMap.targetingState.targets;
+                 let poolIdx = 0;
                  targets.forEach(tgt => {
                      if (tgt.x !== t.x || tgt.y !== t.y) {
-                         // Subtle cursor
-                         const geo = this.cursorMesh.geometry;
-                         const mat = this.cursorMesh.material.clone();
-                         mat.opacity = 0.2;
-                         mat.color.setHex(0xffff88); // Slightly different?
-                         const m = new THREE.Mesh(geo, mat);
-                         m.position.set(tgt.x, 0.5, tgt.y);
-                         this.cursorGroup.add(m);
+                         if (poolIdx < this.cursorPool.length) {
+                             const m = this.cursorPool[poolIdx];
+                             m.position.set(tgt.x, 0.5, tgt.y);
+                             m.visible = true;
+                             poolIdx++;
+                         }
                      }
                  });
             }
