@@ -460,6 +460,18 @@ class Game_Actor extends Game_Battler {
     }
 
     /**
+     * Gets the x-coordinate of the actor (player position).
+     * @returns {number}
+     */
+    get x() { return $gameMap ? $gameMap.playerX : 0; }
+
+    /**
+     * Gets the y-coordinate of the actor (player position).
+     * @returns {number}
+     */
+    get y() { return $gameMap ? $gameMap.playerY : 0; }
+
+    /**
      * Heals the actor.
      * @param {number} v - Amount to heal.
      */
@@ -796,8 +808,21 @@ class Game_Map {
                 }
             } else if (this.targetingState.mode === 'direction') {
                 actor.direction = { x: dx, y: dy };
-                // Also update cursor to "look" like it's in that direction (optional, for visual feedback)
-                this.targetingState.cursor = { x: this.playerX + dx, y: this.playerY + dy };
+                // Update cursor to end of line for visual feedback
+                let cx = this.playerX + dx;
+                let cy = this.playerY + dy;
+                // Project cursor out to range
+                const range = skill.range || 1;
+                for(let i=1; i<range; i++) {
+                    const tx = this.playerX + dx * (i+1);
+                    const ty = this.playerY + dy * (i+1);
+                    if(!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break; // Wall
+                    cx = tx; cy = ty;
+                    // Stop at enemy? Optional. Usually nice to see line going through if piercing, but standard is cursor on target.
+                    // If not piercing, stop at first target?
+                    if (this.enemies.find(e => e.x === cx && e.y === cy)) break;
+                }
+                this.targetingState.cursor = { x: cx, y: cy };
             } else {
                 // Cursor Mode
                 const nx = this.targetingState.cursor.x + dx;
