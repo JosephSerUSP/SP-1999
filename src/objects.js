@@ -724,7 +724,6 @@ class Game_Map {
             const a = $gameParty.active();
             if (!a.direction) a.direction = {x:0, y:1};
         }
-        $gameSystem.log(skill.type === 'target' ? "Select Enemy (Arrows + Enter)" : "Select Direction (Arrows + Enter)");
     }
 
     /**

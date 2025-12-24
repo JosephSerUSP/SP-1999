@@ -659,13 +659,6 @@ class Renderer3D {
             this.showRange($gameMap.targetingState.skill);
         } else if (this.previewOverride) {
             this.showRange(this.previewOverride);
-        } else if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !this.isAnimating) {
-            const actor = $gameParty.active();
-            const skillId = actor.getAttackSkill();
-
-            // Show range for skill OR default range 1
-            if (skillId) this.showRange($dataSkills[skillId]);
-            else this.showRange({range: 1, type: 'target'}); // Default melee range
         } else {
             this.clearRange();
         }
