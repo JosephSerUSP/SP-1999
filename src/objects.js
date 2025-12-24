@@ -1135,7 +1135,15 @@ class Game_Map {
      * Updates enemy positions and actions.
      */
     async updateEnemies() {
-        for(const e of this.enemies) {
+        // PHASE 1: PLANNING & MOVEMENT
+        // Move all enemies simultaneously, but defer attacks/skills.
+        const pendingActions = [];
+        let anyMoved = false;
+
+        // Clone list to safely iterate even if list changes (unlikely during planning)
+        const enemies = [...this.enemies];
+
+        for(const e of enemies) {
             // Enemy State Logic
             let restricted = false;
             for(let i = e.states.length - 1; i >= 0; i--) {
@@ -1156,15 +1164,13 @@ class Game_Map {
                 let action = e.decideAction();
 
                 if (action.type === 'skill') {
-                    // Execute Skill
-                    // Need to set direction first if it matters?
-                    // Usually direction points to player if attacking player.
+                    // Update Direction
                     let dx = Math.sign(this.playerX - e.x);
                     let dy = Math.sign(this.playerY - e.y);
                     if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
 
-                    await BattleManager.executeSkill(e, action.skillId, null); // Targets auto-resolved
-                    e.onActionTaken(action);
+                    // Queue Skill
+                    pendingActions.push({ type: 'skill', enemy: e, action: action });
 
                 } else if (action.type === 'move') {
                     // Movement Logic
@@ -1173,56 +1179,84 @@ class Game_Map {
 
                     // LEGACY MOVEMENT MAPPING
                     if(behavior === "turret") {
-                         // Still need to shoot if legacy turret
-                         if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
-                            // Using standard calcDamage for legacy support
-                            const target = $gameParty.active();
-                            const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
-                            target.takeDamage(dmg);
-                            EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
-                            await Sequencer.sleep(100);
-                            EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                            EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                        // Turrets don't move, check attack
+                        // Queue Attack (Legacy Turret Logic)
+                        if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
+                            pendingActions.push({ type: 'turret_fire', enemy: e, behavior: behavior });
                         }
-                        // Turrets don't move
-                    } else if (behavior === "flee") {
-                         dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
-                         if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
-                    } else if(behavior === "patrol" && !e.alerted) {
-                         if(Math.random() < 0.3) {
-                             const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
-                             const dir = dirs[Math.floor(Math.random()*dirs.length)];
-                             dx = dir.x; dy = dir.y;
-                         }
-                    } else if(behavior === "hunter" || behavior === "ambush" || (behavior === "patrol" && e.alerted)) {
-                        dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
-                        if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
-                    }
-
-                    // Execute Move
-                    const nx = e.x + dx; const ny = e.y + dy;
-
-                    // Update Direction
-                    if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
-
-                    // Attack if adjacent (Melee) - ONLY if legacy behavior or standard move bump
-                    // If AI was 'move', we assume it intends to close distance or melee if close.
-                    if(nx === this.playerX && ny === this.playerY) {
-                        if (behavior !== "flee") {
-                            const target = $gameParty.active();
-                            const dmg = BattleManager.calcDamage(e, target);
-                            target.takeDamage(dmg);
-                            EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: nx, ty: ny });
-                            EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                            EventBus.emit('play_animation', 'hit', { uid: 'player' });
-                            e.onActionTaken({ type: 'melee_bump' }); // Tick counters
+                    } else {
+                        // Standard Movement
+                         if (behavior === "flee") {
+                             dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
+                             if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
+                        } else if(behavior === "patrol" && !e.alerted) {
+                             if(Math.random() < 0.3) {
+                                 const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
+                                 const dir = dirs[Math.floor(Math.random()*dirs.length)];
+                                 dx = dir.x; dy = dir.y;
+                             }
+                        } else if(behavior === "hunter" || behavior === "ambush" || (behavior === "patrol" && e.alerted)) {
+                            dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                            if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
                         }
-                    } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en.x === nx && en.y === ny)) {
-                        e.x = nx; e.y = ny;
-                        EventBus.emit('sync_enemies');
-                        e.onActionTaken({ type: 'move' });
+
+                        // Target Coordinate
+                        const nx = e.x + dx; const ny = e.y + dy;
+
+                        // Update Direction
+                        if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
+
+                        // Collision / Attack Logic
+                        if(nx === this.playerX && ny === this.playerY) {
+                            // Melee Attack Intended
+                            if (behavior !== "flee") {
+                                pendingActions.push({ type: 'melee', enemy: e, nx: nx, ny: ny });
+                            }
+                        } else if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en !== e && en.x === nx && en.y === ny)) {
+                            // Valid Move - Execute State Change Immediately
+                            e.x = nx; e.y = ny;
+                            e.onActionTaken({ type: 'move' });
+                            anyMoved = true;
+                        }
                     }
                 }
+            }
+        }
+
+        // PHASE 2: VISUALIZE MOVEMENT
+        if (anyMoved) {
+            EventBus.emit('sync_enemies');
+            await Sequencer.sleep(400); // Wait for move animation
+        }
+
+        // PHASE 3: EXECUTE ACTIONS (Paced)
+        for (const act of pendingActions) {
+            const e = act.enemy;
+            if (e.isDead()) continue;
+
+            if (act.type === 'skill') {
+                await BattleManager.executeSkill(e, act.action.skillId, null);
+                e.onActionTaken(act.action);
+            } else if (act.type === 'turret_fire') {
+                 const target = $gameParty.active();
+                 const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
+                 target.takeDamage(dmg);
+                 EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
+                 await Sequencer.sleep(100);
+                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                 EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                 await Sequencer.sleep(200);
+            } else if (act.type === 'melee') {
+                const target = $gameParty.active();
+                const dmg = BattleManager.calcDamage(e, target);
+                target.takeDamage(dmg);
+                EventBus.emit('play_animation', 'enemyLunge', { uid: e.uid, tx: act.nx, ty: act.ny });
+                // Delay for impact
+                await Sequencer.sleep(150);
+                EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
+                EventBus.emit('play_animation', 'hit', { uid: 'player' });
+                e.onActionTaken({ type: 'melee_bump' });
+                await Sequencer.sleep(250); // Pause between attacks
             }
         }
     }
