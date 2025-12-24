@@ -116,7 +116,12 @@ class Window_Tactics extends Window_Base {
                                      if (target) {
                                          // Execute
                                          // If target is string 'CONFIRM', it means Directional confirm (target is null/implicit)
-                                         const finalTarget = (target === 'CONFIRM') ? null : target;
+                                         let finalTarget = (target === 'CONFIRM') ? null : target;
+                                         // If skill is AOE (e.g. circle), even if we selected a target for inspection, we want to hit the area.
+                                         // Passing null forces BattleManager to calculate targets based on shape.
+                                         if (s.type === 'circle' || s.type === 'cone') {
+                                             finalTarget = null;
+                                         }
                                          $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, k, finalTarget));
                                      } else {
                                          // Cancelled (implicit in updateTargeting but safety here if callback called with null)

@@ -104,12 +104,12 @@ const $dataSkills = {
     "blast": { name: "Grenade", cost: 15, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 15, fixed: true}], desc: () => "AoE Blast. 15 DMG to all hostiles." },
     "barrier": { name: "Barrier", cost: 20, range: 0, type: "self", effects: [{code: EFFECT_ADD_STATE, dataId: 'barrier'}], desc: () => "Nano-shield. DEF +2 temporarily." },
     "combust": { name: "Combust", cost: 25, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 25, fixed: true}], desc: () => "Ignite Room. 25 Fire DMG to all." },
-    "drain": { name: "Drain", cost: 10, range: 2, type: "target", effects: [{code: EFFECT_DAMAGE, value: 10, fixed: true}, {code: EFFECT_HEAL, value: 10, target: 'self'}], desc: () => "Bio-leech. 10 DMG + Heal Self." },
+    "drain": { name: "Drain", cost: 10, range: 2, type: "circle", effects: [{code: EFFECT_DAMAGE, value: 10, fixed: true}, {code: EFFECT_HEAL, value: 10, target: 'self'}], desc: () => "Bio-leech. 10 DMG + Heal Self." },
     "snipe": { name: "Snipe", cost: 15, range: 8, type: "target", effects: [{code: EFFECT_DAMAGE, value: 3.0}], desc: (a) => `Precision shot. Est: ${Math.floor(a.atk * 3.0)} DMG.` },
     "heal": { name: "Heal", cost: 15, range: 0, type: "self", effects: [{code: EFFECT_HEAL, value: 30}], desc: () => "Restore 30 HP." },
     "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.0}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.5}], desc: (a) => "Melee shock. Chance to stun." },
     "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 60, fixed: true}], desc: () => "Discharge all PE. 60 DMG." },
-    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` },
+    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", piercing: false, effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` },
 
     // New Skills for AI/Player Shape Testing
     "cone_shot": { name: "Scatter Shot", cost: 10, range: 3, type: "cone", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Cone AoE attack." },

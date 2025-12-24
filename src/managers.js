@@ -305,43 +305,38 @@ class BattleManager {
 
             // Apply Logic
             if (targets.length > 0) {
-                if (s.type === 'target') {
-                     // Single Target Logic (Pick one if multiple overlap, e.g. stacked? usually not)
-                     // Or "Hit all in shape" vs "Hit first in shape"
-                     // 'target' usually means Single Target. 'cone'/'circle' means AOE.
-                     // But getTilesInShape for 'target' returns a line.
-                     // We should pick the closest one for 'target'/'line'.
-                     // For Cone/Circle, hit ALL.
+                 if (s.type === 'line' || s.type === 'target') {
+                     // Sort by distance (Closest first)
+                     targets.sort((t1, t2) => (Math.abs(t1.x - a.x) + Math.abs(t1.y - a.y)) - (Math.abs(t2.x - a.x) + Math.abs(t2.y - a.y)));
 
-                     if (s.type === 'line' || s.type === 'target') {
-                         // Sort by distance
-                         targets.sort((t1, t2) => (Math.abs(t1.x - a.x) + Math.abs(t1.y - a.y)) - (Math.abs(t2.x - a.x) + Math.abs(t2.y - a.y)));
-                         // Hit first (penetrating? if type is line... maybe. default to single for now unless specified)
-                         // Original logic was single for line.
-                         const count = s.count || 1;
-                         for(let i=0; i<count; i++) {
-                             // Hit same target multiple times?
-                             // Or multiple targets?
-                             // Standard interpretation: count = multi-hit on single target.
-                             await runEffects(targets[0]);
-                             await Sequencer.sleep(200);
-                             if(targets[0].isDead()) break;
-                         }
-                     } else {
-                         // AOE (Cone, Circle) - Hit ALL
-                         for(let t of targets) {
-                             await runEffects(t);
-                             // Small delay for drama?
-                             // await Sequencer.sleep(50);
-                         }
-                         if(targets.length > 2) EventBus.emit('play_animation', 'shake');
+                     // Line Logic: Check for piercing. If not piercing, only hit the first target.
+                     if (s.type === 'line' && !s.piercing) {
+                         targets = [targets[0]];
                      }
-                } else {
-                    // AOE Fallback
+
+                     // 'target' Logic: Usually implies single selection, so targets[0].
+                     // If we are here, we might have multiple targets if 'target' shape returns a line (which it does in getTilesInShape).
+                     if (s.type === 'target') {
+                         targets = [targets[0]];
+                     }
+
+                     const count = s.count || 1;
+                     // Apply effects to the determined target(s)
+                     // Note: If piercing line, targets has multiple. If not, only one.
+                     for(let t of targets) {
+                         for(let i=0; i<count; i++) {
+                             await runEffects(t);
+                             await Sequencer.sleep(200);
+                             if(t.isDead()) break;
+                         }
+                     }
+                 } else {
+                     // AOE (Cone, Circle, All Enemies) - Hit ALL
                      for(let t of targets) {
                          await runEffects(t);
                      }
-                }
+                     if(targets.length > 2) EventBus.emit('play_animation', 'shake');
+                 }
             } else {
                 $gameSystem.log("Missed.", 'combat');
             }

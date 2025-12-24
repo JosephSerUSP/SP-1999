@@ -453,7 +453,7 @@ class Game_Actor extends Game_Battler {
         this.nextExp = 50;
         this.inventory = [];
 
-        if(name === "Julia") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫"}, {name:"Std", atk:0});
+        if(name === "Julia") this.equip.weapon = new Game_Weapon({name:"M84F", baseAtk:2, icon:"🔫", attackSkill:"gunshot"}, {name:"Std", atk:0});
         if(name === "Miguel") this.equip.armor = new Game_Armor({name:"Vest", baseDef:3, icon:"🦺"});
         this.uid = 'player';
         this.direction = {x:0, y:1};
@@ -700,13 +700,20 @@ class Game_Map {
         this.targetingState.inputCooldown = 10; // Prevent immediate confirmation from same keypress
 
         // Determine Mode
-        if (skill.type === 'target') {
+        if (skill.type === 'target' || skill.type === 'circle') {
             this.targetingState.mode = 'target_cycle';
             // Find valid targets
-            this.targetingState.targets = this.enemies.filter(e =>
-                (Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY)) <= skill.range &&
-                this.checkLineOfSight(this.playerX, this.playerY, e.x, e.y)
-            ).sort((a,b) => (Math.abs(a.x - this.playerX) + Math.abs(a.y - this.playerY)) - (Math.abs(b.x - this.playerX) + Math.abs(b.y - this.playerY)));
+            this.targetingState.targets = this.enemies.filter(e => {
+                if (skill.type === 'circle') {
+                    // Euclidean range for circle
+                    return ((e.x - this.playerX)**2 + (e.y - this.playerY)**2) <= skill.range**2 &&
+                           this.checkLineOfSight(this.playerX, this.playerY, e.x, e.y);
+                } else {
+                    // Manhattan range for target (standard grid logic)
+                    return (Math.abs(e.x - this.playerX) + Math.abs(e.y - this.playerY)) <= skill.range &&
+                           this.checkLineOfSight(this.playerX, this.playerY, e.x, e.y);
+                }
+            }).sort((a,b) => (Math.abs(a.x - this.playerX) + Math.abs(a.y - this.playerY)) - (Math.abs(b.x - this.playerX) + Math.abs(b.y - this.playerY)));
 
             this.targetingState.targetIndex = 0;
 
