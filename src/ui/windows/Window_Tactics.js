@@ -60,7 +60,8 @@ class Window_Tactics extends Window_Base {
             $gameMap.startTargeting(attackSkill, (target) => {
                 // If confirmed
                 if (target) {
-                    $gameMap.processTurn(0, 0, () => $gameMap.playerAttack());
+                    const finalTarget = (target === 'CONFIRM') ? null : target;
+                    $gameMap.processTurn(0, 0, () => $gameMap.playerAttack(finalTarget));
                 } else {
                     $gameSystem.ui.focusWindow('cmd');
                 }

@@ -1320,8 +1320,9 @@ class Game_Map {
     /**
      * Executes the player's attack action.
      * Logic determines target based on direction or skill range; no arguments required.
+     * @param {Game_Enemy} [forcedTarget] - Optional target to attack directly (from UI selection).
      */
-    async playerAttack() {
+    async playerAttack(forcedTarget = null) {
         if ($gameSystem.isBusy || $gameSystem.isInputBlocked || (Renderer && Renderer.isAnimating)) return;
         $gameSystem.isBusy = true;
         const actor = $gameParty.active();
@@ -1339,17 +1340,31 @@ class Game_Map {
         const attackSkillId = actor.getAttackSkill();
         const skill = attackSkillId ? $dataSkills[attackSkillId] : null;
 
-        let target = null;
+        let target = forcedTarget;
         let skillIdToExec = attackSkillId;
 
         // STAMINA COST CHECK (Skill/Attack = 20)
         // Check if we can attack. If not enough stamina, we still attack but get exhausted.
         actor.payStamina(20);
 
+        // If forced target provided, update direction to face it
+        if (target) {
+            const dx = Math.sign(target.x - this.playerX);
+            const dy = Math.sign(target.y - this.playerY);
+            if (dx !== 0 || dy !== 0) {
+                actor.direction = { x: dx, y: dy };
+            }
+        }
+
         // DELEGATE AOE SKILLS TO BATTLEMANAGER
+        // If we have a forced target, we might be executing a skill on that specific target
+        // But if it's an AoE skill, we generally want BattleManager to handle the shape.
+        // However, if the user selected a target for a circle skill (for inspection), we still probably want AoE.
+        // But playerAttack is mostly for Basic Attacks (Weapon Skills).
+        // Weapon skills like 'gunshot' are 'line' or 'target'.
         if (skill && (skill.type === 'self' || skill.type === 'all_enemies' || skill.type === 'cone' || skill.type === 'circle')) {
              // For complex shapes, BattleManager handles geometry targeting.
-             await BattleManager.executeSkill(actor, skillIdToExec, null);
+             await BattleManager.executeSkill(actor, skillIdToExec, target); // Pass target if exists (e.g. center of circle?)
 
              EventBus.emit('refresh_ui');
              await this.updateEnemies();
@@ -1360,25 +1375,27 @@ class Game_Map {
              return;
         }
 
-        if (skill && (skill.type === 'line' || skill.type === 'target')) {
-            const dx = actor.direction.x; const dy = actor.direction.y;
-            for (let i=1; i<=skill.range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
+        if (!target) {
+            if (skill && (skill.type === 'line' || skill.type === 'target')) {
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                for (let i=1; i<=skill.range; i++) {
+                    const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
+                    if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                    const e = this.enemies.find(en => en.x === tx && en.y === ty);
+                    if (e) { target = e; break; }
+                }
+            } else {
+                // Default melee range 1
+                const range = skill ? skill.range : 1;
+                const dx = actor.direction.x; const dy = actor.direction.y;
+                // Check along the line up to range
+                for (let i=1; i<=range; i++) {
+                    const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
+                    if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
+                    const e = this.enemies.find(en => en.x === tx && en.y === ty);
+                    if (e) { target = e; break; }
+                }
             }
-        } else {
-            // Default melee range 1
-            const range = skill ? skill.range : 1;
-            const dx = actor.direction.x; const dy = actor.direction.y;
-             // Check along the line up to range
-             for (let i=1; i<=range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
-             }
         }
 
         if (skillIdToExec) {
