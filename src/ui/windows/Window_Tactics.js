@@ -58,11 +58,14 @@ class Window_Tactics extends Window_Base {
         children.push(this.createCommand("ATTACK", "", () => {
             $gameSystem.ui.blurWindow();
             $gameMap.startTargeting(attackSkill, (target) => {
+                console.log("[Window_Tactics] Attack confirmed. Target:", target);
                 // If confirmed
                 if (target) {
                     const finalTarget = (target === 'CONFIRM') ? null : target;
+                    console.log("[Window_Tactics] calling processTurn with playerAttack. finalTarget:", finalTarget);
                     $gameMap.processTurn(0, 0, () => $gameMap.playerAttack(finalTarget));
                 } else {
+                    console.log("[Window_Tactics] Target cancelled/null.");
                     $gameSystem.ui.focusWindow('cmd');
                 }
             });

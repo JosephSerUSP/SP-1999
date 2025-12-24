@@ -1323,7 +1323,11 @@ class Game_Map {
      * @param {Game_Enemy} [forcedTarget] - Optional target to attack directly (from UI selection).
      */
     async playerAttack(forcedTarget = null) {
-        if ($gameSystem.isBusy || $gameSystem.isInputBlocked || (Renderer && Renderer.isAnimating)) return;
+        console.log("[Game_Map] playerAttack called. forcedTarget:", forcedTarget);
+        if ($gameSystem.isBusy || $gameSystem.isInputBlocked || (Renderer && Renderer.isAnimating)) {
+            console.log("[Game_Map] playerAttack blocked. Busy:", $gameSystem.isBusy, "Blocked:", $gameSystem.isInputBlocked, "Animating:", (Renderer && Renderer.isAnimating));
+            return;
+        }
         $gameSystem.isBusy = true;
         const actor = $gameParty.active();
 
@@ -1351,6 +1355,7 @@ class Game_Map {
         if (target) {
             const dx = Math.sign(target.x - this.playerX);
             const dy = Math.sign(target.y - this.playerY);
+            console.log("[Game_Map] Aligning to target. New Dir:", dx, dy);
             if (dx !== 0 || dy !== 0) {
                 actor.direction = { x: dx, y: dy };
             }
@@ -1399,6 +1404,7 @@ class Game_Map {
         }
 
         if (skillIdToExec) {
+            console.log("[Game_Map] Executing skill:", skillIdToExec, "Target:", target);
             if (!target) {
                 // MISS VISUAL
                 $gameSystem.log(`${actor.name} attacks empty air.`, 'combat');
