@@ -174,15 +174,18 @@ class UIManager {
         const c = document.getElementById('minimap-canvas');
         if(!c) return;
 
-        // Logic matches original
-        const ts = 4;
+        // Determine Tile Size based on Mode
+        // Mode 1 (Overlay) = Larger (e.g., 12px), Mode 0 (Corner) = 4px
+        const mode = this.windows.minimap ? this.windows.minimap.mode : 0;
+        const ts = (mode === 1) ? 12 : 4;
+
         // Set internal resolution based on map size
         c.width = $gameMap.width * ts;
         c.height = $gameMap.height * ts;
 
-        // Remove forced style sizing to allow CSS (width: 100%) to handle scaling
-        // c.style.width = c.width + "px";
-        // c.style.height = c.height + "px";
+        // Force style sizing to ensure canvas has correct dimensions for scrolling
+        c.style.width = c.width + "px";
+        c.style.height = c.height + "px";
 
         const ctx = c.getContext('2d');
         ctx.clearRect(0, 0, c.width, c.height); // Clear previous frame (transparency)

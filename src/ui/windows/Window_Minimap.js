@@ -33,9 +33,10 @@ class Window_Minimap extends Window_Base {
     }
 
     defineLayout() {
+        // Remove size constraints to allow content to overflow and be scrolled
         return {
             type: 'container',
-            props: { style: { padding: '0', overflow: 'hidden', width: '100%', height: '100%' } },
+            props: { style: { padding: '0', overflow: 'hidden' } },
             children: [
                 {
                     component: MinimapCanvas
@@ -48,6 +49,19 @@ class Window_Minimap extends Window_Base {
         if (InputManager.isTriggered('MINIMAP')) {
             this.mode = (this.mode + 1) % 3;
             this.applyMode();
+        }
+
+        // Centering Logic
+        if (this.visible && this.el && typeof $gameMap !== 'undefined' && this.contentEl) {
+            const ts = (this.mode === 1) ? 12 : 4;
+            const pX = $gameMap.playerX * ts + (ts / 2);
+            const pY = $gameMap.playerY * ts + (ts / 2);
+            const centerX = this.contentEl.clientWidth / 2;
+            const centerY = this.contentEl.clientHeight / 2;
+
+            // Apply scroll to center the player
+            this.contentEl.scrollLeft = pX - centerX;
+            this.contentEl.scrollTop = pY - centerY;
         }
     }
 
@@ -76,12 +90,18 @@ class Window_Minimap extends Window_Base {
             this.el.style.top = '50%';
             this.el.style.left = '50%';
             this.el.style.width = '80%';
+            this.el.style.height = '80%'; // Explicit height for overlay container
             this.el.style.transform = 'translate(-50%, -50%)';
             this.el.style.opacity = '0.2'; // 20% opacity
             this.refresh();
         } else {
             // HIDDEN
             this.el.style.display = 'none';
+        }
+
+        // Force refresh of minimap content to apply scale/scrolling
+        if (this.mode !== 2 && $gameSystem && $gameSystem.ui) {
+            $gameSystem.ui.refreshMinimap();
         }
     }
 
@@ -147,9 +167,7 @@ class MinimapCanvas extends UIComponent {
         // Initial size
         cvs.width = 128;
         cvs.height = 128;
-        // Style: fit container
-        cvs.style.width = '100%';
-        cvs.style.height = '100%';
+        // Style handled by UIManager.refreshMinimap now (explicit px size)
         return cvs;
     }
 }
