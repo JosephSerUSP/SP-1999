@@ -238,12 +238,12 @@ class BattleManager {
         // Enemies might not use PE strictly yet, or have infinite?
         // Let's enforce it if they have 'pe' property, else free.
         if(a.pe !== undefined && a.pe < s.cost) {
-            if(isPlayer) $gameSystem.log("No PE.");
+            if(isPlayer) $gameSystem.log("No PE.", 'warning');
             return false;
         }
         if(a.pe !== undefined) a.pe -= s.cost;
 
-        $gameSystem.log(`${a.name} uses ${s.name}!`);
+        $gameSystem.log(`${a.name} uses ${s.name}!`, 'combat');
         EventBus.emit('play_animation', 'flash', { color: a.color });
         await Sequencer.sleep(300);
 
@@ -342,7 +342,7 @@ class BattleManager {
                      }
                 }
             } else {
-                $gameSystem.log("Missed.");
+                $gameSystem.log("Missed.", 'combat');
             }
         }
 

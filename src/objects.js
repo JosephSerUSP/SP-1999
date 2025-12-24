@@ -36,11 +36,12 @@ class Game_System {
     /**
      * Adds a message to the game log.
      * @param {string} text - The text to log.
+     * @param {string} [type='system'] - The type of message (system, combat, exploration, item, status, warning, growth).
      */
-    log(text) {
+    log(text, type = 'system') {
         this.logHistory.unshift(text);
         if(this.logHistory.length > 15) this.logHistory.pop();
-        EventBus.emit('log_updated', text);
+        EventBus.emit('log_updated', { text, type });
     }
 }
 
@@ -515,7 +516,7 @@ class Game_Actor extends Game_Battler {
         this.exp += v;
         if(this.exp >= this.nextExp) {
             this.level++; this.exp = 0; this.nextExp = Math.floor(this.nextExp*1.5); this.mhp+=5; this.hp=this.mhp; this.atk++;
-            $gameSystem.log(`${this.name} Lv.${this.level}!`);
+            $gameSystem.log(`${this.name} Lv.${this.level}!`, 'growth');
             $gameBanter.trigger('level_up');
         }
     }
@@ -635,7 +636,7 @@ class Game_Party {
             const nextIndex = (this.index + offset) % 3;
             const member = this.members[nextIndex];
             if (!member.isDead() && !member.isExhausted) {
-                $gameSystem.log(`${active.name} exhausted! Swapping.`);
+                $gameSystem.log(`${active.name} exhausted! Swapping.`, 'warning');
                 this.setIndex(nextIndex, true);
                 return;
             }
@@ -654,7 +655,7 @@ class Game_Party {
      * Adds an item to the party's inventory.
      * @param {Game_Item|Game_Weapon|Game_Armor} i - The item to gain.
      */
-    gainItem(i) { if(this.inventory.length < this.maxInventory) { this.inventory.push(i); $gameSystem.log(`Got ${i.icon}${i.name}`); } else { $gameSystem.log("Inv Full!"); } }
+    gainItem(i) { if(this.inventory.length < this.maxInventory) { this.inventory.push(i); $gameSystem.log(`Got ${i.icon}${i.name}`, 'item'); } else { $gameSystem.log("Inv Full!", 'warning'); } }
 }
 
 /**
@@ -817,7 +818,7 @@ class Game_Map {
      * @param {number} floor - The floor level to generate.
      */
     setup(floor) {
-        $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`);
+        $gameSystem.floor = floor; $gameSystem.log(`>> SECTOR ${floor}`, 'exploration');
         this.generate(floor);
         // Trigger generic start banter after a short delay
         setTimeout(() => $gameBanter.trigger('start'), 1000);
@@ -1075,7 +1076,7 @@ class Game_Map {
             }
 
             if(this.tiles[nx][ny] === 3) {
-                $gameSystem.log("Ascending...");
+                $gameSystem.log("Ascending...", 'exploration');
                 EventBus.emit('play_animation', 'ascend');
                 $gameSystem.isInputBlocked = true;
                 // Wait slightly more for dramatic effect before logic switch
@@ -1106,15 +1107,15 @@ class Game_Map {
             if(s.id === 'poison') {
                 const dmg = Math.floor(actor.mhp * 0.05);
                 actor.takeDamage(dmg);
-                $gameSystem.log(`${actor.name} takes poison dmg!`);
+                $gameSystem.log(`${actor.name} takes poison dmg!`, 'combat');
                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#808");
                 if(actor.isDead()) {
-                     $gameSystem.log(`${actor.name} collapsed.`);
+                     $gameSystem.log(`${actor.name} collapsed.`, 'combat');
                 }
             }
             if(s.duration <= 0) {
                 actor.removeState(s.id);
-                $gameSystem.log(`${actor.name}'s ${s.name} faded.`);
+                $gameSystem.log(`${actor.name}'s ${s.name} faded.`, 'status');
             }
         }
 
@@ -1230,7 +1231,7 @@ class Game_Map {
         await Sequencer.sleep(300);
         this.enemies = this.enemies.filter(e => e !== enemy);
         $gameParty.distributeExp(enemy.exp);
-        $gameSystem.log(`${enemy.name} dissolved.`);
+        $gameSystem.log(`${enemy.name} dissolved.`, 'combat');
         EventBus.emit('sync_enemies');
         $gameBanter.trigger('kill', {x: this.playerX, y: this.playerY});
     }
@@ -1245,7 +1246,7 @@ class Game_Map {
         const actor = $gameParty.active();
 
         if (actor.isRestricted()) {
-            $gameSystem.log(`${actor.name} is stunned!`);
+            $gameSystem.log(`${actor.name} is stunned!`, 'status');
             EventBus.emit('refresh_ui');
             await this.updateEnemies();
             await this.processTurnEnd(actor);
@@ -1302,7 +1303,7 @@ class Game_Map {
         if (skillIdToExec) {
             if (!target) {
                 // MISS VISUAL
-                $gameSystem.log(`${actor.name} attacks empty air.`);
+                $gameSystem.log(`${actor.name} attacks empty air.`, 'combat');
                 const dx = actor.direction.x; const dy = actor.direction.y;
                 Renderer.playAnimation('projectile', { x1: this.playerX, y1: this.playerY, x2: this.playerX + dx*5, y2: this.playerY + dy*5, color: actor.color });
                 await Sequencer.sleep(300);
@@ -1319,10 +1320,10 @@ class Game_Map {
                 EventBus.emit('float_text', dmg, target.x, target.y, "#fff");
                 EventBus.emit('play_animation', 'hit', { uid: target.uid });
                 await Sequencer.sleep(200);
-                $gameSystem.log(`Hit ${target.name} for ${dmg}.`);
+                $gameSystem.log(`Hit ${target.name} for ${dmg}.`, 'combat');
                 if(target.hp <= 0) await this.killEnemy(target);
             } else {
-                $gameSystem.log(`${actor.name} swings at nothing.`);
+                $gameSystem.log(`${actor.name} swings at nothing.`, 'combat');
                 EventBus.emit('play_animation', 'lunge', { tx: this.playerX + actor.direction.x, ty: this.playerY + actor.direction.y });
                 await Sequencer.sleep(300);
             }
