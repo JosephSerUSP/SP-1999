@@ -137,7 +137,7 @@ class Renderer3D {
 
         // Shared resources for danger zones to prevent memory leaks
         this.dangerGeo = new THREE.PlaneGeometry(0.9, 0.9);
-        this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+        this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
         this.dangerPool = [];
         this.floatingTexts = [];
     }
@@ -199,6 +199,10 @@ class Renderer3D {
         this.cursorMesh = new THREE.Mesh(cursorGeo, cursorMat);
         this.cursorMesh.visible = false;
         this.scene.add(this.cursorMesh);
+
+        // Secondary Cursors (for AoE targets)
+        this.cursorGroup = new THREE.Group();
+        this.scene.add(this.cursorGroup);
 
         this.mapGroup = new THREE.Group(); this.enemyGroup = new THREE.Group(); this.lootGroup = new THREE.Group(); this.rangeGroup = new THREE.Group();
         this.scene.add(this.mapGroup); this.scene.add(this.enemyGroup); this.scene.add(this.lootGroup); this.scene.add(this.rangeGroup);
@@ -586,7 +590,7 @@ class Renderer3D {
                     if ($gameMap.targetingState && $gameMap.targetingState.active && $gameMap.targetingState.mode === 'target_cycle') {
                         const cur = $gameMap.targetingState.cursor;
                         lx = cur.x; lz = cur.y;
-                        tx = cur.x; tz = cur.y + 5; ty = 5; // Slightly closer zoom for targeting
+                        tx = cur.x; tz = cur.y + 8; ty = 12; // Zoom OUT (Higher Y, Further Z)
                     }
 
                     this.cameraLookCurrent.x += (lx - this.cameraLookCurrent.x) * 0.1;
@@ -644,11 +648,29 @@ class Renderer3D {
         this.floatingTexts = this.floatingTexts.filter(ft => ft !== null);
 
         // Update Cursor
+        this.cursorGroup.clear();
         if ($gameMap.targetingState && $gameMap.targetingState.active) {
             this.cursorMesh.visible = true;
             const t = $gameMap.targetingState.cursor;
             this.cursorMesh.position.set(t.x, 0.5, t.y);
             this.cursorMesh.material.opacity = 0.5 + Math.sin(Date.now() * 0.01) * 0.4; // Blink
+
+            // Secondary Cursors for other targets in AoE
+            if ($gameMap.targetingState.mode === 'target_cycle' && $gameMap.targetingState.targets) {
+                 const targets = $gameMap.targetingState.targets;
+                 targets.forEach(tgt => {
+                     if (tgt.x !== t.x || tgt.y !== t.y) {
+                         // Subtle cursor
+                         const geo = this.cursorMesh.geometry;
+                         const mat = this.cursorMesh.material.clone();
+                         mat.opacity = 0.2;
+                         mat.color.setHex(0xffff88); // Slightly different?
+                         const m = new THREE.Mesh(geo, mat);
+                         m.position.set(tgt.x, 0.5, tgt.y);
+                         this.cursorGroup.add(m);
+                     }
+                 });
+            }
         } else {
             this.cursorMesh.visible = false;
         }

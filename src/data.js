@@ -109,7 +109,7 @@ const $dataSkills = {
     "heal": { name: "Heal", cost: 15, range: 0, type: "self", effects: [{code: EFFECT_HEAL, value: 30}], desc: () => "Restore 30 HP." },
     "stun": { name: "Stun Bat", cost: 10, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.0}, {code: EFFECT_ADD_STATE, dataId: 'stun', chance: 0.5}], desc: (a) => "Melee shock. Chance to stun." },
     "nuke": { name: "Overload", cost: 60, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 60, fixed: true}], desc: () => "Discharge all PE. 60 DMG." },
-    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` },
+    "gunshot": { name: "Gunshot", cost: 0, range: 5, type: "line", piercing: false, effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => `Ranged shot. Est: ${Math.floor(a.atk * 1.5)} DMG.` },
 
     // New Skills for AI/Player Shape Testing
     "cone_shot": { name: "Scatter Shot", cost: 10, range: 3, type: "cone", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Cone AoE attack." },
