@@ -420,21 +420,6 @@ class UIManager {
         };
     }
 
-    createModal(title, buildFn, closeCallback) {
-        // Generic modal support (legacy)
-        if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove();
-        const m = document.createElement('div'); m.id='temp-modal'; m.className='pe-window';
-        Object.assign(m.style, {left:'20%', top:'10%', width:'60%', height:'80%', zIndex:100});
-        m.innerHTML = `<div class="pe-header" style="display:flex; justify-content:space-between;">${title}<span style="cursor:pointer" id="modal-close">X</span></div><div class="pe-content"></div>`;
-        buildFn(m.querySelector('.pe-content'));
-        document.getElementById('ui-root').appendChild(m);
-        m.querySelector('#modal-close').onclick = () => { this.closeModal(); if(closeCallback) closeCallback(); };
-
-        this.activeModal = m;
-        this.collectFocusables();
-        this.setFocus(0);
-    }
-
     showTooltip(e, html) {
         const el = document.getElementById('tooltip');
         el.innerHTML = html;
