@@ -40,7 +40,7 @@ class Game_System {
     log(text) {
         this.logHistory.unshift(text);
         if(this.logHistory.length > 15) this.logHistory.pop();
-        EventBus.emit('log_updated');
+        EventBus.emit('log_updated', text);
     }
 }
 
