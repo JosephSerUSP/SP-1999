@@ -176,7 +176,6 @@ class UIManager {
         c.style.width = c.width + "px";
         c.style.height = c.height + "px";
         const ctx = c.getContext('2d');
-        ctx.fillStyle = "#000"; ctx.fillRect(0,0,c.width,c.height);
         for(let x=0; x<$gameMap.width; x++) {
             for(let y=0; y<$gameMap.height; y++) {
                 if(!$gameMap.visited || !$gameMap.visited[x] || !$gameMap.visited[x][y]) continue;
