@@ -28,6 +28,7 @@ class UIManager {
         // Persistent Windows
         this.windows.status = new Window_Party();
         this.windows.cmd = new Window_Tactics();
+        this.windows.help = new Window_Help();
         this.windows.minimap = new Window_Minimap();
 
         // Ensure minimap shell is sized before log creation?
@@ -49,6 +50,7 @@ class UIManager {
         if (this.windows.status) this.windows.status.refresh();
         if (this.windows.cmd) this.windows.cmd.refresh();
         if (this.windows.log) this.windows.log.refresh();
+        if (this.windows.help) this.windows.help.refresh();
         if (this.windows.enemyInfo) this.windows.enemyInfo.update();
         this.refreshMinimap();
 
@@ -152,7 +154,9 @@ class UIManager {
             const el = this.focusableElements[index];
             el.classList.add('focused');
             el.scrollIntoView({ block: 'nearest' });
-            if (el.onmouseenter) el.onmouseenter({ target: el, clientX: el.getBoundingClientRect().right, clientY: el.getBoundingClientRect().top });
+            if (el.onmouseenter) {
+                el.onmouseenter({ target: el, clientX: el.getBoundingClientRect().right, clientY: el.getBoundingClientRect().top });
+            }
         }
     }
 
@@ -428,6 +432,18 @@ class UIManager {
     }
 
     hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+
+    showHelp(html) {
+        if (this.windows.help) {
+            this.windows.help.setText(html);
+        }
+    }
+
+    clearHelp() {
+        if (this.windows.help) {
+            this.windows.help.setText('');
+        }
+    }
 
     closeModal() {
         if(document.getElementById('temp-modal')) document.getElementById('temp-modal').remove();

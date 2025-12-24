@@ -168,13 +168,14 @@ class Window_Tactics extends Window_Base {
                 onMouseEnter: (e) => {
                     if (skill) {
                         Renderer.setPreviewOverride(skill);
-                        $gameSystem.ui.showTooltip(e, `<b>${skill.name}</b><br>${skill.desc(actor)}`);
+                        // Show description in help window instead of tooltip
+                        $gameSystem.ui.showHelp(`<b>${skill.name}</b>: ${skill.desc(actor)}`);
                     }
                 },
                 onMouseLeave: () => {
                     if (skill) {
                         Renderer.clearPreviewOverride();
-                        $gameSystem.ui.hideTooltip();
+                        $gameSystem.ui.clearHelp();
                     }
                 }
             }
