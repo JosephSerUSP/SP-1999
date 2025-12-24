@@ -6,7 +6,8 @@ class Window_Log extends Window_Base {
     constructor(mmW) {
         // Position at Top Left (2%, 2%)
         // We override standard window shell creation to make it transparent
-        super('log', { top: '10%', left: '2%', width: '30%', height: 'auto', zIndex: '10000' }, null);
+        // Moved down by 96px (approx 10% + 96px = ~150px)
+        super('log', { top: '150px', left: '2%', width: '30%', height: 'auto', zIndex: '10000' }, null);
 
         // Remove standard window classes and styling
         this.el.classList.remove('pe-window');
@@ -53,8 +54,8 @@ class Window_Log extends Window_Base {
         lineEl.className = 'log-line';
         lineEl.textContent = text;
 
-        // Add to container
-        this.container.appendChild(lineEl);
+        // Add to container (Newest at top)
+        this.container.prepend(lineEl);
 
         // Data object
         const lineObj = {
@@ -62,11 +63,12 @@ class Window_Log extends Window_Base {
             timeout: setTimeout(() => this.removeLog(lineObj), 5000) // Duration: 5s
         };
 
-        this.lines.push(lineObj);
+        // Add to start of array
+        this.lines.unshift(lineObj);
 
-        // Limit to 10 lines
-        if (this.lines.length > 10) {
-            const oldest = this.lines.shift();
+        // Limit to 13 lines
+        if (this.lines.length > 13) {
+            const oldest = this.lines.pop();
             this.removeLog(oldest, true);
         }
     }
