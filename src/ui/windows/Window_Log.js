@@ -6,8 +6,8 @@ class Window_Log extends Window_Base {
     constructor(mmW) {
         // Position at Top Left (2%, 2%)
         // We override standard window shell creation to make it transparent
-        // Moved down by 96px (approx 10% + 96px = ~150px)
-        super('log', { top: '150px', left: '2%', width: '30%', height: 'auto', zIndex: '10000' }, null);
+        // Moved down further to approx 220px to leave room for Help window
+        super('log', { top: '220px', left: '2%', width: '30%', height: 'auto', zIndex: '10000' }, null);
 
         // Remove standard window classes and styling
         this.el.classList.remove('pe-window');
@@ -32,7 +32,7 @@ class Window_Log extends Window_Base {
         this.lines = []; // Array of { el, timeout }
 
         // Subscribe directly to log updates
-        EventBus.on('log_updated', (text) => this.addLog(text));
+        EventBus.on('log_updated', (payload) => this.addLog(payload));
 
         // Ensure visibility immediately
         this.show();
@@ -47,12 +47,35 @@ class Window_Log extends Window_Base {
         this.visible = true;
     }
 
-    addLog(text) {
-        if (!text) return;
+    addLog(payload) {
+        if (!payload) return;
+
+        let text = "";
+        let type = "system";
+
+        if (typeof payload === 'string') {
+            text = payload;
+        } else {
+            text = payload.text;
+            type = payload.type || 'system';
+        }
+
+        const emojis = {
+            system: '⚙️',
+            combat: '⚔️',
+            exploration: '🗺️',
+            item: '📦',
+            status: '✨',
+            warning: '⚠️',
+            growth: '⏫'
+        };
+
+        const emoji = emojis[type] || '⚙️';
+        const fullText = `${emoji} ${text}`;
 
         const lineEl = document.createElement('div');
         lineEl.className = 'log-line';
-        lineEl.textContent = text;
+        lineEl.textContent = fullText;
 
         // Add to container (Newest at top)
         this.container.prepend(lineEl);
