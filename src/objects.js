@@ -1001,9 +1001,10 @@ class Game_Map {
     }
 
     /**
-     * Processes a game turn based on player movement.
+     * Processes a game turn based on player movement or a direct action.
      * @param {number} dx - Change in x.
      * @param {number} dy - Change in y.
+     * @param {Function} [action] - An optional async callback representing a non-movement action (e.g., skill).
      */
     async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
@@ -1236,6 +1237,7 @@ class Game_Map {
 
     /**
      * Executes the player's attack action.
+     * Logic determines target based on direction or skill range; no arguments required.
      */
     async playerAttack() {
         if ($gameSystem.isBusy || $gameSystem.isInputBlocked || (Renderer && Renderer.isAnimating)) return;
