@@ -205,13 +205,21 @@ class UIManager {
         }
         $gameMap.enemies.forEach(e => {
             const dist = Math.abs(e.x - $gameMap.playerX) + Math.abs(e.y - $gameMap.playerY);
-            if(dist < 8) {
+            if($gameMap.scanActive || dist < 8) {
                 ctx.fillStyle = "#f00";
                 ctx.shadowColor = "#f00"; ctx.shadowBlur = 4;
                 ctx.fillRect(e.x*ts, e.y*ts, ts, ts);
                 ctx.shadowBlur = 0;
             }
         });
+
+        $gameMap.loot.forEach(i => {
+            if ($gameMap.visited[i.x][i.y]) {
+                ctx.fillStyle = "#ff0";
+                ctx.fillRect(i.x * ts, i.y * ts, ts, ts);
+            }
+        });
+
         ctx.fillStyle = "#0ff"; ctx.fillRect($gameMap.playerX*ts, $gameMap.playerY*ts, ts, ts);
 
         // Scroll logic needs container
