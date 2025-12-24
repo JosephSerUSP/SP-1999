@@ -189,6 +189,7 @@ class Game_Battler {
      */
     takeDamage(v) {
         this.hp = Math.max(0, this.hp - v);
+        EventBus.emit('actor_stats_updated');
         if (this.uid === 'player' || this instanceof Game_Actor) {
             $gameBanter.trigger('hurt');
             if (this.hp < this.mhp * 0.3) {
@@ -586,7 +587,7 @@ class Game_Party {
     setIndex(newIndex, animate = true) {
         if (this.index === newIndex) return;
         this.index = newIndex;
-        EventBus.emit('refresh_ui');
+        EventBus.emit('actor_stats_updated');
 
         if (animate) {
             EventBus.emit('play_animation', 'move_switch', {
@@ -1075,9 +1076,9 @@ class Game_Map {
                 const result = await action();
                 if (result !== false) {
                     actor.payStamina(20);
-                    EventBus.emit('refresh_ui');
+                    EventBus.emit('actor_stats_updated');
                     await this.updateEnemies();
-                    EventBus.emit('refresh_ui'); // Update after enemy actions
+                    EventBus.emit('actor_stats_updated'); // Update after enemy actions
                     await this.processTurnEnd(actor);
                 }
             } finally {
@@ -1100,10 +1101,10 @@ class Game_Map {
                      const skillId = actor.getAttackSkill();
                      actor.payStamina(20);
                      await BattleManager.executeSkill(actor, skillId, enemy);
-                     EventBus.emit('refresh_ui');
+                     EventBus.emit('actor_stats_updated');
                  }
                  await this.updateEnemies();
-                 EventBus.emit('refresh_ui');
+                 EventBus.emit('actor_stats_updated');
                  await this.processTurnEnd(actor);
              } finally {
                  $gameSystem.isBusy = false;
@@ -1143,7 +1144,7 @@ class Game_Map {
                 return;
             }
 
-            EventBus.emit('refresh_ui');
+            EventBus.emit('actor_stats_updated');
             await this.updateEnemies();
             await this.processTurnEnd(actor); // States update
 
@@ -1179,7 +1180,7 @@ class Game_Map {
         // Force rotation if active actor is dead
         if($gameParty.active().isDead()) {
              $gameParty.rotate();
-             EventBus.emit('refresh_ui');
+             EventBus.emit('actor_stats_updated');
         }
     }
 
