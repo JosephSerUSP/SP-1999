@@ -1088,7 +1088,25 @@ class Game_Map {
         const enemy = this.enemies.find(e => e.x === nx && e.y === ny);
 
         if(enemy) {
-             this.playerAttack();
+            // Execute Basic Attack
+            const skillId = actor.getAttackSkill() || 'attack';
+
+            // Pay Stamina (Standard Action Cost)
+            // Note: BattleManager checks PE, but basic attacks cost Stamina in this engine context for now.
+            // If we want to unify, skills should cost Stamina too?
+            // Currently skills called via processTurn(action) pay 20 stamina.
+            // Bumps are direct actions.
+            actor.payStamina(20);
+
+            // Execute
+            $gameSystem.isBusy = true;
+            await BattleManager.executeSkill(actor, skillId, enemy);
+
+            EventBus.emit('refresh_ui');
+            await this.updateEnemies();
+            EventBus.emit('refresh_ui');
+            await this.processTurnEnd(actor);
+            $gameSystem.isBusy = false;
         } else {
             // Consume Stamina for Move (10)
             actor.payStamina(10);
@@ -1318,103 +1336,9 @@ class Game_Map {
     }
 
     /**
-     * Executes the player's attack action.
-     * Logic determines target based on direction or skill range; no arguments required.
+     * @deprecated Used to be playerAttack(). Replaced by direct BattleManager calls in processTurn.
      */
     async playerAttack() {
-        if ($gameSystem.isBusy || $gameSystem.isInputBlocked || (Renderer && Renderer.isAnimating)) return;
-        $gameSystem.isBusy = true;
-        const actor = $gameParty.active();
-
-        if (actor.isRestricted()) {
-            $gameSystem.log(`${actor.name} is stunned!`, 'status');
-            EventBus.emit('refresh_ui');
-            await this.updateEnemies();
-            await this.processTurnEnd(actor);
-            $gameSystem.isBusy = false;
-            return;
-        }
-
-        // Determine skill
-        const attackSkillId = actor.getAttackSkill();
-        const skill = attackSkillId ? $dataSkills[attackSkillId] : null;
-
-        let target = null;
-        let skillIdToExec = attackSkillId;
-
-        // STAMINA COST CHECK (Skill/Attack = 20)
-        // Check if we can attack. If not enough stamina, we still attack but get exhausted.
-        actor.payStamina(20);
-
-        // DELEGATE AOE SKILLS TO BATTLEMANAGER
-        if (skill && (skill.type === 'self' || skill.type === 'all_enemies' || skill.type === 'cone' || skill.type === 'circle')) {
-             // For complex shapes, BattleManager handles geometry targeting.
-             await BattleManager.executeSkill(actor, skillIdToExec, null);
-
-             EventBus.emit('refresh_ui');
-             await this.updateEnemies();
-             // Emit refresh again to show results of enemy turn (damage to player)
-             EventBus.emit('refresh_ui');
-             $gameSystem.isBusy = false;
-             await this.processTurnEnd(actor);
-             return;
-        }
-
-        if (skill && (skill.type === 'line' || skill.type === 'target')) {
-            const dx = actor.direction.x; const dy = actor.direction.y;
-            for (let i=1; i<=skill.range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
-            }
-        } else {
-            // Default melee range 1
-            const range = skill ? skill.range : 1;
-            const dx = actor.direction.x; const dy = actor.direction.y;
-             // Check along the line up to range
-             for (let i=1; i<=range; i++) {
-                 const tx = this.playerX + dx * i; const ty = this.playerY + dy * i;
-                 if (!this.isValid(tx, ty) || this.tiles[tx][ty] === 1) break;
-                 const e = this.enemies.find(en => en.x === tx && en.y === ty);
-                 if (e) { target = e; break; }
-             }
-        }
-
-        if (skillIdToExec) {
-            if (!target) {
-                // MISS VISUAL
-                $gameSystem.log(`${actor.name} attacks empty air.`, 'combat');
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                Renderer.playAnimation('projectile', { x1: this.playerX, y1: this.playerY, x2: this.playerX + dx*5, y2: this.playerY + dy*5, color: actor.color });
-                await Sequencer.sleep(300);
-            } else {
-                await BattleManager.executeSkill(actor, skillIdToExec, target);
-            }
-        } else {
-            // Basic Attack (No skill override)
-            if (target && (Math.abs(target.x - this.playerX) + Math.abs(target.y - this.playerY) <= 1)) {
-                const dmg = BattleManager.calcDamage(actor, target);
-                target.takeDamage(dmg);
-                EventBus.emit('play_animation', 'lunge', { tx: target.x, ty: target.y });
-                await Sequencer.sleep(150);
-                EventBus.emit('float_text', dmg, target.x, target.y, "#fff");
-                EventBus.emit('play_animation', 'hit', { uid: target.uid });
-                await Sequencer.sleep(200);
-                $gameSystem.log(`Hit ${target.name} for ${dmg}.`, 'combat');
-                if(target.hp <= 0) await this.killEnemy(target);
-            } else {
-                $gameSystem.log(`${actor.name} swings at nothing.`, 'combat');
-                EventBus.emit('play_animation', 'lunge', { tx: this.playerX + actor.direction.x, ty: this.playerY + actor.direction.y });
-                await Sequencer.sleep(300);
-            }
-        }
-
-        EventBus.emit('refresh_ui');
-        await this.updateEnemies();
-        // Emit refresh again to show results of enemy turn (damage to player)
-        EventBus.emit('refresh_ui');
-        $gameSystem.isBusy = false;
-        await this.processTurnEnd(actor);
+        console.warn("Game_Map.playerAttack is deprecated.");
     }
 }

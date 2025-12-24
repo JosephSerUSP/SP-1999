@@ -52,15 +52,21 @@ class Window_Tactics extends Window_Base {
 
         // Attack
         const actor = $gameParty.active();
-        const skillId = actor.getAttackSkill();
-        const attackSkill = skillId ? $dataSkills[skillId] : { type: 'line', range: 1, name: 'Attack', desc: () => "Basic melee attack." };
+        const skillId = actor.getAttackSkill() || 'attack';
+        const attackSkill = $dataSkills[skillId];
 
         children.push(this.createCommand("ATTACK", "", () => {
             $gameSystem.ui.blurWindow();
             $gameMap.startTargeting(attackSkill, (target) => {
                 // If confirmed
                 if (target) {
-                    $gameMap.processTurn(0, 0, () => $gameMap.playerAttack());
+                     // If target is string 'CONFIRM', it means Directional confirm (target is null/implicit)
+                     let finalTarget = (target === 'CONFIRM') ? null : target;
+                     if (attackSkill.type === 'circle' || attackSkill.type === 'cone') {
+                         finalTarget = null;
+                     }
+                    // Pass to processTurn: This handles execution, stamina payment (20), and turn progression.
+                    $gameMap.processTurn(0, 0, () => BattleManager.executeSkill(actor, skillId, finalTarget));
                 } else {
                     $gameSystem.ui.focusWindow('cmd');
                 }

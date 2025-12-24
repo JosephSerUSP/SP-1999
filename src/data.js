@@ -115,7 +115,8 @@ const $dataSkills = {
     "cone_shot": { name: "Scatter Shot", cost: 10, range: 3, type: "cone", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Cone AoE attack." },
     "spin_slash": { name: "Spin Slash", cost: 15, range: 1, type: "circle", effects: [{code: EFFECT_DAMAGE, value: 1.5}], desc: (a) => "Hit all adjacent units." },
     "charge_blade": { name: "Charge Blade", cost: 0, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 2.0}], desc: (a) => "Heavy Melee attack." },
-    "tactical_shot": { name: "Tac Shot", cost: 0, range: 6, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Ranged shot. Triggers Melee Mode." }
+    "tactical_shot": { name: "Tac Shot", cost: 0, range: 6, type: "line", effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => "Ranged shot. Triggers Melee Mode." },
+    "attack": { name: "Attack", cost: 0, range: 1, type: "target", effects: [{code: EFFECT_DAMAGE, value: 1.0}], desc: (a) => "Basic melee attack." }
 };
 
 /**
