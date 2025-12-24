@@ -10,41 +10,107 @@ class Window_Inventory extends Window_Base {
 
         // Track state internally for selection
         this.selectedItem = null;
+        this.selectedIdx = -1;
+        this.viewState = 'list'; // 'list', 'target'
+        this.closeCallback = null; // Assigned by UIManager
+    }
+
+    handleBack() {
+        if (this.viewState === 'target') {
+            this.viewState = 'list';
+            this.selectedItem = null;
+            this.selectedIdx = -1;
+            this.refreshAndTitle();
+            return true;
+        }
+        return false;
     }
 
     defineLayout() {
-        return {
+        // Main Container
+        const container = {
             type: 'container',
             layout: new FlexLayout({ direction: 'column', gap: 10 }),
             props: { style: { height: '100%' } }, // Fill window
-            children: [
-                // Description Pane
-                {
-                    type: 'container',
-                    props: {
-                        id: 'inv-desc-pane',
-                        style: {
-                            height: '60px', borderBottom: '1px solid #444',
-                            marginBottom: '5px', padding: '5px',
-                            fontSize: '12px', color: '#aaa', fontStyle: 'italic'
-                        }
-                    },
-                    children: [
-                        { component: Label, props: { id: 'inv-desc-text', text: 'Select an item...' } }
-                    ]
-                },
-                // Body (Split View)
-                {
-                    type: 'container',
-                    layout: new FlexLayout({ direction: 'row', gap: 10 }),
-                    props: { flex: '1', style: { overflow: 'hidden' } },
-                    children: [
-                        // Left Column: Item List
-                        this.createItemList(),
-                        // Right Column: Squad Equip Status
-                        this.createSquadStatus()
-                    ]
+            children: []
+        };
+
+        // Description Pane (always visible, updates based on context)
+        container.children.push({
+            type: 'container',
+            props: {
+                id: 'inv-desc-pane',
+                style: {
+                    height: '60px', borderBottom: '1px solid #444',
+                    marginBottom: '5px', padding: '5px',
+                    fontSize: '12px', color: '#aaa', fontStyle: 'italic'
                 }
+            },
+            children: [
+                { component: Label, props: { id: 'inv-desc-text', text: this.selectedItem ? `Select target for ${this.selectedItem.name}...` : 'Select an item...' } }
+            ]
+        });
+
+        if (this.viewState === 'target') {
+            container.children.push(this.renderTargetSelect());
+        } else {
+            container.children.push({
+                type: 'container',
+                layout: new FlexLayout({ direction: 'row', gap: 10 }),
+                props: { flex: '1', style: { overflow: 'hidden' } },
+                children: [
+                    this.createItemList(),
+                    this.createSquadStatus()
+                ]
+            });
+        }
+
+        return container;
+    }
+
+    renderTargetSelect() {
+        const item = this.selectedItem;
+        const members = $gameParty.members.map(m => {
+            let label = m.name;
+            let subLabel = "";
+
+            // Calculate diff if equipment
+            if (item.category === 'weapon') {
+                const currentAtk = m.getAtk();
+                const newAtk = m.getAtkWith(item);
+                const diff = newAtk - currentAtk;
+                const color = diff > 0 ? '#0f0' : (diff < 0 ? '#f00' : '#888');
+                subLabel = `ATK: ${currentAtk} -> <span style="color:${color}">${newAtk}</span>`;
+            } else if (item.category === 'armor') {
+                const currentDef = m.getDef();
+                const newDef = m.getDefWith(item);
+                const diff = newDef - currentDef;
+                const color = diff > 0 ? '#0f0' : (diff < 0 ? '#f00' : '#888');
+                subLabel = `DEF: ${currentDef} -> <span style="color:${color}">${newDef}</span>`;
+            } else {
+                // Consumable status
+                subLabel = `HP: ${m.hp}/${m.mhp} PE: ${m.pe}/${m.mpe}`;
+            }
+
+            return {
+                component: Button,
+                props: {
+                    className: 'item-row',
+                    label: label,
+                    subLabel: subLabel, // Button component needs to support HTML in subLabel if we want colors
+                    html: `<span>${label}</span> <span style="font-size:10px; color:#aaa">(${subLabel})</span>`, // Override internal content
+                    onClick: () => this.onTargetClick(m)
+                }
+            };
+        });
+
+        return {
+            type: 'container',
+            layout: new FlexLayout({ direction: 'column', gap: 5 }),
+            props: { flex: '1', style: { overflowY: 'auto', padding: '10px' } },
+            children: [
+                { component: Label, props: { text: "SELECT TARGET", align: 'center', color: 'var(--pe-gold)' } },
+                ...members
             ]
         };
     }
@@ -127,6 +193,7 @@ class Window_Inventory extends Window_Base {
                 style: { fontSize: '10px', display: 'flex', justifyContent: 'space-between', cursor: item ? 'pointer' : 'default', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', padding: '2px' },
                 html: item ? `<span>${slot}: ${item.icon} ${item.name}</span>` : `<span style="color:#444">${slot}: ---</span>`,
                 onClick: () => {
+                     if ($gameSystem.isInputBlocked || $gameSystem.isBusy) return;
                      if (item) this.unequipItem(actor, slot);
                 },
                 onMouseEnter: (e) => {
@@ -140,45 +207,87 @@ class Window_Inventory extends Window_Base {
     }
 
     updateDescription(text) {
-        // Direct DOM manipulation for performance on hover, bypassing full re-render
-        // Though ideally we'd use state. But for now this is fine.
         const el = document.getElementById('inv-desc-text');
         if (el) el.innerText = text;
     }
 
     onItemClick(item, idx) {
-        if (item.category === 'item') {
-            $gameSystem.ui.showTargetSelectModal((target) => {
-                // Check if target is dead and if item can be used
-                if (target.isDead()) {
-                     // We allow "heal" type if it acts as revive (depends on implementation, here heal is hp+v),
-                     // but "cure" (antidote) should not be used on dead actors if it causes freeze.
-                     // Assuming dead actors cannot be cured of poison (state persists but doesn't tick damage if dead).
-                     // For safety, we prevent using any item on dead actors unless it's explicitly a revive item (which we don't have yet, or 'heal' counts).
-                     // Based on user report: "It is possible to use items on dead actors... Antidote freezes."
-                     // Let's block 'cure' on dead actors.
-                     if (item.type === 'cure') {
-                         alert("Cannot use this on a dead character!");
-                         return;
-                     }
-                     // If 'heal' is used on dead, it revives them (hp > 0). That seems intended or acceptable.
-                }
-
-                $gameSystem.ui.showConfirmModal(`Use ${item.name} on ${target.name}?`, () => {
-                    $gameSystem.ui.useConsumable(target, item, idx); // Call back to UIManager logic for now
-                    // We need to refresh THIS window after use
-                    this.refreshAndTitle();
-                });
-            });
-        } else {
-            // Equipment
-            $gameSystem.ui.showTargetSelectModal((target) => {
-                 $gameSystem.ui.equipGear(target, item, idx, () => {
-                     this.refreshAndTitle();
-                     $gameSystem.ui.refresh(); // Refresh HUD
-                 });
-            }, item);
+        if ($gameSystem.isInputBlocked || $gameSystem.isBusy) {
+            return;
         }
+        this.selectedItem = item;
+        this.selectedIdx = idx;
+        this.viewState = 'target';
+        this.refreshAndTitle();
+    }
+
+    onTargetClick(target) {
+        if ($gameSystem.isInputBlocked || $gameSystem.isBusy) return;
+
+        const item = this.selectedItem;
+        const idx = this.selectedIdx;
+
+        if (item.category === 'item') {
+            // Consumable Logic
+            if (target.isDead()) {
+                 if (item.type !== 'heal' && item.type !== 'revive') {
+                     alert("Cannot use this on a dead character!");
+                     return;
+                 }
+            }
+            if (item.type === 'cure' && target.isDead()) {
+                alert("Cannot cure dead character.");
+                return;
+            }
+            this.useConsumable(target, item, idx);
+
+        } else {
+            // Equipment Logic
+            this.equipGear(target, item, idx);
+        }
+    }
+
+    useConsumable(actor, i, idx) {
+        if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
+        if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
+        if(i.type==='cure') {
+            if(actor.isStateAffected('poison')) {
+                actor.removeState('poison');
+                $gameSystem.log(`${actor.name} is cured.`);
+            } else {
+                $gameSystem.log("No effect.");
+            }
+        }
+
+        // Remove Item
+        $gameParty.inventory.splice(idx, 1);
+
+        // Log and Close
+        $gameSystem.ui.refresh(); // Update HUD
+
+        if (this.closeCallback) this.closeCallback();
+
+        // End Turn
+        $gameMap.processTurn(0,0);
+    }
+
+    equipGear(actor, i, idx) {
+        const type = i.category;
+        const current = actor.equip[type];
+        actor.equip[type] = i;
+
+        // Swap items
+        $gameParty.inventory.splice(idx, 1);
+        if(current) $gameParty.gainItem(current);
+
+        $gameSystem.log(`${actor.name} equipped ${i.name}.`);
+
+        // Return to list
+        this.viewState = 'list';
+        this.selectedItem = null;
+        this.selectedIdx = -1;
+        this.refreshAndTitle();
+        $gameSystem.ui.refresh();
     }
 
     unequipItem(actor, slot) {
@@ -198,17 +307,13 @@ class Window_Inventory extends Window_Base {
     refreshAndTitle() {
         this.title = `SHARED INVENTORY [${$gameParty.inventory.length}/${$gameParty.maxInventory}]`;
         if (this.headerEl) {
+            // We need to preserve the close button when updating title
             const closeBtn = this.headerEl.querySelector('#modal-close');
             this.headerEl.innerText = this.title;
             if (closeBtn) this.headerEl.appendChild(closeBtn);
         }
         this.refresh();
 
-        // Re-focus logic would go here if we had a robust focus system linked to components
-        // For now, UIManager handles focus separately via class names
-        // But since we rebuilt the DOM, we need to let UIManager know to re-collect focusables
-        // This is a bit tricky with the hybrid approach.
-        // We'll rely on UIManager's loop or manual trigger.
         if ($gameSystem.ui.activeModal === this.el) {
              $gameSystem.ui.collectFocusables();
              $gameSystem.ui.setFocus(0);
