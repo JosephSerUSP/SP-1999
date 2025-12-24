@@ -676,6 +676,7 @@ class Game_Map {
         this.playerY = 1;
         this.enemyIdCounter = 0;
         this.targetingState = { active: false, mode: 'cursor', skill: null, cursor: {x:0, y:0}, callback: null };
+        this.scanActive = false;
     }
 
     /**

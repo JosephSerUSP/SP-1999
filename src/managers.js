@@ -215,6 +215,7 @@ class BattleManager {
                 break;
             case EFFECT_SCAN_MAP:
                 $gameMap.revealZone($gameMap.width/2, $gameMap.height/2, 100);
+                $gameMap.scanActive = true;
                 EventBus.emit('refresh_minimap');
                 EventBus.emit('float_text', "SCAN", $gameMap.playerX, $gameMap.playerY, "#0ff");
                 break;
