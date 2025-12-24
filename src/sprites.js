@@ -12,8 +12,12 @@ function disposeHierarchy(obj) {
         if (child.geometry) child.geometry.dispose();
         if (child.material) {
             if (Array.isArray(child.material)) {
-                child.material.forEach(m => m.dispose());
+                child.material.forEach(m => {
+                    if (m.map) m.map.dispose();
+                    m.dispose();
+                });
             } else {
+                if (child.material.map) child.material.map.dispose();
                 child.material.dispose();
             }
         }
@@ -140,6 +144,9 @@ class Renderer3D {
         this.dangerMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
         this.dangerPool = [];
         this.floatingTexts = [];
+
+        // Texture Loading
+        this.textureLoader = new THREE.TextureLoader();
     }
 
     /**
@@ -282,7 +289,36 @@ class Renderer3D {
         this.mapGroup.clear();
         const count = $gameMap.width * $gameMap.height;
         const geoFloor = new THREE.PlaneGeometry(0.95, 0.95);
+
+        // Floor Material setup with texture support
         const matFloor = new THREE.MeshLambertMaterial({ color: CONFIG.colors.floor });
+
+        // Determine Texture Path
+        // Priority: 1. Dynamic Override ($gameMap.floorTexture)
+        //           2. Map Config Override ($dataFloors[level].texture)
+        //           3. Default Texture
+        let texturePath = 'src/assets/images/battlefield/floors/default.png';
+        if ($gameMap.floorTexture) texturePath = $gameMap.floorTexture;
+        else if ($dataFloors && $dataFloors[$gameMap.level] && $dataFloors[$gameMap.level].texture) {
+            texturePath = $dataFloors[$gameMap.level].texture;
+        }
+
+        // Attempt to load texture
+        this.textureLoader.load(
+            texturePath,
+            (texture) => {
+                matFloor.map = texture;
+                matFloor.color.setHex(0xffffff); // Tint white so texture shows true colors
+                matFloor.needsUpdate = true;
+            },
+            undefined,
+            (err) => {
+                // Fallback to original color if texture missing
+                // matFloor.color is already set to CONFIG.colors.floor
+                // Just log warning if needed, but safe to ignore
+            }
+        );
+
         this.instancedFloor = new THREE.InstancedMesh(geoFloor, matFloor, count);
         const geoBlock = new THREE.BoxGeometry(0.95, 1, 0.95);
         const matWall = new THREE.MeshLambertMaterial({ color: CONFIG.colors.wall });
@@ -322,6 +358,32 @@ class Renderer3D {
         this.isAscending = false; this.ascendProgress = 0; this.zoomProgress = 0; this.playerMesh.visible = true;
         this.syncEnemies(); this.syncLoot();
         this.updateDangerZones();
+    }
+
+    /**
+     * Dynamically updates the floor texture.
+     * @param {string} path - The path to the new texture.
+     */
+    updateFloorTexture(path) {
+        if (!this.instancedFloor) return;
+        const mat = this.instancedFloor.material;
+
+        // Temporarily store original color in case we need to revert
+        // Actually, if we are setting a texture, we usually want white tint.
+
+        this.textureLoader.load(
+            path,
+            (texture) => {
+                if (mat.map) mat.map.dispose();
+                mat.map = texture;
+                mat.color.setHex(0xffffff);
+                mat.needsUpdate = true;
+            },
+            undefined,
+            (err) => {
+                 console.warn("Failed to update floor texture:", path);
+            }
+        );
     }
 
     /**
