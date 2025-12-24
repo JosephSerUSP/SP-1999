@@ -659,13 +659,6 @@ class Renderer3D {
             this.showRange($gameMap.targetingState.skill);
         } else if (this.previewOverride) {
             this.showRange(this.previewOverride);
-        } else if (!$gameSystem.isBusy && !$gameSystem.isInputBlocked && !this.isAnimating) {
-            const actor = $gameParty.active();
-            const skillId = actor.getAttackSkill();
-
-            // Show range for skill OR default range 1
-            if (skillId) this.showRange($dataSkills[skillId]);
-            else this.showRange({range: 1, type: 'target'}); // Default melee range
         } else {
             this.clearRange();
         }
@@ -710,27 +703,23 @@ class Renderer3D {
         const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
         const px = $gameMap.playerX; const py = $gameMap.playerY; const coords = [];
 
-        if (skill.type === 'all_enemies') { $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y})); }
-        else if (skill.range > 0) {
-            if (skill.type === 'line') {
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                for(let i=1; i<=skill.range; i++) {
-                    const tx = px + dx*i; const ty = py + dy*i;
-                    if (!$gameMap.isValid(tx, ty) || $gameMap.tiles[tx][ty] === 1) break;
-                    coords.push({x: tx, y: ty});
-                }
-            } else if (skill.range === 1) {
-                // Directional melee indicator
-                const dx = actor.direction.x; const dy = actor.direction.y;
-                const tx = px + dx; const ty = py + dy;
-                if ($gameMap.isValid(tx, ty) && $gameMap.tiles[tx][ty] !== 1) coords.push({x: tx, y: ty});
-            } else {
-                for(let x = px - skill.range; x <= px + skill.range; x++) {
-                    for(let y = py - skill.range; y <= py + skill.range; y++) {
-                        if (Math.abs(x - px) + Math.abs(y - py) <= skill.range && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] === 0) coords.push({x, y});
+        if (skill.type === 'all_enemies') {
+            $gameMap.enemies.forEach(e => coords.push({x: e.x, y: e.y}));
+        } else if (skill.type === 'target') {
+             // For target selection, show all valid tiles in range (Diamond)
+             const r = skill.range;
+             for(let x = px - r; x <= px + r; x++) {
+                for(let y = py - r; y <= py + r; y++) {
+                    if (Math.abs(x - px) + Math.abs(y - py) <= r && $gameMap.isValid(x, y) && $gameMap.tiles[x][y] !== 1) {
+                        // Check LOS for consistency
+                        if ($gameMap.checkLineOfSight(px, py, x, y)) coords.push({x, y});
                     }
                 }
             }
+        } else if (skill.range > 0 || skill.range === 0) {
+            // Use shared Geometry logic for Line, Cone, Circle (including self range 0)
+            const tiles = $gameMap.getTilesInShape(px, py, skill.type, skill.range, actor.direction);
+            tiles.forEach(t => coords.push(t));
         }
         coords.forEach(c => {
             const m = new THREE.Mesh(geo, mat);

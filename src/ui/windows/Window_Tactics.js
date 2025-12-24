@@ -51,22 +51,12 @@ class Window_Tactics extends Window_Base {
         const children = [];
 
         // Attack
+        const actor = $gameParty.active();
+        const skillId = actor.getAttackSkill();
+        const attackSkill = skillId ? $dataSkills[skillId] : { type: 'line', range: 1, name: 'Attack', desc: () => "Basic melee attack." };
+
         children.push(this.createCommand("ATTACK", "", () => {
-            // Check for custom attack skill or default basic
-            const actor = $gameParty.active();
-            const skillId = actor.getAttackSkill();
-            const skill = skillId ? $dataSkills[skillId] : { type: 'target', range: 1, name: 'Attack' };
-
-            // Basic attack is Directional (or Melee Target if adjacent? usually just directional lunge)
-            // But if we want to "decide direction", we treat it as directional.
-            // If it's a "target" type skill (manual select), we use cursor.
-            // Default basic attack in legacy was directional lunge.
-            // Let's use startTargeting.
-            // Construct a dummy skill object if needed for basic attack so startTargeting works.
-            const attackSkill = skillId ? $dataSkills[skillId] : { type: 'line', range: 1, name: 'Attack' };
-
             $gameSystem.ui.blurWindow();
-
             $gameMap.startTargeting(attackSkill, (target) => {
                 // If confirmed
                 if (target) {
@@ -75,7 +65,7 @@ class Window_Tactics extends Window_Base {
                     $gameSystem.ui.focusWindow('cmd');
                 }
             });
-        }));
+        }, false, attackSkill, actor));
 
         // Ability
         children.push(this.createCommand("ABILITY", "", () => {
