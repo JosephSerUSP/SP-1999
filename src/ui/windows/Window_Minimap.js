@@ -53,15 +53,37 @@ class Window_Minimap extends Window_Base {
 
         // Centering Logic
         if (this.visible && this.el && typeof $gameMap !== 'undefined' && this.contentEl) {
-            const ts = (this.mode === 1) ? 12 : 4;
-            const pX = $gameMap.playerX * ts + (ts / 2);
-            const pY = $gameMap.playerY * ts + (ts / 2);
-            const centerX = this.contentEl.clientWidth / 2;
-            const centerY = this.contentEl.clientHeight / 2;
+            const mm = this.contentEl;
+            const c = mm.querySelector('canvas');
 
-            // Apply scroll to center the player
-            this.contentEl.scrollLeft = pX - centerX;
-            this.contentEl.scrollTop = pY - centerY;
+            if (c) {
+                const ts = (this.mode === 1) ? 12 : 4;
+                const pX = $gameMap.playerX * ts + (ts / 2);
+                const pY = $gameMap.playerY * ts + (ts / 2);
+
+                // Canvas Dimensions (explicitly set in refreshMinimap)
+                const cW = parseFloat(c.style.width) || c.width;
+                const cH = parseFloat(c.style.height) || c.height;
+                const winW = mm.clientWidth;
+                const winH = mm.clientHeight;
+
+                // Center via Margin if smaller than window
+                if (cW < winW) {
+                    c.style.marginLeft = Math.floor((winW - cW) / 2) + 'px';
+                    mm.scrollLeft = 0;
+                } else {
+                    c.style.marginLeft = '0px';
+                    mm.scrollLeft = pX - winW / 2;
+                }
+
+                if (cH < winH) {
+                    c.style.marginTop = Math.floor((winH - cH) / 2) + 'px';
+                    mm.scrollTop = 0;
+                } else {
+                    c.style.marginTop = '0px';
+                    mm.scrollTop = pY - winH / 2;
+                }
+            }
         }
     }
 

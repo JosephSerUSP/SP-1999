@@ -57,6 +57,9 @@ class InputManager {
     static onKeyDown(e) {
         this.keys[e.key] = true;
         this.latchedKeys[e.key] = true;
+        if (e.key === 'Tab') {
+            e.preventDefault();
+        }
     }
 
     static onKeyUp(e) {
