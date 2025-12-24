@@ -248,6 +248,14 @@ class UIManager {
         w.show();
         this.activeModal = w.el;
 
+        const closeAndCleanup = () => {
+             w.close();
+             w.destroy();
+             $gameSystem.isInputBlocked = false;
+             this.closeModal();
+        };
+        w.closeCallback = closeAndCleanup;
+
         const closeBtn = document.createElement('span');
         closeBtn.id = 'modal-close';
         closeBtn.innerText = 'X';
@@ -256,24 +264,13 @@ class UIManager {
         closeBtn.style.right = '5px';
         closeBtn.style.top = '2px';
         closeBtn.onclick = () => {
-             w.close();
-             w.destroy();
-             this.closeModal();
-             $gameSystem.isInputBlocked = false;
+             if (w.handleBack && w.handleBack()) return;
+             closeAndCleanup();
         };
         w.headerEl.appendChild(closeBtn);
 
         this.collectFocusables();
         this.setFocus(0);
-
-        const superClose = this.closeModal.bind(this);
-        this.closeModal = () => {
-            w.close();
-            w.destroy();
-            $gameSystem.isInputBlocked = false;
-            superClose();
-            this.closeModal = superClose;
-        };
     }
 
     useConsumable(actor, i, idx) {
