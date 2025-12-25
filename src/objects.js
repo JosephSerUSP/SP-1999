@@ -702,6 +702,7 @@ class Game_Map {
 
     /**
      * Starts the targeting phase for a skill.
+     * Initial cursor position is set to the player (or first valid target in cycle mode).
      * @param {Object} skill - The skill being used.
      * @param {Function} callback - Called on confirmation (args: target or null).
      */
