@@ -51,6 +51,7 @@ Combat is seamless (no separate battle screen) and takes place on the dungeon gr
     *   **Move:** WASD / D-Pad. Consumes 10 PE.
     *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 0 PE (uses weapon stats).
     *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE.
+        *   **Targeting:** Starts at the active character (or first valid target for inspection).
     *   **Items:** Consumables for healing or buffs. Using an item ends the turn.
 *   **Damage Formula:** `(ATK * 2 - DEF) * variation`. This formula makes Defense a very powerful stat.
 
@@ -59,7 +60,7 @@ Combat is seamless (no separate battle screen) and takes place on the dungeon gr
 *   **Fog of War:** The map is hidden until explored.
 *   **Interaction:**
     *   **Loot:** Bumping into a loot crate collects an item.
-    *   **Stairs:** Reaching the stairs proceeds to the next floor (generating a new level).
+    *   **Stairs:** Reaching the stairs proceeds to the next floor (generating a new level). Note: Exit locking mechanisms (e.g. Boss requirements) are currently disabled/not implemented.
 
 ## 3. Systems
 
@@ -76,5 +77,5 @@ Enemies use behavior trees defined in `$dataEnemies`. Common behaviors include:
 
 ### 3.3. Banter System
 Characters react to gameplay events (Kill, Walk, Loot, Hurt) with "Banter" lines displayed above their heads.
-*   **Priority Queue:** High-priority lines (Story, Low HP) override flavor text.
+*   **Priority Queue:** High-priority lines (Story, Low HP) override flavor text. Note: Banter is suppressed if input is blocked (e.g., during cutscenes), regardless of priority.
 *   **Context Awareness:** Banter can check conditions like "Nearby Enemy Count" or "Current Health %".

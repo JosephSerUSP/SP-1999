@@ -472,9 +472,10 @@ class BanterManager {
      */
     trigger(type, context = {}) {
         // Block if cutscene active
-        if ($gameSystem.isInputBlocked) return; // Simple check for now
-        // Also block if trigger cooldown is active (unless it's a high priority trigger?)
-        // Let's enforce trigger cooldowns for generic chatter to prevent spam
+        // Note: Logic does not currently support priority overrides for blocked input.
+        if ($gameSystem.isInputBlocked) return;
+
+        // Block if trigger cooldown is active to prevent spam
         if (this.cooldowns.triggers[type] > 0) return;
 
         // Collect all possible valid banter from all party members
