@@ -1,4 +1,6 @@
-# Architectural Deep Dive: Stillnight - Eve of the Stack
+# [PROPOSAL/ROADMAP] Architectural Deep Dive: Stillnight - Eve of the Stack
+
+> **DISCLAIMER:** This document is a forward-looking proposal for future architectural enhancements. The features described herein (Game Modes, Mission System, Hub Logic) are **NOT currently implemented** in the codebase. Refer to `README.md` and `GAME_DESIGN.md` for the current system state.
 
 ## 1. Executive Summary
 
