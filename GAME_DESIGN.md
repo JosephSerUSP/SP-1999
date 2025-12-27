@@ -36,7 +36,7 @@ The game follows a turn-based tactical RPG structure with roguelike elements.
 ### 2.1. The Tag Team Mechanic
 The player controls a **party of 3 characters**, but only **one character** is physically present on the grid at any time.
 
-*   **Manual Swapping:** The player can freely swap the active character (default keys: Q/E or L2/R2) at the start of their turn.
+*   **Manual Swapping:** The player can freely swap the active character (Keys: Q/E or L2/R2) at the start of their turn.
 *   **Tactical Depth:** Swapping allows the player to adapt to the situation (e.g., switch to Miguel to tank a hit, switch to Rebus to clear a room).
 *   **Stamina (PE) Management:**
     *   Every action (Move, Attack, Skill) costs **PE** (Power Energy).
@@ -71,6 +71,8 @@ Enemies use behavior trees defined in `$dataEnemies`. Common behaviors include:
 *   **Turret:** Stationary, attacks from range.
 *   **Tactical:** Maintains optimal range, switches between melee and ranged.
 
+*Note: While `aiConfig` is the standard for defining behavior, legacy support exists for the "turret" behavior type which is handled explicitly in the map update loop.*
+
 ### 3.2. Traits & Effects
 *   **Traits:** Static modifiers (e.g., "Attack + 5", "Immune to Poison") attached to Equipment or States.
 *   **Effects:** Instant actions (Damage, Heal) or State Application attached to Skills and Items.
@@ -79,3 +81,13 @@ Enemies use behavior trees defined in `$dataEnemies`. Common behaviors include:
 Characters react to gameplay events (Kill, Walk, Loot, Hurt) with "Banter" lines displayed above their heads.
 *   **Priority Queue:** High-priority lines (Story, Low HP) override flavor text. Note: Banter is suppressed if input is blocked (e.g., during cutscenes), regardless of priority.
 *   **Context Awareness:** Banter can check conditions like "Nearby Enemy Count" or "Current Health %".
+
+## 4. Controls
+
+*   **Arrow Keys** or **W/A/S/D**: Move the character.
+*   **Spacebar / Enter**: Confirm / Interact.
+*   **Escape / Backspace**: Cancel / Back.
+*   **C**: Open Tactics Menu.
+*   **Tab / M**: Toggle Minimap.
+*   **Q / E** (or PageUp / PageDown): Cycle Active Character.
+*   **Mouse**: Interact with the UI (select skills, manage inventory, view tooltips).
