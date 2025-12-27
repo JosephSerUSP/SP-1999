@@ -9,7 +9,9 @@ The goal was to make the game fully playable via keyboard and gamepad, ensuring 
         *   Movement: Arrows / WASD / D-Pad
         *   Confirm/Attack: Enter / Space / Z / Button 0 (A/Cross)
         *   Cancel/Back: Escape / X / Backspace / Button 1 (B/Circle)
-        *   Menu/Tactics: Tab / C / Button 2 or 3 (X/Y/Square/Triangle)
+        *   Menu/Tactics: C / Button 2 or 3 (X/Y/Square/Triangle)
+        *   Minimap Toggle: Tab / M
+        *   Party Swap: Q / E / PageUp / PageDown / L2 / R2
     *   **Latching:** Implemented input latching to ensure fast key presses are not missed between frames.
 
 *   **UI Focus System:** `UIManager` in `src/windows.js` now supports a focus state (`focusedWindow`, `focusIndex`).
@@ -20,14 +22,14 @@ The goal was to make the game fully playable via keyboard and gamepad, ensuring 
 *   **Game Loop Integration:** `src/main.js` delegates input appropriately:
     *   If a Modal or Window is focused, input goes to `UIManager`.
     *   Otherwise, input goes to `Game_Map` for movement/combat.
-    *   Specific fix applied to allow opening the Tactics menu (Tab) from the Map state.
+    *   Specific fix applied to allow opening the Tactics menu (C) from the Map state.
 
 *   **Cutscenes:** `CutsceneManager` accepts 'OK' input to advance dialog, synchronized with the frame loop.
 
 ### Verification
 Automated tests confirmed:
 1.  Cutscene dismissal via 'Enter'.
-2.  Opening the Tactics menu via 'Tab' (verified state transition to `focusedWindow: 'tactics'`).
+2.  Opening the Tactics menu via 'C' (verified state transition to `focusedWindow: 'cmd'`).
 
 ## 2. Refactoring Plan (Completed)
 The following steps were executed to achieve the current state:

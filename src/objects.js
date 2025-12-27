@@ -1231,7 +1231,9 @@ class Game_Map {
                     let dx = 0, dy = 0;
                     let behavior = action.behavior || 'hunter';
 
-                    // LEGACY MOVEMENT MAPPING
+                    // LEGACY MOVEMENT MAPPING: "Turret" behavior is handled explicitly here
+                    // rather than via the generic skill execution path to maintain compatibility
+                    // with older enemy definitions that rely on this specific hardcoded logic.
                     if(behavior === "turret") {
                         // Turrets don't move, check attack
                         // Queue Attack (Legacy Turret Logic)
