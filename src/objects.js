@@ -349,6 +349,13 @@ class Game_Enemy extends Game_Battler {
              return { type: 'move', behavior: 'flee' };
         }
 
+        // Turret Logic: If turret, don't move, just check if we can attack.
+        // If we can't attack, we wait.
+        if (this.aiConfig.movement === 'turret') {
+             // We will fall through to action evaluation below.
+             // But we need to ensure we don't return a 'move' action at the end.
+        }
+
         // 1. Process Cooldowns (done in update, but checked here)
         // 2. Evaluate Actions
         const validActions = [];
@@ -397,6 +404,11 @@ class Game_Enemy extends Game_Battler {
         }
 
         // Default: Move
+        // If turret, we never move. If no action found, we wait.
+        if (this.aiConfig.movement === 'turret') {
+             return { type: 'wait' };
+        }
+
         return { type: 'move', behavior: this.aiConfig.movement || 'hunter' };
     }
 
@@ -1231,55 +1243,46 @@ class Game_Map {
                     let dx = 0, dy = 0;
                     let behavior = action.behavior || 'hunter';
 
-                    // LEGACY MOVEMENT MAPPING
-                    if(behavior === "turret") {
-                        // Turrets don't move, check attack
-                        // Queue Attack (Legacy Turret Logic)
-                        if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
-                            pendingActions.push({ type: 'turret_fire', enemy: e, behavior: behavior });
+                    // Priority 1: Check for Melee Attack Opportunity
+                    // If adjacent and not fleeing, attack immediately instead of moving.
+                    if (dist === 1 && behavior !== "flee") {
+                        // Face Player
+                        const dirX = Math.sign(this.playerX - e.x);
+                        const dirY = Math.sign(this.playerY - e.y);
+                        e.direction = {x: dirX, y: dirY};
+
+                        pendingActions.push({ type: 'melee', enemy: e, nx: this.playerX, ny: this.playerY });
+                    }
+                    // Priority 2: Move
+                    else {
+                            if (behavior === "flee") {
+                                dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
+                                if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
+                        } else if(behavior === "patrol" && !e.alerted) {
+                                if(Math.random() < 0.3) {
+                                    const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
+                                    const dir = dirs[Math.floor(Math.random()*dirs.length)];
+                                    dx = dir.x; dy = dir.y;
+                                }
+                        } else if(behavior === "hunter" || behavior === "ambush" || (behavior === "patrol" && e.alerted)) {
+                            dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
+                            if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
                         }
-                    } else {
-                        // Priority 1: Check for Melee Attack Opportunity
-                        // If adjacent and not fleeing, attack immediately instead of moving.
-                        if (dist === 1 && behavior !== "flee") {
-                            // Face Player
-                            const dirX = Math.sign(this.playerX - e.x);
-                            const dirY = Math.sign(this.playerY - e.y);
-                            e.direction = {x: dirX, y: dirY};
 
-                            pendingActions.push({ type: 'melee', enemy: e, nx: this.playerX, ny: this.playerY });
-                        }
-                        // Priority 2: Move
-                        else {
-                             if (behavior === "flee") {
-                                 dx = -Math.sign(this.playerX - e.x); dy = -Math.sign(this.playerY - e.y);
-                                 if(dx === 0 && dy === 0) { dx = Math.random()<0.5?1:-1; dy = Math.random()<0.5?1:-1; }
-                            } else if(behavior === "patrol" && !e.alerted) {
-                                 if(Math.random() < 0.3) {
-                                     const dirs = [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}];
-                                     const dir = dirs[Math.floor(Math.random()*dirs.length)];
-                                     dx = dir.x; dy = dir.y;
-                                 }
-                            } else if(behavior === "hunter" || behavior === "ambush" || (behavior === "patrol" && e.alerted)) {
-                                dx = Math.sign(this.playerX - e.x); dy = Math.sign(this.playerY - e.y);
-                                if(Math.random() < 0.5 && dx !== 0) dy = 0; else if(dy !== 0) dx = 0;
-                            }
+                        // Target Coordinate
+                        const nx = e.x + dx; const ny = e.y + dy;
 
-                            // Target Coordinate
-                            const nx = e.x + dx; const ny = e.y + dy;
+                        // Update Direction
+                        if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
 
-                            // Update Direction
-                            if(dx !== 0 || dy !== 0) e.direction = {x: dx, y: dy};
-
-                            // Move Validity Check
-                            // Must be valid tile, not wall, not occupied by another enemy, AND not occupied by player
-                            const isBlockedByPlayer = (nx === this.playerX && ny === this.playerY);
-                            if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en !== e && en.x === nx && en.y === ny) && !isBlockedByPlayer) {
-                                // Valid Move - Execute State Change Immediately
-                                e.x = nx; e.y = ny;
-                                e.onActionTaken({ type: 'move' });
-                                anyMoved = true;
-                            }
+                        // Move Validity Check
+                        // Must be valid tile, not wall, not occupied by another enemy, AND not occupied by player
+                        const isBlockedByPlayer = (nx === this.playerX && ny === this.playerY);
+                        if(this.isValid(nx, ny) && this.tiles[nx][ny] === 0 && !this.enemies.find(en => en !== e && en.x === nx && en.y === ny) && !isBlockedByPlayer) {
+                            // Valid Move - Execute State Change Immediately
+                            e.x = nx; e.y = ny;
+                            e.onActionTaken({ type: 'move' });
+                            anyMoved = true;
                         }
                     }
                 }
@@ -1300,15 +1303,6 @@ class Game_Map {
             if (act.type === 'skill') {
                 await BattleManager.executeSkill(e, act.action.skillId, null);
                 e.onActionTaken(act.action);
-            } else if (act.type === 'turret_fire') {
-                 const target = $gameParty.active();
-                 const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
-                 target.takeDamage(dmg);
-                 EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
-                 await Sequencer.sleep(100);
-                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                 EventBus.emit('play_animation', 'hit', { uid: 'player' });
-                 await Sequencer.sleep(200);
             } else if (act.type === 'melee') {
                 const target = $gameParty.active();
                 const dmg = BattleManager.calcDamage(e, target);
