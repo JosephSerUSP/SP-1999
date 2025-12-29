@@ -244,3 +244,21 @@ body {
     0% { opacity: 1; transform: translateX(0); }
     100% { opacity: 0; transform: translateX(-20px); }
 }
+
+/* --- CUTSCENE DIALOG --- */
+.cutscene-header {
+    border-bottom: 1px solid #444;
+    margin-bottom: 5px;
+    padding-bottom: 2px;
+    font-weight: bold;
+}
+
+.cutscene-body {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.cutscene-footer {
+    font-size: 10px;
+    color: #666;
+}

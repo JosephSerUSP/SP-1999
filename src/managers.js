@@ -89,9 +89,9 @@ class CutsceneManager {
         switch(cmd.type) {
             case 'dialog':
                 this.dialogEl.innerHTML = `
-                    <div style="border-bottom:1px solid #444; margin-bottom:5px; padding-bottom:2px; font-weight:bold; color:${cmd.color || '#0ff'}">${cmd.speaker || 'SYSTEM'}</div>
-                    <div style="font-size:14px; margin-bottom:10px;">${cmd.text}</div>
-                    <div style="font-size:10px; color:#666;">[CLICK / PRESS OK TO CONTINUE]</div>
+                    <div class="cutscene-header" style="color:${cmd.color || '#0ff'}">${cmd.speaker || 'SYSTEM'}</div>
+                    <div class="cutscene-body">${cmd.text}</div>
+                    <div class="cutscene-footer">[CLICK / PRESS OK TO CONTINUE]</div>
                 `;
                 this.dialogEl.style.display = 'block';
 
