@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Stillnight: Eve of the Stack** is a browser-based, turn-based dungeon crawler RPG. Players control a squad of three specialized characters—Aya (Detective), Kyle (Trooper), and Eve (Subject)—as they navigate through procedurally generated sectors of a mysterious "stack". The game features tactical combat, resource management, and a unique 3D visual representation built with Three.js.
+**Stillnight: Eve of the Stack** is a browser-based, turn-based dungeon crawler RPG. Players control a squad of three specialized characters—Julia (The Agent), Miguel (The Analyst), and Rebus (The Entity)—as they navigate through procedurally generated sectors of a mysterious "stack". The game features tactical combat, resource management, and a unique 3D visual representation built with Three.js.
 
 ## Getting Started
 
@@ -54,7 +54,7 @@ To modify the game:
 *   **Exploration**: Navigate grid-based levels.
 *   **Combat**: Turn-based. Bump enemies to attack or use skills.
 *   **Squad System**: Rotate between three characters with unique stats and skills.
-    *   **Aya**: High speed/utility.
-    *   **Kyle**: Defense/crowd control.
-    *   **Eve**: High damage magic/PE consumer.
+    *   **Julia** (The Agent): High speed/utility.
+    *   **Miguel** (The Analyst): Defense/crowd control.
+    *   **Rebus** (The Entity): High damage magic/PE consumer.
 *   **Progression**: Gain EXP to level up. Find loot to equip.
