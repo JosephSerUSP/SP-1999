@@ -38,19 +38,24 @@ The player controls a **party of 3 characters**, but only **one character** is p
 
 *   **Manual Swapping:** The player can freely swap the active character (default keys: Q/E or L2/R2) at the start of their turn.
 *   **Tactical Depth:** Swapping allows the player to adapt to the situation (e.g., switch to Miguel to tank a hit, switch to Rebus to clear a room).
-*   **Stamina (PE) Management:**
-    *   Every action (Move, Attack, Skill) costs **PE** (Power Energy).
-    *   **Inactive** party members regenerate PE (50% of the active member's expenditure).
-    *   **Exhaustion:** If a character's PE reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their PE recovers to 50%.
+*   **Resource Management (Stamina & PE):**
+    *   **Stamina:** Used for physical exertion (Movement, Swapping, Actions).
+        *   Move costs 10 Stamina.
+        *   Actions (Skill/Attack) cost 20 Stamina.
+        *   **Inactive** party members regenerate Stamina (50% of the active member's expenditure).
+        *   **Exhaustion:** If a character's Stamina reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their Stamina recovers to 50%.
+    *   **PE (Power Energy):** Used for casting Skills.
+        *   Skills consume specific amounts of PE.
+        *   PE does **not** regenerate automatically on the bench; it requires items or specific abilities to restore.
 
 ### 2.2. Combat
 Combat is seamless (no separate battle screen) and takes place on the dungeon grid.
 
 *   **Turn Structure:** Player Phase -> Enemy Phase.
 *   **Actions:**
-    *   **Move:** WASD / D-Pad. Consumes 10 PE.
-    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 0 PE (uses weapon stats).
-    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE.
+    *   **Move:** WASD / D-Pad. Consumes 10 Stamina.
+    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 20 Stamina (but 0 PE).
+    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE (plus 20 Stamina for the action).
         *   **Targeting:** Starts at the active character (or first valid target for inspection).
     *   **Items:** Consumables for healing or buffs. Using an item ends the turn.
 *   **Damage Formula:** `(ATK * 2 - DEF) * variation`. This formula makes Defense a very powerful stat.
@@ -65,11 +70,13 @@ Combat is seamless (no separate battle screen) and takes place on the dungeon gr
 ## 3. Systems
 
 ### 3.1. Enemy AI
-Enemies use behavior trees defined in `$dataEnemies`. Common behaviors include:
+Enemies use an `aiConfig` object defined in `$dataEnemies`. Common behaviors include:
 *   **Hunter:** Pathfinds directly to the player.
-*   **Patrol:** Moves randomly until the player is spotted.
-*   **Turret:** Stationary, attacks from range.
-*   **Tactical:** Maintains optimal range, switches between melee and ranged.
+*   **Patrol:** Moves randomly until the player is spotted (alerted).
+*   **Turret:** Stationary, attacks from range (Logic is partly hardcoded for movement suppression).
+*   **Tactical:** Maintains optimal range, switches between melee and ranged based on conditional actions.
+
+The `aiConfig` supports a list of `actions` with conditions (range, cooldowns, state checks) to determine skill usage.
 
 ### 3.2. Traits & Effects
 *   **Traits:** Static modifiers (e.g., "Attack + 5", "Immune to Poison") attached to Equipment or States.
