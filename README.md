@@ -19,8 +19,11 @@
 ## Game Controls
 
 *   **Arrow Keys** or **W/A/S/D**: Move the character.
-*   **Spacebar**: Wait / Skip turn.
-*   **Enter**: Melee Attack.
+*   **Spacebar / Enter / Z**: Confirm / Open Command Menu.
+*   **Esc / X / Backspace**: Cancel / Back.
+*   **Tab / M**: Toggle Minimap.
+*   **Q / E** or **PageUp / PageDown**: Swap Character.
+*   **C**: Open Command Menu (Alternative).
 *   **Mouse**: Interact with the UI (select skills, manage inventory, view tooltips).
 
 ## Architecture
@@ -31,11 +34,11 @@ The codebase has been refactored from a monolithic prototype into a modular arch
 
 *   **`data.js`**: Contains static configuration data (`CONFIG`), game database objects (`$dataSkills`, `$dataClasses`, `$dataEnemies`), and constant definitions (`EFFECT_*`, `TRAIT_*`).
 *   **`core.js`**: Contains core utility classes that define the engine's backbone, such as `EventBus` (for decoupling logic and view), `ConditionSystem`, and `Sequencer`.
-*   **`managers.js`**: Static classes that manage high-level game logic and systems (`SceneManager`, `BattleManager`, `ItemManager`).
-*   **`objects.js`**: The "Model" layer. Classes representing game entities (`Game_Actor`, `Game_Enemy`, `Game_Map`). These hold state and business logic but do not handle rendering.
+*   **`managers.js`**: Static classes that manage high-level game logic and systems (`BattleManager`, `ItemManager`, `CutsceneManager`, `BanterManager`).
+*   **`objects.js`**: The "Model" layer. Classes representing game entities (`Game_Actor`, `Game_Enemy`, `Game_Map`, `Game_System`). These hold state and business logic but do not handle rendering.
 *   **`sprites.js`**: The "View" layer for the 3D world. Contains `Renderer3D` (Three.js logic) and `ParticleSystem`.
-*   **`windows.js`**: The "View" layer for the UI. Contains `UIManager` and `UI_Window`.
-*   **`main.js`**: The entry point. Bootstraps the application, handles window resizing, and initializes the `SceneManager`.
+*   **`windows.js`**: The "View" layer for the UI. Contains `UIManager` and legacy modal helpers.
+*   **`main.js`**: The entry point. Contains `SceneManager` which bootstraps the application, handles the game loop, and window resizing.
 
 ### Key Design Patterns
 
