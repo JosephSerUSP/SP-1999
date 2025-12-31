@@ -160,9 +160,7 @@ class Geometry {
                 const dist = Math.abs(dx) + Math.abs(dy); // Manhattan for loop limit check approx
                 if (dist > range * 1.5) continue; // Optimization
 
-                // Exact range check (Euclidean or Chebyshev? Game uses Manhattan often but for cone visual Euclidean is better? Or Grid?)
-                // Let's use Chebyshev (Max(dx, dy)) for square range, or Manhattan.
-                // Standard for this game seems to be Manhattan `dist` used in checks, but let's be generous.
+                // Exact range check using Euclidean distance for smoother cone edges
                 if (Math.sqrt(dx*dx + dy*dy) > range) continue;
 
                 // Direction Check
