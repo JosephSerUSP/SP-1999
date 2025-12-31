@@ -2,6 +2,11 @@
 // MAIN ENTRY POINT
 // ============================================================================
 
+/**
+ * @fileoverview Main entry point and SceneManager implementation.
+ * Handles game loop, initialization, and high-level state.
+ */
+
 /** @type {Game_System} */
 let $gameSystem;
 /** @type {Game_Party} */
