@@ -41,16 +41,16 @@ The player controls a **party of 3 characters**, but only **one character** is p
 *   **Stamina (PE) Management:**
     *   Every action (Move, Attack, Skill) costs **PE** (Power Energy).
     *   **Inactive** party members regenerate PE (50% of the active member's expenditure).
-    *   **Exhaustion:** If a character's PE reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their PE recovers to 50%.
+    *   **Exhaustion:** If a character's Stamina reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their Stamina recovers to 50%.
 
 ### 2.2. Combat
 Combat is seamless (no separate battle screen) and takes place on the dungeon grid.
 
 *   **Turn Structure:** Player Phase -> Enemy Phase.
 *   **Actions:**
-    *   **Move:** WASD / D-Pad. Consumes 10 PE.
-    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 0 PE (uses weapon stats).
-    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE.
+    *   **Move:** WASD / D-Pad. Consumes 10 Stamina.
+    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 20 Stamina.
+    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE (Power Energy) and 20 Stamina.
         *   **Targeting:** Starts at the active character (or first valid target for inspection).
     *   **Items:** Consumables for healing or buffs. Using an item ends the turn.
 *   **Damage Formula:** `(ATK * 2 - DEF) * variation`. This formula makes Defense a very powerful stat.

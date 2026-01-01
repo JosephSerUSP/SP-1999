@@ -19,8 +19,11 @@
 ## Game Controls
 
 *   **Arrow Keys** or **W/A/S/D**: Move the character.
-*   **Spacebar**: Wait / Skip turn.
-*   **Enter**: Melee Attack.
+*   **Spacebar / Enter / Z**: Confirm / Interact.
+*   **Arrow Keys / WASD**: Move / Navigate Menu.
+*   **Tab / M**: Toggle Minimap.
+*   **C**: Open Command Menu.
+*   **Q / E**: Swap Character.
 *   **Mouse**: Interact with the UI (select skills, manage inventory, view tooltips).
 
 ## Architecture
@@ -34,7 +37,8 @@ The codebase has been refactored from a monolithic prototype into a modular arch
 *   **`managers.js`**: Static classes that manage high-level game logic and systems (`SceneManager`, `BattleManager`, `ItemManager`).
 *   **`objects.js`**: The "Model" layer. Classes representing game entities (`Game_Actor`, `Game_Enemy`, `Game_Map`). These hold state and business logic but do not handle rendering.
 *   **`sprites.js`**: The "View" layer for the 3D world. Contains `Renderer3D` (Three.js logic) and `ParticleSystem`.
-*   **`windows.js`**: The "View" layer for the UI. Contains `UIManager` and `UI_Window`.
+*   **`ui/`**: The "View" layer for the User Interface. Contains the component-based UI framework (`core.js`, `components.js`, `layouts.js`) and window implementations (`windows/*.js`).
+*   **`windows.js`**: Contains the `UIManager` which bridges the game loop and the UI system.
 *   **`main.js`**: The entry point. Bootstraps the application, handles window resizing, and initializes the `SceneManager`.
 
 ### Key Design Patterns
@@ -54,7 +58,7 @@ To modify the game:
 *   **Exploration**: Navigate grid-based levels.
 *   **Combat**: Turn-based. Bump enemies to attack or use skills.
 *   **Squad System**: Rotate between three characters with unique stats and skills.
-    *   **Aya**: High speed/utility.
-    *   **Kyle**: Defense/crowd control.
-    *   **Eve**: High damage magic/PE consumer.
+    *   **Julia**: High speed/utility.
+    *   **Miguel**: Defense/crowd control.
+    *   **Rebus**: High damage magic/PE consumer.
 *   **Progression**: Gain EXP to level up. Find loot to equip.
