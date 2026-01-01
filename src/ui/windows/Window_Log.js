@@ -2,6 +2,10 @@
 // WINDOW: LOG
 // ============================================================================
 
+/**
+ * Window for displaying game logs.
+ * Displays messages in reverse chronological order (newest at the top).
+ */
 class Window_Log extends Window_Base {
     constructor(mmW) {
         // Position at Top Left (2%, 220px)
