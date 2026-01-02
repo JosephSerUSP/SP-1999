@@ -311,14 +311,13 @@ const $dataEnemies = [
                     skill: "charge_blade",
                     priority: 30,
                     condition: { range: [1,1], state: 'meleeMode', value: true },
-                    onUse: { clearState: 'meleeMode' } // Switch back after hit? Or stay? "Land 2 hits" logic requires counter.
-                    // For demo: Switch back immediately (shoot once, charge once, repeat)
+                    onUse: { clearState: 'meleeMode' }
                 },
-                // If adjacent but NOT in melee mode yet? Force switch if close?
+                // If adjacent but NOT in melee mode yet, use melee
                 {
                     skill: "charge_blade",
                     priority: 25,
-                    condition: { range: [1,1] }, // Use melee if close anyway
+                    condition: { range: [1,1] },
                     onUse: { setState: 'meleeMode' }
                 },
                 // Ranged attack - Triggers melee mode
@@ -326,7 +325,7 @@ const $dataEnemies = [
                     skill: "tactical_shot",
                     priority: 20,
                     condition: { range: [2,6], notState: 'meleeMode' },
-                    onUse: { setState: 'meleeMode' } // Switch to melee after shooting
+                    onUse: { setState: 'meleeMode' }
                 }
             ]
         }
