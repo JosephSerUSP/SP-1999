@@ -155,10 +155,10 @@ class BattleManager {
      * @returns {number} The calculated damage amount (minimum 1).
      */
     static calcDamage(source, target) {
-        let atk = source.getAtk ? source.getAtk() : source.atk;
-        let def = target.getDef ? target.getDef() : (target.def || 0);
+        const atk = source.getAtk ? source.getAtk() : source.atk;
+        const def = target.getDef ? target.getDef() : (target.def || 0);
         const variation = 0.8 + Math.random() * 0.4;
-        let dmg = Math.floor((atk * 2 - def) * variation);
+        const dmg = Math.floor((atk * 2 - def) * variation);
         return Math.max(1, dmg);
     }
 
@@ -207,7 +207,6 @@ class BattleManager {
                 }
                 break;
             case EFFECT_RECOVER_PE:
-                // Assuming Game_Actor has pe
                 if(target.pe !== undefined) {
                     target.pe = Math.min(target.mpe, target.pe + effect.value);
                     EventBus.emit('float_text', "+" + effect.value + "PE", target.x, target.y, "#0ff");
@@ -236,8 +235,7 @@ class BattleManager {
         const isPlayer = a.uid === 'player' || a instanceof Game_Actor;
 
         // Cost Check (PE)
-        // Enemies might not use PE strictly yet, or have infinite?
-        // Let's enforce it if they have 'pe' property, else free.
+        // Enforce PE cost if the battler has the property.
         if(a.pe !== undefined && a.pe < s.cost) {
             if(isPlayer) $gameSystem.log("No PE.", 'warning');
             return false;
