@@ -187,7 +187,7 @@ class Window_Inventory extends Window_Base {
 
     createEquipRow(slot, item, actor) {
         return {
-            type: 'container', // Changed from Button to container (div) to avoid button styling issues
+            type: 'container',
             props: {
                 className: 'item-row',
                 style: { fontSize: '10px', display: 'flex', justifyContent: 'space-between', cursor: item ? 'pointer' : 'default', background: 'transparent', border: 'none', width: '100%', textAlign: 'left', padding: '2px' },
@@ -206,11 +206,20 @@ class Window_Inventory extends Window_Base {
         };
     }
 
+    /**
+     * Updates the description text in the inventory window.
+     * @param {string} text - The description text to display.
+     */
     updateDescription(text) {
         const el = document.getElementById('inv-desc-text');
         if (el) el.innerText = text;
     }
 
+    /**
+     * Handles clicking on an inventory item.
+     * @param {Game_Item|Game_Weapon|Game_Armor} item - The clicked item.
+     * @param {number} idx - The index of the item in the inventory.
+     */
     onItemClick(item, idx) {
         if ($gameSystem.isInputBlocked || $gameSystem.isBusy) {
             return;
@@ -221,6 +230,10 @@ class Window_Inventory extends Window_Base {
         this.refreshAndTitle();
     }
 
+    /**
+     * Handles selecting a target for the currently selected item.
+     * @param {Game_Actor} target - The selected target actor.
+     */
     onTargetClick(target) {
         if ($gameSystem.isInputBlocked || $gameSystem.isBusy) return;
 
