@@ -19,8 +19,10 @@
 ## Game Controls
 
 *   **Arrow Keys** or **W/A/S/D**: Move the character.
-*   **Spacebar**: Wait / Skip turn.
-*   **Enter**: Melee Attack.
+*   **Spacebar / Enter / Z**: Confirm / Open Command Menu.
+*   **Esc / X**: Cancel / Back.
+*   **Q / E** (or L2/R2): Swap active character.
+*   **Tab / C**: Toggle Menu.
 *   **Mouse**: Interact with the UI (select skills, manage inventory, view tooltips).
 
 ## Architecture
