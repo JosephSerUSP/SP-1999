@@ -480,6 +480,7 @@ class Game_Actor extends Game_Battler {
 
     /**
      * Regenerates PE (Power Energy).
+     * @deprecated Unused. Item logic handles PE restoration directly.
      */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
 
