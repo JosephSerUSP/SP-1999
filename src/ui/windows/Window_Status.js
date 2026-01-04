@@ -68,6 +68,12 @@ class Window_Status extends Window_Base {
         };
     }
 
+    /**
+     * Creates a reusable stat box component.
+     * @param {string} label - The label for the stat.
+     * @param {string|number} value - The value to display.
+     * @returns {Object} The component definition.
+     */
     createStatBox(label, value) {
         return {
             type: 'container',
