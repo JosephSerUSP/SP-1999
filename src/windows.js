@@ -302,7 +302,7 @@ class UIManager {
     }
 
     /**
-     * @deprecated Legacy imperative modal. Use Window_Target or similar component-based approach if available.
+     * @deprecated Legacy imperative modal. Use Window_Inventory internal viewState instead.
      */
     showTargetSelectModal(callback, itemPreview = null) {
         // Legacy imperative modal

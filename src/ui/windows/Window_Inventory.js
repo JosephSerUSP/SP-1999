@@ -2,6 +2,10 @@
 // WINDOW: INVENTORY
 // ============================================================================
 
+/**
+ * Inventory Window.
+ * Manages item selection and targeting via an internal view state ('list' vs 'target').
+ */
 class Window_Inventory extends Window_Base {
     constructor() {
         super('inventory-modal', {
