@@ -4,6 +4,7 @@
 
 /**
  * Helper to properly dispose of a Three.js object and its children.
+ * Ensures geometries and materials are disposed to prevent memory leaks.
  * @param {THREE.Object3D} obj
  */
 function disposeHierarchy(obj) {
@@ -427,6 +428,9 @@ class Renderer3D {
      * Triggers a specific visual animation.
      * @param {string} type - The type of animation (e.g., 'move_switch', 'lunge', 'hit').
      * @param {Object} data - Parameters for the animation.
+     * @param {number} [data.toX] - Target X for move animations.
+     * @param {number} [data.toY] - Target Y for move animations.
+     * @param {number} [data.nextColor] - Hex color to swap to during 'move_switch'.
      */
     playAnimation(type, data) {
         if (type === 'move_switch' || type === 'move') {

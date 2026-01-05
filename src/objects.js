@@ -480,6 +480,7 @@ class Game_Actor extends Game_Battler {
 
     /**
      * Regenerates PE (Power Energy).
+     * @deprecated PE does not regenerate automatically in the current design. Use items.
      */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
 
@@ -1043,8 +1044,8 @@ class Game_Map {
 
     /**
      * Processes a game turn based on player movement or a direct action.
-     * @param {number} dx - Change in x.
-     * @param {number} dy - Change in y.
+     * @param {number} dx - Change in x (0 if strictly an action).
+     * @param {number} dy - Change in y (0 if strictly an action).
      * @param {Function} [action] - An optional async callback representing a non-movement action (e.g., skill).
      */
     async processTurn(dx, dy, action) {
