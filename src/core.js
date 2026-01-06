@@ -136,19 +136,15 @@ class Geometry {
     }
 
     /**
-     * Calculates tiles in a cone.
+     * Calculates tiles in a cone (90-degree field of view).
      * @param {number} ox - Origin X
      * @param {number} oy - Origin Y
-     * @param {Object} dir - Direction vector {x, y} (normalized-ish, e.g. 0,1)
-     * @param {number} range - Range/Length of cone
+     * @param {Object} dir - Direction vector {x, y}.
+     * @param {number} range - Range/Length of cone.
      * @returns {Array<{x:number, y:number}>}
      */
     static getCone(ox, oy, dir, range) {
         const points = [];
-        // Cone Logic: 90 degrees (Triangle on grid)
-        // If facing North (0, -1):
-        //  Rows up to range. Width increases by 1 each step away.
-        //  Simple dot product check or relative coordinate check.
 
         // Iterate bounding box
         for (let x = ox - range; x <= ox + range; x++) {
@@ -160,9 +156,7 @@ class Geometry {
                 const dist = Math.abs(dx) + Math.abs(dy); // Manhattan for loop limit check approx
                 if (dist > range * 1.5) continue; // Optimization
 
-                // Exact range check (Euclidean or Chebyshev? Game uses Manhattan often but for cone visual Euclidean is better? Or Grid?)
-                // Let's use Chebyshev (Max(dx, dy)) for square range, or Manhattan.
-                // Standard for this game seems to be Manhattan `dist` used in checks, but let's be generous.
+                // Exact range check (Euclidean Distance)
                 if (Math.sqrt(dx*dx + dy*dy) > range) continue;
 
                 // Direction Check
@@ -170,7 +164,7 @@ class Geometry {
                 // Dot Product: dx*dir.x + dy*dir.y
                 const dot = dx * dir.x + dy * dir.y;
 
-                // If dot > 0, it's in front.
+                // If dot <= 0, it's behind or perpendicular.
                 if (dot <= 0) continue;
 
                 // Angle check.
