@@ -336,7 +336,17 @@ class Game_Enemy extends Game_Battler {
 
     /**
      * Decides the best action to take.
-     * @returns {Object} Action definition (e.g., { type: 'move', behavior: string } or { type: 'skill', skillId: string, config: Object })
+     * @returns {Object} Action definition (e.g., { type: 'move', behavior: string } or { type: 'skill', skillId: string, config: Object }).
+     *
+     * Action Config Structure:
+     * - skill: string (ID)
+     * - condition: Object
+     *   - range: [min, max]
+     *   - state: string (required customState key)
+     *   - value: any (required customState value)
+     *   - notState: string (forbidden customState key)
+     *   - interval: number (turn interval)
+     * - priority: number
      */
     decideAction() {
         if (!this.aiConfig) {
