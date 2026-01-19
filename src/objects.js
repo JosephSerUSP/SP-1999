@@ -480,6 +480,7 @@ class Game_Actor extends Game_Battler {
 
     /**
      * Regenerates PE (Power Energy).
+     * @deprecated PE does not regenerate automatically in the current design.
      */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
 
@@ -1043,6 +1044,9 @@ class Game_Map {
 
     /**
      * Processes a game turn based on player movement or a direct action.
+     * Checks input locking ($gameSystem.isBusy) before execution.
+     * Note: While standard movement doesn't set isBusy to true, the method checks isBusy
+     * at the start, preventing movement during animations or other locked states.
      * @param {number} dx - Change in x.
      * @param {number} dy - Change in y.
      * @param {Function} [action] - An optional async callback representing a non-movement action (e.g., skill).

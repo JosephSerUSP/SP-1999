@@ -137,6 +137,7 @@ class Geometry {
 
     /**
      * Calculates tiles in a cone.
+     * Uses Euclidean distance for range verification to generate smoother visual edges.
      * @param {number} ox - Origin X
      * @param {number} oy - Origin Y
      * @param {Object} dir - Direction vector {x, y} (normalized-ish, e.g. 0,1)

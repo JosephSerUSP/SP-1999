@@ -38,19 +38,21 @@ The player controls a **party of 3 characters**, but only **one character** is p
 
 *   **Manual Swapping:** The player can freely swap the active character (default keys: Q/E or L2/R2) at the start of their turn.
 *   **Tactical Depth:** Swapping allows the player to adapt to the situation (e.g., switch to Miguel to tank a hit, switch to Rebus to clear a room).
-*   **Stamina (PE) Management:**
-    *   Every action (Move, Attack, Skill) costs **PE** (Power Energy).
-    *   **Inactive** party members regenerate PE (50% of the active member's expenditure).
-    *   **Exhaustion:** If a character's PE reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their PE recovers to 50%.
+*   **Stamina & PE Management:**
+    *   **PE (Power Energy):** A finite resource used for Skills. It does not regenerate automatically during combat.
+    *   **Stamina:** Used for Movement and physical actions.
+        *   Every action (Move, Attack, Skill) costs **Stamina**.
+        *   **Inactive** party members regenerate Stamina (50% of the active member's expenditure).
+    *   **Exhaustion:** If a character's Stamina reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their Stamina recovers to 50%.
 
 ### 2.2. Combat
 Combat is seamless (no separate battle screen) and takes place on the dungeon grid.
 
 *   **Turn Structure:** Player Phase -> Enemy Phase.
 *   **Actions:**
-    *   **Move:** WASD / D-Pad. Consumes 10 PE.
-    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 0 PE (uses weapon stats).
-    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE.
+    *   **Move:** WASD / D-Pad. Consumes 10 Stamina.
+    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 20 Stamina.
+    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE + 20 Stamina.
         *   **Targeting:** Starts at the active character (or first valid target for inspection).
     *   **Items:** Consumables for healing or buffs. Using an item ends the turn.
 *   **Damage Formula:** `(ATK * 2 - DEF) * variation`. This formula makes Defense a very powerful stat.
