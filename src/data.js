@@ -249,6 +249,11 @@ const $dataClasses = {
  * Data definitions for enemies.
  * @constant
  * @type {Array<Object>}
+ * @property {string} ai - @deprecated Legacy behavior tag. Use `aiConfig` instead.
+ * @property {Object} aiConfig - Configuration for the behavior tree/state machine.
+ * @property {string} aiConfig.movement - Movement pattern (hunter, patrol, turret, flee).
+ * @property {number} [aiConfig.fleeThreshold] - HP percentage at which to flee.
+ * @property {Array<Object>} [aiConfig.actions] - List of skills and conditions.
  */
 const $dataEnemies = [
     {
