@@ -179,7 +179,7 @@ class Window_Base {
         this.createWindowShell();
     }
 
-    // Compatibility getter for legacy code expecting .content
+    /** @deprecated Use contentEl instead. */
     get content() { return this.contentEl; }
 
     createWindowShell() {

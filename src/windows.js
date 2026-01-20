@@ -302,7 +302,7 @@ class UIManager {
     }
 
     /**
-     * @deprecated Legacy imperative modal. Use Window_Target or similar component-based approach if available.
+     * @deprecated Legacy imperative modal. Logic has moved to component internal states (e.g. Window_Inventory viewState).
      */
     showTargetSelectModal(callback, itemPreview = null) {
         // Legacy imperative modal
@@ -373,7 +373,7 @@ class UIManager {
     }
 
     /**
-     * @deprecated Legacy imperative modal. Use Window_Confirm or similar component-based approach if available.
+     * @deprecated Legacy imperative modal. UI logic should be handled within specific Window components.
      */
     showConfirmModal(text, onConfirm) {
         // Legacy imperative modal
