@@ -376,7 +376,7 @@ class Renderer3D {
 
         const dangerTiles = new Set();
         $gameMap.enemies.forEach(e => {
-            if (e.ai === 'turret') {
+            if (e.aiConfig && e.aiConfig.movement === 'turret') {
                 const range = 5; // Hardcoded range for Turret
                 for (let x = e.x - range; x <= e.x + range; x++) {
                     for (let y = e.y - range; y <= e.y + range; y++) {

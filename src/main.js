@@ -35,10 +35,10 @@ class SceneManager {
         Cutscene = new CutsceneManager();
         $gameBanter = new BanterManager();
 
-        Renderer.init(UI.windows.view.content);
+        Renderer.init(UI.windows.view.contentEl);
         $gameMap.setup(1);
         UI.refresh();
-        $gameBanter.init(UI.windows.view.content);
+        $gameBanter.init(UI.windows.view.contentEl);
         $gameSystem.log("System initialized.");
         InputManager.init();
         this.loop();
