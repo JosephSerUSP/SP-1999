@@ -353,6 +353,7 @@ const $dataLootTable = {
 
 /**
  * Configuration for floor generation.
+ * Note: `boss` and `texture` properties mentioned in design docs are not currently utilized by the generator.
  * @constant
  * @type {Object}
  */
