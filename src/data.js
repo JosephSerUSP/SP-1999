@@ -252,7 +252,7 @@ const $dataClasses = {
  */
 const $dataEnemies = [
     {
-        id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4, ai: "hunter",
+        id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4,
         aiConfig: {
             movement: "hunter",
             actions: [
@@ -261,15 +261,15 @@ const $dataEnemies = [
         }
     },
     {
-        id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6, ai: "patrol",
+        id: 2, name: "Ooze", hp: 25, atk: 5, exp: 12, color: 0x00ff44, scale: 0.6,
         aiConfig: { movement: "patrol", fleeThreshold: 0.3 }
     },
     {
-        id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8, ai: "ambush",
+        id: 3, name: "Stalker", hp: 40, atk: 8, exp: 25, color: 0xff4400, scale: 0.8,
         aiConfig: { movement: "ambush", fleeThreshold: 0.3 }
     },
     {
-        id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5, ai: "turret",
+        id: 4, name: "Watcher", hp: 20, atk: 12, exp: 15, color: 0xaa00ff, scale: 0.5,
         aiConfig: {
             movement: "turret", // Turret behavior logic
             actions: [
@@ -282,7 +282,7 @@ const $dataEnemies = [
         }
     },
     {
-        id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3, ai: "hunter",
+        id: 5, name: "Drone", hp: 15, atk: 4, exp: 10, color: 0xaaaaaa, scale: 0.3,
         aiConfig: {
             movement: "hunter",
             actions: [
@@ -291,18 +291,18 @@ const $dataEnemies = [
         }
     },
     {
-        id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5, ai: "hunter",
+        id: 6, name: "Mutant Hound", hp: 30, atk: 6, exp: 20, color: 0x880000, scale: 0.5,
         aiConfig: { movement: "hunter", fleeThreshold: 0.3 }
     },
     {
-        id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0, ai: "patrol",
+        id: 7, name: "Abomination", hp: 80, atk: 10, exp: 50, color: 0x440044, scale: 1.0,
         aiConfig: { movement: "patrol", fleeThreshold: 0.3 }
     },
 
     // NEW ENEMY: Tactical Trooper
     // Shoots then charges (Switching behavior)
     {
-        id: 8, name: "Simulacrum", hp: 50, atk: 8, exp: 35, color: 0x008888, scale: 0.7, ai: "tactical",
+        id: 8, name: "Simulacrum", hp: 50, atk: 8, exp: 35, color: 0x008888, scale: 0.7,
         aiConfig: {
             movement: "hunter",
             actions: [
