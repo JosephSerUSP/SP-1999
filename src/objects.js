@@ -480,6 +480,7 @@ class Game_Actor extends Game_Battler {
 
     /**
      * Regenerates PE (Power Energy).
+     * @deprecated PE does not regenerate automatically in the current design.
      */
     regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
 
@@ -600,7 +601,7 @@ class Game_Party {
 
     /**
      * Rotates to the next living party member.
-     * Note: Now only used for forced rotation on death. Manual rotation uses cycleActive.
+     * @deprecated Usage limited to forced rotation on death. Manual rotation should use cycleActive.
      */
     rotate() {
         let s = 3;

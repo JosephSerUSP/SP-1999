@@ -36,22 +36,27 @@ The game follows a turn-based tactical RPG structure with roguelike elements.
 ### 2.1. The Tag Team Mechanic
 The player controls a **party of 3 characters**, but only **one character** is physically present on the grid at any time.
 
-*   **Manual Swapping:** The player can freely swap the active character (default keys: Q/E or L2/R2) at the start of their turn.
+*   **Manual Swapping:** The player can freely swap the active character (default keys: Q/E or PageUp/PageDown) at the start of their turn.
 *   **Tactical Depth:** Swapping allows the player to adapt to the situation (e.g., switch to Miguel to tank a hit, switch to Rebus to clear a room).
-*   **Stamina (PE) Management:**
-    *   Every action (Move, Attack, Skill) costs **PE** (Power Energy).
-    *   **Inactive** party members regenerate PE (50% of the active member's expenditure).
-    *   **Exhaustion:** If a character's PE reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their PE recovers to 50%.
+*   **Resource Management (Stamina & PE):**
+    *   **Stamina:** Used for all physical exertions. Max 1000 (effectively 100 points as actions cost 10-20).
+        *   **Move:** Consumes 10 Stamina.
+        *   **Action (Attack/Skill):** Consumes 20 Stamina.
+        *   **Recovery:** Inactive party members regenerate Stamina (50% of the active member's expenditure).
+    *   **PE (Power Energy):** Used for special Skills. Max 100.
+        *   **Skills:** Consume specific amounts of PE.
+        *   **Recovery:** PE does not regenerate automatically. It must be restored via Items (Stims) or specific abilities.
+    *   **Exhaustion:** If a character's **Stamina** reaches 0, they become **Exhausted** and are forcibly swapped out. They cannot be swapped back in until their Stamina recovers to at least 50%.
 
 ### 2.2. Combat
 Combat is seamless (no separate battle screen) and takes place on the dungeon grid.
 
 *   **Turn Structure:** Player Phase -> Enemy Phase.
 *   **Actions:**
-    *   **Move:** WASD / D-Pad. Consumes 10 PE.
-    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 0 PE (uses weapon stats).
-    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE.
-        *   **Targeting:** Starts at the active character (or first valid target for inspection).
+    *   **Move:** WASD / Arrow Keys. Consumes 10 Stamina.
+    *   **Bump Attack:** Moving into an enemy triggers a basic melee attack. Consumes 20 Stamina (0 PE).
+    *   **Skills:** Selected from the menu. Can target single enemies, shapes (Line, Cone, Circle), or Self. Consumes PE and 20 Stamina.
+        *   **Targeting:** Starts at the active character or the first valid target (cycle mode).
     *   **Items:** Consumables for healing or buffs. Using an item ends the turn.
 *   **Damage Formula:** `(ATK * 2 - DEF) * variation`. This formula makes Defense a very powerful stat.
 
@@ -60,15 +65,15 @@ Combat is seamless (no separate battle screen) and takes place on the dungeon gr
 *   **Fog of War:** The map is hidden until explored.
 *   **Interaction:**
     *   **Loot:** Bumping into a loot crate collects an item.
-    *   **Stairs:** Reaching the stairs proceeds to the next floor (generating a new level). Note: Exit locking mechanisms (e.g. Boss requirements) are currently disabled/not implemented.
+    *   **Stairs:** Reaching the stairs proceeds to the next floor (generating a new level).
 
 ## 3. Systems
 
 ### 3.1. Enemy AI
-Enemies use behavior trees defined in `$dataEnemies`. Common behaviors include:
+Enemies use behavior trees defined in `$dataEnemies` (via `aiConfig`). Common behaviors include:
 *   **Hunter:** Pathfinds directly to the player.
 *   **Patrol:** Moves randomly until the player is spotted.
-*   **Turret:** Stationary, attacks from range.
+*   **Turret:** Stationary, attacks from range (Logic handled in `Game_Map` and `Game_Enemy`).
 *   **Tactical:** Maintains optimal range, switches between melee and ranged.
 
 ### 3.2. Traits & Effects
@@ -77,5 +82,5 @@ Enemies use behavior trees defined in `$dataEnemies`. Common behaviors include:
 
 ### 3.3. Banter System
 Characters react to gameplay events (Kill, Walk, Loot, Hurt) with "Banter" lines displayed above their heads.
-*   **Priority Queue:** High-priority lines (Story, Low HP) override flavor text. Note: Banter is suppressed if input is blocked (e.g., during cutscenes), regardless of priority.
-*   **Context Awareness:** Banter can check conditions like "Nearby Enemy Count" or "Current Health %".
+*   **Priority Queue:** High-priority lines (Story, Low HP) override flavor text. Banter is suppressed if input is blocked.
+*   **Context Awareness:** Banter can check conditions like "Nearby Enemy Count" or "Current Health %" via `ConditionSystem`.
