@@ -141,9 +141,9 @@ class UIManager {
         if (this.activeModal) {
             container = this.activeModal;
         } else if (this.focusedWindow === 'cmd') {
-            container = this.windows.cmd.contentEl; // Updated to contentEl
+            container = this.windows.cmd.contentEl;
         } else if (this.focusedWindow === 'status') {
-            container = this.windows.status.contentEl; // Updated to contentEl
+            container = this.windows.status.contentEl;
         }
 
         if (container) {
