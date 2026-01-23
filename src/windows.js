@@ -4,6 +4,7 @@
 
 /**
  * Manages the game's UI windows, layout, and user interactions.
+ * Uses the Component-Based architecture (src/ui/). Legacy imperative modals are deprecated.
  */
 class UIManager {
     constructor() {
