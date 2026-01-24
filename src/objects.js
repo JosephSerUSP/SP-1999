@@ -479,12 +479,6 @@ class Game_Actor extends Game_Battler {
     heal(v) { this.hp = Math.min(this.mhp, this.hp + v); }
 
     /**
-     * Regenerates PE (Power Energy).
-     * @deprecated This method is currently unused by the core game loop.
-     */
-    regenPE() { this.pe = Math.min(this.mpe, this.pe + 2); }
-
-    /**
      * Consumes stamina for an action.
      * Triggers exhaustion if Stamina reaches 0.
      * @param {number} amount - The amount of stamina to consume.
