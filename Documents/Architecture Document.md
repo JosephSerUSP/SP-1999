@@ -48,7 +48,7 @@ Mechanics data: cost, range, type, power, optional fixed, count.
 
 Class / Actor Data ($dataClasses)
 
-Keyed by character name ("Aya", "Kyle", "Eve").
+Keyed by character name ("Julia", "Miguel", "Rebus").
 
 Defines: job, base hp, atk, def, pe, color, and starting skills array.
 
@@ -111,7 +111,7 @@ Copies stat fields via Object.assign.
 
 Sets mhp = base hp, hp from data, mpe=100, pe=class pe.
 
-Sets equipment defaults (Aya starts with basic handgun, Kyle with armor).
+Sets equipment defaults (Julia starts with basic handgun, Miguel with armor).
 
 Initializes level, exp, nextExp, inventory (per-actor, currently unused).
 
@@ -161,9 +161,15 @@ nextActive(): returns next member in cycle (without mutating index).
 
 rotate():
 
+Used for forced rotation on death.
+
 Advance index, skip dead members.
 
 If after at most 3 checks the active is still dead → SceneManager.gameOver().
+
+cycleActive(dir):
+
+Manually cycles the active party member.
 
 distributeExp(amount):
 
@@ -535,11 +541,11 @@ Equips item, returns previous gear to inventory if present.
 
 Logs.
 
-showTargetSelectModal(callback, itemPreview):
+showTargetSelectModal(callback, itemPreview) (Deprecated):
 
 Simple overlay listing party members.
 
-showConfirmModal(text, onConfirm):
+showConfirmModal(text, onConfirm) (Deprecated):
 
 Yes/No dialog overlay.
 
