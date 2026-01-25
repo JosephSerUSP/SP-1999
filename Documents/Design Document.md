@@ -619,7 +619,7 @@ Currently Implemented / Near-Term Scope
 
 Core roguelike exploration and bump-combat.
 
-Three distinct squad members with unique stats and skills (currently named Aya, Kyle, Eve in code, mapped narratively to Julia, Agent-02, and Subject-03). 
+Three distinct squad members with unique stats and skills (implemented as Julia, Miguel, and Rebus).
 
 Design Document
 
@@ -633,7 +633,7 @@ Next Design Steps Aligned with New Narrative
 
 Fully Re-skin Data Layer to SP1999 Cast & Locations
 
-Rename actors, enemies, and items to match Julia / Agent-02 / Subject-03 and São Paulo/Santos settings.
+Ensure all enemies and items match the São Paulo/Santos settings.
 
 Implement Scan / Intel Systems
 
