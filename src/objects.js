@@ -4,7 +4,7 @@
 
 /**
  * Manages global game state, such as floor level and logs.
- * Note: While historically a Manager in some engines, this acts as the central data object for the system state.
+ * Acts as the central data object for the system state (e.g., floor, logs, flags).
  */
 class Game_System {
     /**
@@ -1039,9 +1039,10 @@ class Game_Map {
 
     /**
      * Processes a game turn based on player movement or a direct action.
-     * @param {number} dx - Change in x.
-     * @param {number} dy - Change in y.
+     * @param {number} dx - Change in x (0 if performing a non-movement action).
+     * @param {number} dy - Change in y (0 if performing a non-movement action).
      * @param {Function} [action] - An optional async callback representing a non-movement action (e.g., skill).
+     *                              If provided, it overrides movement.
      */
     async processTurn(dx, dy, action) {
         if($gameSystem.isInputBlocked) return;
