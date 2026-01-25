@@ -1227,14 +1227,7 @@ class Game_Map {
                     let dx = 0, dy = 0;
                     let behavior = action.behavior || 'hunter';
 
-                    // LEGACY MOVEMENT MAPPING
-                    if(behavior === "turret") {
-                        // Turrets don't move, check attack
-                        // Queue Attack (Legacy Turret Logic)
-                        if (dist <= 5 && this.checkLineOfSight(e.x, e.y, this.playerX, this.playerY)) {
-                            pendingActions.push({ type: 'turret_fire', enemy: e, behavior: behavior });
-                        }
-                    } else {
+                    if (behavior !== "turret") {
                         // Priority 1: Check for Melee Attack Opportunity
                         // If adjacent and not fleeing, attack immediately instead of moving.
                         if (dist === 1 && behavior !== "flee") {
@@ -1296,15 +1289,6 @@ class Game_Map {
             if (act.type === 'skill') {
                 await BattleManager.executeSkill(e, act.action.skillId, null);
                 e.onActionTaken(act.action);
-            } else if (act.type === 'turret_fire') {
-                 const target = $gameParty.active();
-                 const dmg = Math.floor(BattleManager.calcDamage(e, target) * 0.8);
-                 target.takeDamage(dmg);
-                 EventBus.emit('play_animation', 'projectile', { x1: e.x, y1: e.y, x2: this.playerX, y2: this.playerY, color: e.color });
-                 await Sequencer.sleep(100);
-                 EventBus.emit('float_text', dmg, this.playerX, this.playerY, "#f00");
-                 EventBus.emit('play_animation', 'hit', { uid: 'player' });
-                 await Sequencer.sleep(200);
             } else if (act.type === 'melee') {
                 const target = $gameParty.active();
                 const dmg = BattleManager.calcDamage(e, target);
