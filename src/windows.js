@@ -274,34 +274,6 @@ class UIManager {
         this.setFocus(0);
     }
 
-    useConsumable(actor, i, idx) {
-        if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
-        if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
-        if(i.type==='cure') {
-            if(actor.isStateAffected('poison')) {
-                actor.removeState('poison');
-                $gameSystem.log(`${actor.name} is cured.`);
-            } else {
-                $gameSystem.log("No effect.");
-            }
-        }
-        $gameParty.inventory.splice(idx, 1);
-        this.closeModal();
-        $gameSystem.isInputBlocked = false;
-        this.refresh();
-        $gameMap.processTurn(0,0);
-    }
-
-    equipGear(actor, i, idx, callback) {
-        const type = i.category;
-        const current = actor.equip[type];
-        actor.equip[type] = i;
-        $gameParty.inventory.splice(idx, 1);
-        if(current) $gameParty.gainItem(current);
-        $gameSystem.log(`${actor.name} equipped ${i.name}.`);
-        callback();
-    }
-
 
     showStatusModal(a) {
         $gameSystem.isInputBlocked = true;
