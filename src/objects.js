@@ -1183,6 +1183,7 @@ class Game_Map {
 
     /**
      * Updates enemy positions and actions.
+     * Async: Awaits execution of skills and animations.
      */
     async updateEnemies() {
         // PHASE 1: PLANNING & MOVEMENT

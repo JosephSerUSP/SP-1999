@@ -1,31 +1,59 @@
-# Documentation Audit Report
+# Documentation Audit
 
-## Executive Summary
-This report summarizes the findings of a documentation audit performed on the *Stillnight: Eve of the Stack* repository. The audit compared existing documentation (README, Design Docs, Architecture Docs) against the actual codebase (`src/`).
+## Overview
+This document tracks inconsistencies between the documentation and the actual codebase, specifically targeting `Documents/Architecture Document.md` and inline comments.
 
-## 1. Character Name Inconsistencies
-**Status:** Drift Identified
-**Details:**
-*   **Documentation:** `README.md`, `Documents/Architecture Document.md`, and `Documents/Design Document.md` frequently refer to the squad members as "Aya" (Detective), "Kyle" (Trooper), and "Eve" (Subject).
-*   **Code:** `src/data.js` and `src/objects.js` implement these characters as "Julia" (Agent), "Miguel" (Analyst), and "Rebus" (Entity).
-*   **Action:** Documentation will be updated to use the implementation names (Julia, Miguel, Rebus).
+## Discrepancies Identified
 
-## 2. Deprecated API
-**Status:** Deprecation Flagged
-**Details:**
-*   The following methods in `src/windows.js` are marked as `@deprecated` in the code but listed as standard methods in `Documents/Architecture Document.md`:
-    *   `UIManager.showTargetSelectModal`
-    *   `UIManager.showConfirmModal`
-*   **Action:** `Documents/Architecture Document.md` will be updated to mark these as deprecated legacy modals.
+### 1. Architectural Structure
+*   **Documentation (`Architecture Document.md`):** claims "All code lives in one <script> in the HTML" (Single-File Build).
+*   **Codebase:** The project is modular, organized into `src/` with files like `core.js`, `managers.js`, `objects.js`, `windows.js`, and `ui/`.
+*   **Action:** Update documentation to reflect the modular architecture.
 
-## 3. Architectural Drift
-**Status:** Inconsistencies Identified
-**Details:**
-*   **Party Rotation:** `Documents/Architecture Document.md` describes `Game_Party.rotate()` as the primary method for cycling characters. In the current code (`src/objects.js`), `rotate()` is exclusively used for forced rotation upon death, while `cycleActive()` handles manual swapping.
-*   **Game Modes:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` outlines a "Multi-Modal State Machine" (Dungeon vs. Hub). This is a proposal/roadmap document; the current `src/main.js` implements a single-mode game loop.
-*   **Content:** `Documents/Architecture Document.md` claims `$dataEnemies.hp` is not used at spawn. This is partially correct (it uses a floor-scaled value), but the phrasing could be clearer.
+### 2. Runtime Game Objects
+*   **Game_Actor:**
+    *   **Doc:** Mentions `regenPE()` and `nextExp *= 1.5`.
+    *   **Code:** `regenPE` is removed. PE is restored via items or specific effects. `nextExp` uses `Math.floor(this.nextExp*1.5)`. The code also includes a Stamina system (`payStamina`, `checkExhaustionSwap`) which is not documented.
+    *   **Action:** Remove `regenPE`, correct `nextExp`, and document the Stamina/Exhaustion system.
+*   **Game_Map:**
+    *   **Doc:** `processTurn` description implies a simpler synchronous flow. `updateEnemies` is described as "async but currently synchronous".
+    *   **Code:** `processTurn` handles async actions, stamina costs, and targeting states. `updateEnemies` is fully async (awaits `BattleManager.executeSkill` and `Sequencer.sleep`).
+    *   **Action:** Update descriptions to reflect async nature and complexity.
+*   **Game_Party:**
+    *   **Doc:** `rotate` used for forced rotation.
+    *   **Code:** `rotate` is indeed used for forced rotation on death, but `cycleActive` is used for manual rotation.
+    *   **Action:** Clarify the distinction.
 
-## 4. File Structure & Language
-**Status:** Accurate
-**Details:**
-*   The project structure (`src/`) and language (JavaScript) match the descriptions in `README.md`.
+### 3. Managers & Utilities
+*   **BattleManager:**
+    *   **Doc:** Does not explicitly state `executeSkill` is async.
+    *   **Code:** `executeSkill` is async and handles animations/pauses.
+    *   **Action:** Mark methods as async.
+*   **BanterManager:**
+    *   **Doc:** Not detailed.
+    *   **Code:** Features a complex system with priority queues, cooldowns (global, trigger, actor), and conversational threads (replies).
+    *   **Action:** Add a section detailing `BanterManager`.
+
+### 4. UI Layer
+*   **Architecture:**
+    *   **Doc:** Describes a legacy imperative modal system and claims UI uses "CSS + DOM (no canvas)".
+    *   **Code:** Uses a Component-Based UI Framework (`UIComponent`, `UIContainer`, `Window_Base`). `Window_Minimap` uses an HTML Canvas.
+    *   **Action:** Rewrite UI section to describe the component system and correct the canvas usage.
+*   **Modals:**
+    *   **Doc:** Describes `showInventoryModal` and `equipGear` as standalone methods with specific logic.
+    *   **Code:** `showInventoryModal` instantiates a `Window_Inventory` which handles its own logic.
+    *   **Action:** Update to refer to Window classes.
+
+### 5. Scene & Input Management
+*   **Game Loop:**
+    *   **Doc:** Simplified loop description.
+    *   **Code:** `SceneManager.loop` includes `BanterManager.update()` and specific input priority (UI -> Targeting -> Gameplay).
+    *   **Action:** detailed loop description.
+
+## Deprecations Flagged
+*   **Imperative UI Construction:** The documentation describes creating modals imperatively (e.g., `createModal`). The codebase uses class-based windows (`Window_Base`).
+*   **Single-File Build:** The entire concept of a single-file build is deprecated and replaced by the modular `src/` structure.
+*   **Synchronous Enemy Updates:** The concept of synchronous enemy updates is obsolete.
+
+## Summary of Changes
+The `Architecture Document.md` will be significantly rewritten to align with the current modular, async, and component-based architecture of the engine. Inline comments in `src/objects.js` will be updated to reflect the async reality of `updateEnemies`.
