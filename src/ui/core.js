@@ -179,9 +179,6 @@ class Window_Base {
         this.createWindowShell();
     }
 
-    // Compatibility getter for legacy code expecting .content
-    get content() { return this.contentEl; }
-
     createWindowShell() {
         this.el = document.createElement('div');
         this.el.id = this.id;
