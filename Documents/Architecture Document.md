@@ -1,661 +1,151 @@
-3. Code Architecture Document — “Eve of the Stack” (Single-File Build)
+3. Code Architecture Document — “Eve of the Stack”
 
-This section describes how the game is structured as code in the given HTML.
+This section describes how the game is structured as code.
 
 3.1. High-Level Architecture
 
-All code lives in one <script> in the HTML, but within that file we can see three conceptual layers:
+The codebase handles three conceptual layers:
 
-Data Layer (configuration & content):
+**Data Layer (configuration & content):**
+`CONFIG`, `$dataSkills`, `$dataClasses`, `$dataEnemies`, `$dataLootTable`, `$dataFloors`, `$dataCutscenes`.
 
-CONFIG, $dataSkills, $dataClasses, $dataEnemies, $dataLootTable, $dataFloors, $dataCutscenes.
+**Game Logic Layer (systems & state):**
+*   **Core state:** `Game_System`, `Game_Party`, `Game_Actor`, `Game_Enemy`, `Game_Map`.
+*   **Managers:** `BattleManager`, `ItemManager`, `CutsceneManager`, `BanterManager`, `Sequencer`.
+*   **Global singletons:** `$gameSystem`, `$gameParty`, `$gameMap`, `Cutscene`, `$gameBanter`.
 
-Game Logic Layer (systems & state):
+**Presentation Layer:**
+*   **3D renderer:** `Renderer3D`, `ParticleSystem`, `Renderer` singleton.
+*   **UI:** `UIManager` (singleton `UI`), Component-Based Framework (`UIComponent`, `UIContainer`, `Window_Base`).
+*   **Screen FX:** HTML overlays handled via CSS and DOM manipulation.
 
-Core state: Game_System, Game_Party, Game_Actor, Game_Enemy, Game_Map.
-
-Managers: BattleManager, ItemManager, CutsceneManager, Sequencer.
-
-Global singletons: $gameSystem, $gameParty, $gameMap, Cutscene.
-
-Presentation Layer:
-
-3D renderer: Renderer3D, ParticleSystem, Renderer singleton.
-
-UI windows and modals: UI_Window, UIManager, UI singleton.
-
-Screen FX layers in HTML (#screen-fx, #floating-text-layer, #cutscene-overlay, #tooltip).
-
-Orchestrating all of it:
-
-SceneManager: bootstraps the game and owns the input polling loop that drives turns.
+**Orchestration:**
+*   **SceneManager:** bootstraps the game, handles the main loop, and manages input delegation.
 
 3.2. Data Layer
 
-Config
-
-CONFIG.colors defines base color palette used by Renderer3D.
-
-Skill Data ($dataSkills)
-
-Plain object keyed by skill id.
-
-Each skill has:
-
-Display data: name, desc(actor).
-
-Mechanics data: cost, range, type, power, optional fixed, count.
-
-Class / Actor Data ($dataClasses)
-
-Keyed by character name ("Julia", "Miguel", "Rebus").
-
-Defines: job, base hp, atk, def, pe, color, and starting skills array.
-
-Enemy Data ($dataEnemies)
-
-Array of enemies with: id, name, hp, atk, exp, color, scale, ai.
-
-In current build, hp is not used at spawn; HP is derived from floor.
-
-Loot Table ($dataLootTable)
-
-prefixes: modifiers for weapons (name + atk delta).
-
-weapons: base weapon entries with name, baseAtk, icon, desc.
-
-armors: armor entries with name, baseDef, icon, desc.
-
-items: consumables with name, type, val, icon, desc.
-
-Floors ($dataFloors)
-
-Floor configs: width/height, room count, base enemies & loot, optional cutscene.
-
-Cutscenes ($dataCutscenes)
-
-Keyed by ID, each is a list of commands:
-
-{ type: 'wait' | 'dialog' | 'log', ... }.
-
-Data is cleanly separated and used by logic classes without requiring code changes for content expansion.
+*   **Config:** `CONFIG.colors` defines base color palette used by Renderer3D.
+*   **Skill Data ($dataSkills):** Plain object keyed by skill id. Includes display data and mechanics data (cost, range, type, effects).
+*   **Class / Actor Data ($dataClasses):** Defines job, base stats, color, and starting skills.
+*   **Enemy Data ($dataEnemies):** Array of enemies with stats, AI config, and visual properties.
+*   **Loot Table ($dataLootTable):** Definitions for weapons, armors, and items.
+*   **Floors ($dataFloors):** Configuration for procedural generation (dimensions, enemies, loot, cutscenes).
+*   **Cutscenes ($dataCutscenes):** Scripted sequences of commands (dialog, wait, log).
 
 3.3. Runtime Game Objects
-Game_System
 
-Global meta-state:
-
-floor: current floor index.
-
-logHistory: array of recent log strings.
-
-isBusy: prevents input during certain actions (e.g., melee attack).
-
-isInputBlocked: used for cutscenes and modals to disable movement.
-
-log(text):
-
-Pushes to logHistory and trims size.
-
-Triggers UI.refreshLog().
-
-Game_Actor
-
-Represents a party member.
-
-Construction:
-
-Takes name, looks up $dataClasses[name].
-
-Copies stat fields via Object.assign.
-
-Sets mhp = base hp, hp from data, mpe=100, pe=class pe.
-
-Sets equipment defaults (Julia starts with basic handgun, Miguel with armor).
-
-Initializes level, exp, nextExp, inventory (per-actor, currently unused).
-
-Methods:
-
-isDead(), takeDamage(v), heal(v), regenPE().
-
-gainExp(v):
-
-Levels up when exp >= nextExp.
-
-On level up: level++, exp=0, nextExp *= 1.5 (floored), mhp += 5, hp = mhp, atk++.
-
-Logs level up.
-
-getAtk(): base ATK + equipped weapon ATK.
-
-getDef(): base DEF + equipped armor DEF.
-
-getAtkWith(item), getDefWith(item): preview stats if item were equipped.
-
-Game_Enemy
-
-Represents a single enemy instance.
-
-Construction:
-
-Copies data fields from $dataEnemies entry.
-
-Sets x, y, uid, hp, mhp, alerted, def = 0, equip = {}.
-
-Methods:
-
-takeDamage(v), isDead().
-
-getAtk(): returns this.atk.
-
-Game_Party
-
-Holds members (array of 3 Game_Actor), index (current active), shared inventory, maxInventory.
-
-Core methods:
-
-active(): returns current active member.
-
-nextActive(): returns next member in cycle (without mutating index).
-
-rotate():
-
-Used for forced rotation on death.
-
-Advance index, skip dead members.
-
-If after at most 3 checks the active is still dead → SceneManager.gameOver().
-
-cycleActive(dir):
-
-Manually cycles the active party member.
-
-distributeExp(amount):
-
-Active member gets full amount.
-
-Other living members get floor(amount * 0.5).
-
-gainItem(item):
-
-Adds to shared inventory if space; logs success or “Inv Full!”.
-
-Game_Map
-
-Encapsulates the grid and its entities.
-
-Properties:
-
-width, height.
-
-tiles: 2D array (1 = wall, 0 = floor, 3 = stairs).
-
-enemies: array of Game_Enemy.
-
-loot: array of { x, y, item }.
-
-playerX, playerY, stairsX, stairsY.
-
-Methods:
-
-setup(floor):
-
-Reads $dataFloors[floor] or default.
-
-Generates rooms and corridors, sets tiles.
-
-Sets spawn and stairs positions.
-
-Spawns enemies and loot using Game_Enemy and ItemManager.generateLoot.
-
-Calls Renderer.rebuildLevel().
-
-Plays floor cutscene via Cutscene.play if defined.
-
-Refreshes minimap.
-
-processTurn(dx, dy) (async):
-
-Early exits if input blocked or Renderer.isAnimating during move animation.
-
-Calculates target tile:
-
-If wall (tile 1): abort.
-
-If enemy: resolves melee attack flow:
-
-Set isBusy, calculate damage, apply VFX, call killEnemy if needed, rotate party, refresh UI, call await updateEnemies(), clear isBusy.
-
-Else:
-
-Trigger Renderer.playAnimation('move_switch', ...) to animate “color swap move” (even for dx,dy = 0).
-
-Update playerX/Y.
-
-Pick up loot if present (gainItem, Renderer.playAnimation('itemGet')).
-
-If stairs tile: log, play ascend animation, block input, wait, then call setup(next floor).
-
-Rotate party, refresh UI, call updateEnemies().
-
-updateEnemies() (async but currently synchronous):
-
-For each enemy:
-
-If distance < 7 → alerted = true.
-
-If alerted:
-
-For ai === 'hunter' or 'ambush': compute dx, dy toward player (simple Manhattan).
-
-Others: dx = dy = 0.
-
-Compute nx, ny.
-
-If nx,ny == player position: attack active actor.
-
-Else if target tile is floor and no other enemy there: move enemy to nx,ny and Renderer.syncEnemies().
-
-killEnemy(enemy):
-
-Plays death animation.
-
-Removes enemy from list.
-
-Distributes EXP, logs.
-
-Calls Renderer.syncEnemies().
-
-Map is the core of the roguelike loop: grid state, enemy list, loot list.
+**Game_System**
+*   **Global meta-state:** `floor`, `logHistory`, `isBusy`, `isInputBlocked`.
+*   **log(text):** Pushes to logHistory, trims size, and emits `log_updated`.
+
+**Game_Actor**
+*   Represents a party member.
+*   **Stats:** HP, PE (Power Energy), Stamina.
+*   **Stamina System:**
+    *   Max Stamina: 1000.
+    *   Actions cost stamina (Move: 10, Skill: 20).
+    *   **Exhaustion:** If stamina reaches 0, the actor becomes exhausted and the party attempts to swap to a fresh member.
+    *   **Regen:** Inactive members regenerate stamina when the active member spends it.
+*   **Progression:** `gainExp(v)` triggers level up when `exp >= nextExp`. `nextExp` scales via `Math.floor(nextExp * 1.5)`.
+*   **Methods:** `takeDamage`, `heal`, `payStamina`, `gainItem`.
+
+**Game_Enemy**
+*   Represents a single enemy instance.
+*   **AI:** Uses `decideAction` based on `aiConfig` (support for ranges, cooldowns, state checks).
+*   **Methods:** `takeDamage`, `isDead`, `onActionTaken`.
+
+**Game_Party**
+*   Holds members (array of 3 `Game_Actor`) and shared inventory.
+*   **Rotation:**
+    *   `cycleActive(dir)`: Manual rotation by player.
+    *   `rotate()`: Forced rotation when active member dies.
+    *   `checkExhaustionSwap()`: Auto-swap when active member is exhausted.
+*   **Methods:** `active()`, `distributeExp()`, `gainItem()`.
+
+**Game_Map**
+*   Encapsulates the grid, entities, and turn logic.
+*   **Properties:** `width`, `height`, `tiles`, `enemies`, `loot`, `targetingState`.
+*   **setup(floor):** Generates level via `Generator` registry, spawns entities, triggers start cutscene/banter.
+*   **processTurn(dx, dy, action) (Async):**
+    *   Handles input blocking and `isBusy` checks.
+    *   **Movement:** Checks collisions, consumes stamina, updates position, picks up loot, triggers map events (stairs).
+    *   **Combat:** If moving into enemy, executes melee attack (via `BattleManager`).
+    *   **Actions:** If `action` callback provided, executes it (e.g. Skill).
+    *   **Updates:** Calls `updateEnemies()` and `processTurnEnd()` after player action.
+*   **updateEnemies() (Async):**
+    *   **Phase 1 (Planning):** All enemies decide actions. Moves are processed immediately for collision resolution.
+    *   **Phase 2 (Visuals):** Syncs enemy meshes.
+    *   **Phase 3 (Execution):** Executes attacks/skills sequentially with delays for visual clarity.
+*   **Targeting:**
+    *   `startTargeting(skill)`: Enters targeting mode (Cursor, Direction, or Cycle).
+    *   `updateTargeting()`: Handles input for cursor movement or target selection.
 
 3.4. Managers & Utilities
-BattleManager
 
-Static helper for combat calculations.
+**BattleManager**
+*   Static helper for combat logic.
+*   **calcDamage(source, target):** Standard damage formula with variation.
+*   **executeSkill(actor, key, target) (Async):**
+    *   Checks PE cost.
+    *   Resolves targets based on skill type/shape (Cone, Line, Circle, All).
+    *   Applies effects (Damage, Heal, State, etc.).
+    *   Handles visual FX (projectiles, flashes).
 
-calcDamage(source, target):
+**BanterManager**
+*   Manages floating dialogue text.
+*   **Systems:**
+    *   **Priority Queue:** Higher priority lines (Story/Reply) preempt generic ones.
+    *   **Cooldowns:** Tracks Global, Per-Trigger, and Per-Actor cooldowns to prevent spam.
+    *   **Chains:** Supports reply chains for conversational depth.
 
-Uses source.getAtk()/source.atk and target.getDef()/target.def.
+**ItemManager**
+*   Generates loot based on floor difficulty and loot tables.
 
-executeSkill(actor, key) (async):
-
-Checks PE cost; if not enough → logs “No PE.” and returns.
-
-Deducts PE, logs skill usage, screen flash.
-
-Computes baseDmg based on skill data.
-
-Branches:
-
-'rapid': custom logic for 2 random shots within range.
-
-type: 'all_enemies': apply damage to all enemies, VFX + shake.
-
-type: 'target': first enemy in range; with special case for 'drain'.
-
-No handling for type: 'self' or buffs/status.
-
-Does not set isBusy or interact with turn flow; is triggered from UI.
-
-ItemManager
-
-generateLoot(floor):
-
-Randomly returns consumable, weapon, or armor based on probabilities.
-
-Uses prefixes & floor number to scale weapon ATK.
-
-CutsceneManager
-
-Maintains a queue of commands and an active flag.
-
-play(script):
-
-Copies script, sets active, sets $gameSystem.isInputBlocked = true.
-
-Calls next().
-
-next() pops next command and passes to processCommand.
-
-processCommand(cmd):
-
-dialog: fills #cutscene-overlay, shows it, waits for click to advance.
-
-wait: simple timeout.
-
-log: writes to system log.
-
-end():
-
-Clears active, unblocks input, logs “Command restored.”
-
-Sequencer
-
-Utility with sleep(ms) returning a promise for await usage inside async flows.
+**CutsceneManager**
+*   Handles blocking cutscenes.
+*   **processCommand:** Supports `dialog` (with blocking input poll), `wait`, `log`.
 
 3.5. Rendering Layer
-ParticleSystem
 
-Preallocates ~50 plane meshes for particles.
-
-Two main emitters:
-
-spawnBurst(x, y, color, count): radial burst used for hits/deaths.
-
-spawnSparkle(x, y): upward sparkle trail used for loot.
-
-update() called every frame to integrate velocities and fade particles.
-
-Renderer3D (singleton instance Renderer)
-
-Responsibilities:
-
-Owns Three.js scene, camera, renderer, lights, and object groups:
-
-mapGroup (instanced floor/walls + stairs meshes).
-
-enemyGroup (enemy meshes).
-
-lootGroup (loot meshes).
-
-rangeGroup (2D range markers).
-
-Owns the player mesh and lighting:
-
-Player is an octahedron (OctahedronGeometry).
-
-Player color (matPlayer.color) is changed to the active party member’s color.
-
-Player point light follows player.
-
-Key methods:
-
-init(container):
-
-Configures camera (Perspective 50°, 16:9), renderer (320×180 internal res).
-
-Creates player mesh and groups, attaches canvas to UI view window.
-
-Starts animate() loop.
-
-rebuildLevel():
-
-Rebuilds mapGroup using instanced meshes:
-
-Floor tiles: plane geometry rotated flat.
-
-Walls: box geometry for wall segments adjacent to floor.
-
-Stairs: custom stack of box slices to form a stepped ramp.
-
-Positions player mesh and camera look target on Game_Map.playerX/Y.
-
-Calls syncEnemies() and syncLoot().
-
-syncEnemies():
-
-Ensures each Game_Enemy has a corresponding Three.js mesh in enemyGroup.
-
-Maintains enemyTargets map of desired positions.
-
-syncLoot():
-
-Clears lootGroup, re-adds a small box mesh at each loot tile.
-
-playAnimation(type, data):
-
-move_switch: sets up interpolated movement from start to end; sets isAnimating = true and handles color swap halfway.
-
-ascend: triggers a special camera + player vertical motion mode.
-
-lunge / enemyLunge: temporary target positions for tweening.
-
-shake: shakes the whole game-view-wrapper div.
-
-hit: per-target shake + particle burst.
-
-itemGet: sparkle particles at loot position.
-
-flash: full-screen color flash via #screen-fx.
-
-die: spawn burst particles at enemy position.
-
-projectToScreen(x, y, z):
-
-Projects a 3D point in world space to 2D screen space (for float text).
-
-showRange(skill) & clearRange():
-
-Builds range overlay meshes in rangeGroup based on skill.range and skill.type.
-
-animate():
-
-Called every frame via requestAnimationFrame.
-
-Handles:
-
-Player movement lerp and color swap for move_switch.
-
-Ascend animation (zoom then vertical flight).
-
-Camera following logic (smooth follow + lookAt).
-
-Enemy mesh pulsing and rotation.
-
-Loot spinning.
-
-Particle updates.
-
-Render call.
-
-Input gating tie-in:
-Renderer.isAnimating is used by SceneManager.loop and Game_Map.processTurn to temporarily prevent new moves while the player is mid-step, but it’s not used for skills, cutscenes, or other animations.
+**Renderer3D**
+*   Uses Three.js to render the game world.
+*   **Methods:** `init`, `rebuildLevel`, `syncEnemies`, `playAnimation` (move, hit, shake, etc.).
+*   **Animation Lock:** `isAnimating` flag prevents input during movement transitions.
 
 3.6. UI Layer
-UI_Window
 
-Small helper class:
+**Architecture**
+*   **Component-Based:** Uses `UIComponent`, `UIContainer`, and `Window_Base` to build modular UI elements.
+*   **UIManager:** Singleton managing all windows and input focus.
+*   **Windows:**
+    *   `Window_Party`, `Window_Tactics`, `Window_Log`, `Window_View`, `Window_Help`.
+    *   `Window_Minimap`: Renders map state to an HTML Canvas.
+    *   `Window_Inventory`: dynamic window for item management.
+    *   `Window_Status`: dynamic window for detailed actor stats.
 
-Creates a .pe-window div at a given position/size.
-
-Adds a .pe-header (title) and .pe-content container.
-
-UIManager (singleton UI)
-
-On construction (createLayout()), builds the main window layout:
-
-status, cmd, minimap, log, view.
-
-Attaches minimap canvas to minimap.
-
-Registers view.content as the container for the 3D renderer.
-
-Core methods:
-
-refresh():
-
-Calls refreshStatus(), refreshCmd(), refreshLog(), refreshMinimap().
-
-refreshStatus():
-
-Rebuilds SQUADRON window from $gameParty.members.
-
-Uses inner HTML to create health/PE/EXP bars.
-
-Adds click handlers to open showStatusModal(actor).
-
-refreshCmd():
-
-Rebuilds TACTICS window for current active actor.
-
-Adds WAIT and ITEM commands.
-
-Lists skills, enabling/disabling based on PE.
-
-Skill buttons:
-
-On click: call $gameMap.processTurn(0,0) (wait) then BattleManager.executeSkill.
-
-On hover: show tooltip and Renderer.showRange(skill).
-
-refreshMinimap():
-
-Draws tile types, enemies, and player on the minimap canvas.
-
-refreshLog():
-
-Populates system log with recent entries, most recent at top, fading older ones.
-
-floatText(t, x, y, color):
-
-Uses Renderer.projectToScreen to place damage/heal digits in the floating-text-layer.
-
-Each digit animates with a bounce and fades out.
-
-Modals & overlays:
-
-showInventoryModal():
-
-Blocks input.
-
-Builds a modal window listing items and showing per-actor gear.
-
-Clicking item row:
-
-If category === 'item' → prompts for target and confirm; uses via useConsumable.
-
-If gear → target selection with stat preview; uses equipGear.
-
-useConsumable(actor, item, index):
-
-Applies heal or PE restore.
-
-Removes item from inventory.
-
-Closes modal, unblocks input, refreshes UI, and triggers processTurn(0,0) (consumes a turn).
-
-equipGear(actor, item, index, callback):
-
-Equips item, returns previous gear to inventory if present.
-
-Logs.
-
-showTargetSelectModal(callback, itemPreview) (Deprecated):
-
-Simple overlay listing party members.
-
-showConfirmModal(text, onConfirm) (Deprecated):
-
-Yes/No dialog overlay.
-
-showStatusModal(actor):
-
-Opens a modal with actor stats.
-
-createModal(title, build, onClose) / closeModal():
-
-Generic window builder with header + closable content.
-
-UI uses CSS + DOM (no canvas) and interacts directly with Renderer, $gameMap, $gameParty, $gameSystem.
+**Interaction**
+*   **Focus System:** `UIManager` tracks `focusedWindow` and `focusableElements`, handling keyboard navigation (Arrows, OK, Cancel).
 
 3.7. Scene & Input Management
-SceneManager
 
-Global orchestrator for bootstrapping and input.
-
-init():
-
-Instantiates $gameSystem, $gameParty, $gameMap.
-
-Instantiates UIManager, Renderer3D, CutsceneManager.
-
-Calls Renderer.init(view container) and $gameMap.setup(1) to build the first floor.
-
-Calls UI.refresh() to initialize windows.
-
-Logs “System initialized.”
-
-Sets up keyboard event listeners:
-
-keydown: sets this.keys[e.key] = true.
-
-keyup: sets this.keys[e.key] = false.
-
-Starts the main loop: this.loop().
-
-loop():
-
-requestAnimationFrame recursive call.
-
-Each frame:
-
-If not busy / input blocked / animating:
-
-Checks for directional keys or space.
-
-On first match, calls $gameMap.processTurn(dx, dy).
-
-gameOver():
-
-Simple alert("FAILURE."); location.reload();.
-
-Because movement is only processed in loop() when keys are pressed, and enemies only act from inside Game_Map.processTurn, the whole game is effectively player-clocked.
+**SceneManager**
+*   **init():** Bootstraps all systems, initializes Renderer and UI.
+*   **loop():** Main game loop.
+    *   Updates `InputManager`, `BanterManager`, `UIManager`.
+    *   **Input Priority:**
+        1.  **Global UI:** (e.g., Minimap toggle).
+        2.  **UI Navigation:** If a window/modal is focused.
+        3.  **Targeting:** If `$gameMap.isTargeting()`.
+        4.  **Gameplay:** Player movement/actions (calls `$gameMap.processTurn`).
 
 3.8. Cross-Cutting Flags & Global State
 
-There are three key booleans used for gating:
-
-$gameSystem.isBusy:
-
-Set true during melee attack turn resolution.
-
-Prevents new inputs until attack animation and enemy update finish.
-
-$gameSystem.isInputBlocked:
-
-Used by cutscenes and UI modals to freeze movement and commands.
-
-Renderer.isAnimating:
-
-Used to throttle per-step movement while the move_switch animation is in progress.
-
-Global singletons:
-
-$gameSystem, $gameParty, $gameMap, Renderer, UI, Cutscene, managed at the top script scope.
-
-This gives you a working but tightly coupled state graph: every system talks to every global directly, which is convenient now but will be a refactoring target if you move to a multi-file engine.
+*   `$gameSystem.isBusy`: Locks input during turn processing.
+*   `$gameSystem.isInputBlocked`: Locks input during cutscenes/modals.
+*   `Renderer.isAnimating`: Throttles movement during visual transitions.
 
 3.9. Known Technical Limitations / Debt
 
-From the current architecture:
-
-Single file, no module boundaries:
-
-All systems live in one <script>, though they’re conceptually separated.
-
-No formal scene stack:
-
-SceneManager only has SceneManager.init() and loop(); no Scene_Map, Scene_Menu, etc.
-
-All UI overlays (inventory, status, cutscene) are ad-hoc modals layered over a single “scene”.
-
-No window manager stack:
-
-UI windows don’t know about z-order or interaction blocking; modals rely on isInputBlocked plus z-index, but there’s no centralized “top window” logic.
-
-Timing inconsistencies:
-
-Skills are not integrated into the same turn resolution path as movement/bump combat.
-
-Some actions set isBusy, others don’t; only movement uses Renderer.isAnimating gating.
-
-Partial system implementations:
-
-Skill data includes many non-operational skills (scan, barrier, heal, stun).
-
-Status effects, buffs, and debuffs are absent.
-
-Some data fields (enemy hp, AI types, item types) are unused or only partially used.
-
-Despite this, the architecture is already trending toward the Data / Systems / Presentation separation you want, just without the file/module scaffolding and manager abstractions yet.
+*   **Scene Stack:** No formal scene stack (Menu, Map, Title are not separate scenes), though `UIManager` handles focus effectively.
+*   **Content:** Some data fields (e.g., full status effect implementations) are partial.
+*   **State Management:** High coupling between global singletons (`$gameMap`, `$gameParty`, `UI`).
