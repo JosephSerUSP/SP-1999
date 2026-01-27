@@ -56,6 +56,7 @@ To modify the game:
 
 *   **Exploration**: Navigate grid-based levels.
 *   **Combat**: Turn-based. Bump enemies to attack or use skills.
+*   **Stamina System**: Characters have limited Stamina (max 1000). Moving costs 10, Actions cost 20. Exhaustion forces a character swap. Inactive members regenerate stamina.
 *   **Squad System**: Rotate between three characters with unique stats and skills.
     *   **Julia (Agent)**: High speed and precision DPS.
     *   **Miguel (Analyst)**: Tank, support, and crowd control.
