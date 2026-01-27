@@ -541,14 +541,6 @@ Equips item, returns previous gear to inventory if present.
 
 Logs.
 
-showTargetSelectModal(callback, itemPreview) (Deprecated):
-
-Simple overlay listing party members.
-
-showConfirmModal(text, onConfirm) (Deprecated):
-
-Yes/No dialog overlay.
-
 showStatusModal(actor):
 
 Opens a modal with actor stats.
