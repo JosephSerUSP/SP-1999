@@ -4,7 +4,7 @@ This section describes how the game is structured as code in the given HTML.
 
 3.1. High-Level Architecture
 
-All code lives in one <script> in the HTML, but within that file we can see three conceptual layers:
+The code is modularized in `src/`, with three conceptual layers:
 
 Data Layer (configuration & content):
 
@@ -14,9 +14,9 @@ Game Logic Layer (systems & state):
 
 Core state: Game_System, Game_Party, Game_Actor, Game_Enemy, Game_Map.
 
-Managers: BattleManager, ItemManager, CutsceneManager, Sequencer.
+Managers: BattleManager, ItemManager, CutsceneManager, BanterManager, Sequencer.
 
-Global singletons: $gameSystem, $gameParty, $gameMap, Cutscene.
+Global singletons: $gameSystem, $gameParty, $gameMap, Cutscene, $gameBanter.
 
 Presentation Layer:
 
@@ -50,13 +50,13 @@ Class / Actor Data ($dataClasses)
 
 Keyed by character name ("Julia", "Miguel", "Rebus").
 
-Defines: job, base hp, atk, def, pe, color, and starting skills array.
+Defines: job, base hp, atk, def, pe, color, starting skills array, and banter configuration.
 
 Enemy Data ($dataEnemies)
 
-Array of enemies with: id, name, hp, atk, exp, color, scale, ai.
+Array of enemies with: id, name, hp, atk, exp, color, scale, and aiConfig.
 
-In current build, hp is not used at spawn; HP is derived from floor.
+aiConfig defines behavior (movement type, actions, conditions) used by Game_Enemy.decideAction.
 
 Loot Table ($dataLootTable)
 
@@ -111,13 +111,25 @@ Copies stat fields via Object.assign.
 
 Sets mhp = base hp, hp from data, mpe=100, pe=class pe.
 
+Sets mstamina = 1000, stamina = 1000.
+
 Sets equipment defaults (Julia starts with basic handgun, Miguel with armor).
 
 Initializes level, exp, nextExp, inventory (per-actor, currently unused).
 
 Methods:
 
-isDead(), takeDamage(v), heal(v), regenPE().
+isDead(), takeDamage(v), heal(v).
+
+payStamina(amount):
+
+Deducts stamina. If stamina reaches 0, sets isExhausted = true and triggers Party Swap if possible.
+
+Regenerates 50% of spent stamina for inactive members.
+
+gainStamina(amount):
+
+Recovers stamina, clearing exhaustion if above 50%.
 
 gainExp(v):
 
@@ -143,11 +155,21 @@ Copies data fields from $dataEnemies entry.
 
 Sets x, y, uid, hp, mhp, alerted, def = 0, equip = {}.
 
+Clones aiConfig from data to allow per-instance state (cooldowns).
+
 Methods:
 
 takeDamage(v), isDead().
 
 getAtk(): returns this.atk.
+
+decideAction():
+
+Evaluates aiConfig to choose best action (Skill or Move).
+
+Checks conditions (range, state, notState, interval) and cooldowns.
+
+Returns action object used by Game_Map.updateEnemies.
 
 Game_Party
 
@@ -215,21 +237,25 @@ Plays floor cutscene via Cutscene.play if defined.
 
 Refreshes minimap.
 
-processTurn(dx, dy) (async):
+processTurn(dx, dy, action) (async):
 
 Early exits if input blocked or Renderer.isAnimating during move animation.
 
-Calculates target tile:
+Handles external action (Skills): if action provided, executes it (costs 20 Stamina), updates enemies, and ends turn.
+
+Calculates target tile (if movement):
 
 If wall (tile 1): abort.
 
-If enemy: resolves melee attack flow:
+If enemy: resolves melee attack flow (costs 20 Stamina):
 
 Set isBusy, calculate damage, apply VFX, call killEnemy if needed, rotate party, refresh UI, call await updateEnemies(), clear isBusy.
 
-Else:
+Else (Movement):
 
-Trigger Renderer.playAnimation('move_switch', ...) to animate “color swap move” (even for dx,dy = 0).
+Costs 10 Stamina.
+
+Trigger Renderer.playAnimation('move', ...) and 'move_switch'.
 
 Update playerX/Y.
 
@@ -238,6 +264,10 @@ Pick up loot if present (gainItem, Renderer.playAnimation('itemGet')).
 If stairs tile: log, play ascend animation, block input, wait, then call setup(next floor).
 
 Rotate party, refresh UI, call updateEnemies().
+
+Targeting System (startTargeting / updateTargeting):
+
+Manages cursor/directional input for skill usage before calling processTurn.
 
 updateEnemies() (async but currently synchronous):
 
@@ -294,9 +324,23 @@ type: 'all_enemies': apply damage to all enemies, VFX + shake.
 
 type: 'target': first enemy in range; with special case for 'drain'.
 
-No handling for type: 'self' or buffs/status.
+Handles type: 'self', 'cone', 'line', 'circle'.
+
+applyEffect(effect, source, target):
+
+Handles EFFECT_DAMAGE, EFFECT_HEAL, EFFECT_ADD_STATE (buffs/debuffs), EFFECT_RECOVER_PE, EFFECT_SCAN_MAP.
 
 Does not set isBusy or interact with turn flow; is triggered from UI.
+
+BanterManager
+
+Manages priority-based banter system.
+
+Queue-based display of floating text above map.
+
+Handles priorities (Story > High Reactivity > Flavor) and cooldowns (Global, Per-Actor, Per-Trigger).
+
+triggers: kill, walk, surrounded, loot, hurt, low_hp, start.
 
 ItemManager
 
@@ -453,19 +497,23 @@ Input gating tie-in:
 Renderer.isAnimating is used by SceneManager.loop and Game_Map.processTurn to temporarily prevent new moves while the player is mid-step, but it’s not used for skills, cutscenes, or other animations.
 
 3.6. UI Layer
-UI_Window
+UI Framework (src/ui/)
 
-Small helper class:
+Component-Based UI Architecture:
 
-Creates a .pe-window div at a given position/size.
+UIComponent: Base class for DOM elements with props and lifecycle (mount, update, destroy).
 
-Adds a .pe-header (title) and .pe-content container.
+UIContainer: Manages child components and layout strategies.
+
+Window_Base: Shell for windows, managing title bar and content container.
+
+Specific Windows (Window_Status, Window_Inventory, Window_Party, etc.) inherit from UI components or wrap them.
 
 UIManager (singleton UI)
 
 On construction (createLayout()), builds the main window layout:
 
-status, cmd, minimap, log, view.
+status, cmd, minimap, log, view (Window_View), enemyInfo.
 
 Attaches minimap canvas to minimap.
 
@@ -541,14 +589,6 @@ Equips item, returns previous gear to inventory if present.
 
 Logs.
 
-showTargetSelectModal(callback, itemPreview) (Deprecated):
-
-Simple overlay listing party members.
-
-showConfirmModal(text, onConfirm) (Deprecated):
-
-Yes/No dialog overlay.
-
 showStatusModal(actor):
 
 Opens a modal with actor stats.
@@ -566,9 +606,7 @@ Global orchestrator for bootstrapping and input.
 
 init():
 
-Instantiates $gameSystem, $gameParty, $gameMap.
-
-Instantiates UIManager, Renderer3D, CutsceneManager.
+Instantiates $gameSystem, $gameParty, $gameMap, UIManager, Renderer3D, CutsceneManager, BanterManager.
 
 Calls Renderer.init(view container) and $gameMap.setup(1) to build the first floor.
 
@@ -576,31 +614,27 @@ Calls UI.refresh() to initialize windows.
 
 Logs “System initialized.”
 
-Sets up keyboard event listeners:
-
-keydown: sets this.keys[e.key] = true.
-
-keyup: sets this.keys[e.key] = false.
-
 Starts the main loop: this.loop().
 
 loop():
 
 requestAnimationFrame recursive call.
 
-Each frame:
+Input polling order:
 
-If not busy / input blocked / animating:
+1. UI.updateInput(): Checks global toggles (Minimap) and modal navigation.
 
-Checks for directional keys or space.
+2. $gameMap.updateTargeting(): If in targeting mode, handles cursor/direction.
 
-On first match, calls $gameMap.processTurn(dx, dy).
+3. Map Gameplay: If not busy/blocked/animating, checks directional keys or action keys (OK, MENU, PREV/NEXT_ACTOR) to call $gameMap.processTurn or UI focus.
 
-gameOver():
+InputManager (src/input.js)
 
-Simple alert("FAILURE."); location.reload();.
+Manages keyboard and gamepad state.
 
-Because movement is only processed in loop() when keys are pressed, and enemies only act from inside Game_Map.processTurn, the whole game is effectively player-clocked.
+Actions: UP, DOWN, LEFT, RIGHT, OK, CANCEL, MENU, MINIMAP, CYCLE, PREV_ACTOR, NEXT_ACTOR.
+
+Supports latching (isTriggered) and continuous press (isPressed).
 
 3.8. Cross-Cutting Flags & Global State
 
