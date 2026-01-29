@@ -56,7 +56,7 @@ To modify the game:
 
 *   **Exploration**: Navigate grid-based levels.
 *   **Combat**: Turn-based. Bump enemies to attack or use skills.
-*   **Squad System**: Rotate between three characters with unique stats and skills.
+*   **Squad System**: Manually swap between three characters to adapt to threats. Manage Stamina (Action Points) to avoid being exhausted and forcibly swapped.
     *   **Julia (Agent)**: High speed and precision DPS.
     *   **Miguel (Analyst)**: Tank, support, and crowd control.
     *   **Rebus (Entity)**: AoE damage and high PE consumption.

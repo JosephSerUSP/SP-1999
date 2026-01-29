@@ -34,13 +34,11 @@ UI is a PC-98 / late-90s Windows-style control center: multiple windows, minimap
 
 Combat and exploration share a single 3D tactical feed, framed as INTRA’s “optical” surveillance of the mission. 
 
-Design Document
-
 2.2. Core Fantasy & Pillars
 
 Core Fantasy
 
-You command a small INTRA field squad investigating dangerous anomalies in real São Paulo/Santos locations (Santa Casa, USP, subway lines, harbor, etc.). Every step forward advances time, every action rotates the front-liner, and every decision you make—what you record, what you omit, what you believe—quietly shapes how the anomaly manifests.
+You command a small INTRA field squad investigating dangerous anomalies in real São Paulo/Santos locations (Santa Casa, USP, subway lines, harbor, etc.). Every step forward advances time, every action drains stamina, and every decision you make—what you record, what you omit, what you believe—quietly shapes how the anomaly manifests.
 
 You aren’t just killing monsters; you’re fighting for control over the case file itself, against a State that wants to erase, distort, or bury what you find.
 
@@ -56,9 +54,7 @@ Three-Member INTRA Squad
 
 A small team with distinct roles: hardened investigator, anxious analyst, unstable “pattern” being.
 
-The active member cycles with every action, so you’re always thinking about who will be “on point” when enemies retaliate. 
-
-Design Document
+The active member persists until exhaustion or manual swap, so you must manage Stamina carefully to ensure the right agent is on point.
 
 Cognition → Reality
 
@@ -78,15 +74,11 @@ Atmosphere Through UI & Camera
 
 Logs, minimap, and a cinematic camera sell the mood more than high poly counts. 
 
-Design Document
-
 Data-Driven Systems
 
 Skills, enemies, loot, floors, and missions are defined in data tables.
 
 Narrative descriptors (case tags, anomaly categories, floor themes) live alongside mechanical stats, so the engine can scale without hard-coding content. 
-
-Design Document
 
 2.3. Narrative Premise
 INTRA & the State
@@ -173,8 +165,6 @@ Scan → reveals minimap sectors / enemy positions / anomaly clues.
 
 Snipe → high-power, single-target shot with good range. 
 
-Design Document
-
 Agent-02 (“Analyst”, 36, M)
 
 Background:
@@ -205,8 +195,6 @@ Barrier → defensive buff once status systems exist.
 
 Stun Baton → melee with possible stun status. 
 
-Design Document
-
 Subject-03 (“Pattern”, ??, M)
 
 Ontology:
@@ -232,8 +220,6 @@ HP: low, ATK: high, DEF: low, PE: very high.
 Existing skills mapped:
 
 Combust / Nuke / Drain / Heal as manifestations of cognitive stress in the environment rather than generic magic. 
-
-Design Document
 
 Key NPC
 
@@ -309,8 +295,6 @@ Squad spawns near the mission’s “entry point” (e.g., hospital entrance, st
 
 Floor layout is procedurally generated within parameters themed around the location. 
 
-Design Document
-
 Exploration (Turn-Based):
 
 Arrow keys / WASD: move one tile.
@@ -319,13 +303,15 @@ Space / WAIT command: pass a turn.
 
 Each step:
 
-Rotates the active member (Julia → Agent-02 → Subject-03 → …).
+Consumes Stamina (10 for Move, 20 for Action).
+
+If Stamina reaches 0, the character is exhausted and automatically swapped.
 
 Advances enemies (only those alerted or within “cognitive radius”).
 
 Interaction:
 
-Bump into an enemy: melee attack.
+Bump into an enemy: melee attack (20 Stamina).
 
 Step onto loot tile: auto-pickup item or gear, log entry.
 
@@ -337,7 +323,7 @@ Display skill range overlay in the 3D view.
 
 Use items via inventory:
 
-Heal HP, restore PE, cure statuses (once implemented).
+Heal HP, restore PE, cure statuses.
 
 Escalation & Exit:
 
@@ -346,8 +332,6 @@ Reach anomaly hotspots / bosses deeper in the mission.
 Reach stairs or final node to exit to the next floor or conclude the mission.
 
 Cinematic ascend/exit animation, logs, and potential cutscenes. 
-
-Design Document
 
 Return to Base:
 
@@ -365,9 +349,9 @@ Choose exactly one: move, wait, use skill, or use item.
 
 The action resolves immediately.
 
-Rotation:
+Stamina Check:
 
-Active member index moves to the next living squadmate.
+If Stamina depleted, force swap.
 
 Enemy Phase:
 
@@ -379,15 +363,13 @@ Attack if they step into the player tile.
 
 Damage is resolved using ATK vs DEF with light randomness. 
 
-Design Document
-
 Combat is meant to feel:
 
 Simple numerically (HP, ATK, DEF, PE) but
 
 Tense tactically, because:
 
-Rotation means you can’t always choose who takes the hit.
+Exhaustion means you can’t always choose who takes the hit.
 
 Turn economy is tight; every step matters.
 
@@ -409,9 +391,7 @@ target (single enemy within range).
 
 all_enemies (all enemies currently on the field).
 
-self (self-targeted abilities like healing/buffing, to be fully implemented). 
-
-Design Document
+self (self-targeted abilities like healing/buffing).
 
 Current Implemented Behaviors (Re-themed)
 
@@ -429,11 +409,13 @@ AoE attacks: grenades and large-scale anomaly discharges.
 
 Scan / Barrier / Heal / Stun
 
-Mechanically stubbed and planned to be expanded into:
+Implemented basic versions:
 
-Map intel/reveal systems.
+Scan reveals map.
 
-Buff/debuff/status effect systems.
+Heal restores HP.
+
+Stun applies restriction state.
 
 2.9. Enemies & Anomaly Taxonomy
 
@@ -463,13 +445,9 @@ Spawned onto floors with HP scaled by floor.
 
 Tagged with AI: hunter, patrol, turret, ambush, etc., which can be expanded into richer behaviors later. 
 
-Design Document
-
 2.10. Floors, Real Locations & Progression
 
 Each floor in $dataFloors defines: width, height, rooms, enemies, loot, and optional cutscene identifier. The generator carves rooms and tunnels from a solid grid, then places spawn, exits, enemies, and loot. 
-
-Design Document
 
 Thematic Layer on Top of Floor Data
 
@@ -517,7 +495,7 @@ HP recovery (medicines).
 
 PE recovery (stimulants).
 
-Status cures (antidotes, anti-panic, etc., once status exists).
+Status cures (antidotes, anti-panic, etc.).
 
 Weapons
 
@@ -553,8 +531,6 @@ Equipping gear is done through modals (inventory → select target → confirm).
 
 Swapping gear may return previously equipped item to inventory if there’s space. 
 
-Design Document
-
 Items and gear will be increasingly tied to narrative:
 
 Some items only drop in certain neighborhoods or institutions.
@@ -574,8 +550,6 @@ MINIMAP: Grid of explored tiles, walls, stairs, enemies, and player.
 SYSTEM LOG: Scrolling event log, from combat results to flavor messages.
 
 OPTICAL FEED: Full-screen 3D view of the current floor, enemies, and VFX. 
-
-Design Document
 
 Modals & Overlays
 
@@ -620,8 +594,6 @@ Currently Implemented / Near-Term Scope
 Core roguelike exploration and bump-combat.
 
 Three distinct squad members with unique stats and skills (implemented as Julia, Miguel, and Rebus).
-
-Design Document
 
 Procedural floor generation and progression by floor index.
 
