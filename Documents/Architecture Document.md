@@ -1,34 +1,34 @@
-3. Code Architecture Document — “Eve of the Stack” (Single-File Build)
+3. Code Architecture Document — “Eve of the Stack” (Modular Build)
 
-This section describes how the game is structured as code in the given HTML.
+This section describes how the game is structured as code.
 
 3.1. High-Level Architecture
 
-All code lives in one <script> in the HTML, but within that file we can see three conceptual layers:
+The codebase is modularized into the `src/` directory.
 
 Data Layer (configuration & content):
 
-CONFIG, $dataSkills, $dataClasses, $dataEnemies, $dataLootTable, $dataFloors, $dataCutscenes.
+`src/data.js`: CONFIG, $dataSkills, $dataClasses, $dataEnemies, $dataLootTable, $dataFloors, $dataCutscenes.
 
 Game Logic Layer (systems & state):
 
-Core state: Game_System, Game_Party, Game_Actor, Game_Enemy, Game_Map.
+`src/objects.js`: Core state classes (Game_System, Game_Party, Game_Actor, Game_Enemy, Game_Map).
 
-Managers: BattleManager, ItemManager, CutsceneManager, Sequencer.
+`src/managers.js`: Static managers (BattleManager, ItemManager, CutsceneManager, BanterManager).
+
+`src/core.js`: Utilities (EventBus, ConditionSystem, Sequencer, Geometry).
 
 Global singletons: $gameSystem, $gameParty, $gameMap, Cutscene.
 
 Presentation Layer:
 
-3D renderer: Renderer3D, ParticleSystem, Renderer singleton.
+`src/sprites.js`: 3D renderer (Renderer3D, ParticleSystem).
 
-UI windows and modals: UI_Window, UIManager, UI singleton.
-
-Screen FX layers in HTML (#screen-fx, #floating-text-layer, #cutscene-overlay, #tooltip).
+`src/windows.js` & `src/ui/`: UI system (UIManager, Window_Base, and specific Window classes).
 
 Orchestrating all of it:
 
-SceneManager: bootstraps the game and owns the input polling loop that drives turns.
+`src/main.js`: SceneManager (bootstraps the game and drives the input loop).
 
 3.2. Data Layer
 
@@ -54,9 +54,7 @@ Defines: job, base hp, atk, def, pe, color, and starting skills array.
 
 Enemy Data ($dataEnemies)
 
-Array of enemies with: id, name, hp, atk, exp, color, scale, ai.
-
-In current build, hp is not used at spawn; HP is derived from floor.
+Array of enemies with: id, name, hp, atk, exp, color, scale, aiConfig.
 
 Loot Table ($dataLootTable)
 
@@ -77,8 +75,6 @@ Cutscenes ($dataCutscenes)
 Keyed by ID, each is a list of commands:
 
 { type: 'wait' | 'dialog' | 'log', ... }.
-
-Data is cleanly separated and used by logic classes without requiring code changes for content expansion.
 
 3.3. Runtime Game Objects
 Game_System
@@ -117,7 +113,9 @@ Initializes level, exp, nextExp, inventory (per-actor, currently unused).
 
 Methods:
 
-isDead(), takeDamage(v), heal(v), regenPE().
+isDead(), takeDamage(v), heal(v).
+
+payStamina(amount): Consumes stamina. If 0, marks exhausted and triggers forced swap. Inactive members regen stamina.
 
 gainExp(v):
 
@@ -143,9 +141,13 @@ Copies data fields from $dataEnemies entry.
 
 Sets x, y, uid, hp, mhp, alerted, def = 0, equip = {}.
 
+Clones aiConfig for behavior logic.
+
 Methods:
 
 takeDamage(v), isDead().
+
+decideAction(): Evaluates aiConfig conditions to choose Skill or Move action.
 
 getAtk(): returns this.atk.
 
@@ -215,9 +217,17 @@ Plays floor cutscene via Cutscene.play if defined.
 
 Refreshes minimap.
 
-processTurn(dx, dy) (async):
+startTargeting(skill, callback):
+
+Initiates targeting mode (cursor or cycle) for skill usage.
+
+processTurn(dx, dy, action) (async):
 
 Early exits if input blocked or Renderer.isAnimating during move animation.
+
+If action (skill callback): Executes action, pays stamina, updates stats, calls updateEnemies.
+
+Else (Movement):
 
 Calculates target tile:
 
@@ -225,11 +235,11 @@ If wall (tile 1): abort.
 
 If enemy: resolves melee attack flow:
 
-Set isBusy, calculate damage, apply VFX, call killEnemy if needed, rotate party, refresh UI, call await updateEnemies(), clear isBusy.
+Set isBusy, calculate damage, apply VFX, call killEnemy if needed, refresh UI, call await updateEnemies(), clear isBusy.
 
 Else:
 
-Trigger Renderer.playAnimation('move_switch', ...) to animate “color swap move” (even for dx,dy = 0).
+Trigger Renderer.playAnimation('move_switch', ...) to animate “color swap move”.
 
 Update playerX/Y.
 
@@ -237,9 +247,9 @@ Pick up loot if present (gainItem, Renderer.playAnimation('itemGet')).
 
 If stairs tile: log, play ascend animation, block input, wait, then call setup(next floor).
 
-Rotate party, refresh UI, call updateEnemies().
+Refresh UI, call updateEnemies().
 
-updateEnemies() (async but currently synchronous):
+updateEnemies() (async):
 
 For each enemy:
 
@@ -247,15 +257,13 @@ If distance < 7 → alerted = true.
 
 If alerted:
 
-For ai === 'hunter' or 'ambush': compute dx, dy toward player (simple Manhattan).
+Decides action via decideAction() (Skill or Move).
 
-Others: dx = dy = 0.
+If Move: Moves towards player (A* or simple Manhattan) or patrols.
 
-Compute nx, ny.
+If Skill: Queues skill execution.
 
-If nx,ny == player position: attack active actor.
-
-Else if target tile is floor and no other enemy there: move enemy to nx,ny and Renderer.syncEnemies().
+Executes pending actions (moves first, then skills/attacks).
 
 killEnemy(enemy):
 
@@ -294,7 +302,11 @@ type: 'all_enemies': apply damage to all enemies, VFX + shake.
 
 type: 'target': first enemy in range; with special case for 'drain'.
 
-No handling for type: 'self' or buffs/status.
+type: 'self': applies effects to user.
+
+Handles geometric shapes (cone, line, circle).
+
+Applies effects (damage, heal, state, PE recover) via applyEffect.
 
 Does not set isBusy or interact with turn flow; is triggered from UI.
 
@@ -330,9 +342,21 @@ end():
 
 Clears active, unblocks input, logs “Command restored.”
 
+BanterManager
+
+Manages floating text "banter" triggered by game events.
+
+Maintains a priority queue of lines.
+
+Handles cooldowns (Global, Per-Trigger, Per-Actor).
+
 Sequencer
 
 Utility with sleep(ms) returning a promise for await usage inside async flows.
+
+ConditionSystem
+
+Evaluates conditions (ranges, stats, states) for AI and Banter logic.
 
 3.5. Rendering Layer
 ParticleSystem
@@ -521,37 +545,13 @@ Blocks input.
 
 Builds a modal window listing items and showing per-actor gear.
 
-Clicking item row:
-
-If category === 'item' → prompts for target and confirm; uses via useConsumable.
-
-If gear → target selection with stat preview; uses equipGear.
-
-useConsumable(actor, item, index):
-
-Applies heal or PE restore.
-
-Removes item from inventory.
-
-Closes modal, unblocks input, refreshes UI, and triggers processTurn(0,0) (consumes a turn).
-
-equipGear(actor, item, index, callback):
-
-Equips item, returns previous gear to inventory if present.
-
-Logs.
-
-showTargetSelectModal(callback, itemPreview) (Deprecated):
-
-Simple overlay listing party members.
-
-showConfirmModal(text, onConfirm) (Deprecated):
-
-Yes/No dialog overlay.
+Uses `Window_Inventory` from `src/ui/windows/`.
 
 showStatusModal(actor):
 
 Opens a modal with actor stats.
+
+Uses `Window_Status` from `src/ui/windows/`.
 
 createModal(title, build, onClose) / closeModal():
 
@@ -629,10 +629,6 @@ This gives you a working but tightly coupled state graph: every system talks to 
 3.9. Known Technical Limitations / Debt
 
 From the current architecture:
-
-Single file, no module boundaries:
-
-All systems live in one <script>, though they’re conceptually separated.
 
 No formal scene stack:
 
