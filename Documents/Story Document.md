@@ -24,31 +24,31 @@ References to lacking metro/subway stations that nowdays do exist (such as the B
 
 Characters:
 
-1.Julia dos Santos (23, F) (no nickname. People don't call her nicknames. Only her older brother did)
+1. Julia dos Santos (23, F) (no nickname. People don't call her nicknames. Only her older brother did)
 A young, no bullshit agent at a countergovernment organization. 
 Background: 
 When she was 8, she witnessed the brutal murder of her older brother in a police raid. Her mother is a shut-in. 
 Her high school best friend is now a devout evangelical police officer; she misses him.
 Attachment Style: Dismissive-avoidant. (Why? How? Let's elaborate.)
 
-2. "????" (36, M) 
+2. Miguel (36, M)
 A soft, gentle but quirky man who, despite his age, has experienced very little in life. 
 Background: 
-Has a huge crush on his boss, who is his childhood friend. Tends to crush on other men easily, something which 1. teases him for. 
+Has a huge crush on his boss, who is his childhood friend. Tends to crush on other men easily, something which Julia teases him for.
 His crush (and unresolved romantic tension) with his boss remains a firm theme in all endings. 
-Notoriously 3. is not his type, but that doesn't stop him from developing a minor crush anyway. This resolves rapidly.
+Notoriously Rebus is not his type, but that doesn't stop him from developing a minor crush anyway. This resolves rapidly.
 
 Attachment Style: Anxious.
 
-3. "????" (??, M)
+3. Rebus (??, M)
 A beautiful, androgynous man with no memory and no ID. The organization has found him. 
-3 isn’t a person but a “pattern” that keeps reincarnating in different hosts; the more the org investigates, the more real he becomes.
+Rebus isn’t a person but a “pattern” that keeps reincarnating in different hosts; the more the org investigates, the more real he becomes.
 This resonates with my views on human intesubjectivity, as well as Lucia Santaella's Semiotics work.
 Is an immediate "tag along" party member, from the first VR mission. His more attuned "powers" make him the glass cannon of the group.
 
 4. Olavo (35, M) 
-Handles missions to the duo - the trio, as soon 3. becomes an official tag along member. 
-2's childhood friend.
+Handles missions to the duo - the trio, as soon Rebus becomes an official tag along member.
+Miguel's childhood friend.
 
 Locations:
 ALL locations in this game (with the exception of the VELDT, which is not technically a location anyway) are real world locations in São Paulo or Santos.
@@ -80,18 +80,18 @@ Endings:
 The player never unfolds the mystery. The final boss is a random monster of the week. 
 
 2. Normal Ending: 
-In the second to last dungeon, 3. is separated from the party. 
-3's role in the story solidifies as antagonistic and monstruous - a real, immediate and high stakes threat scenario. Mass evacuation level. "1999 apocalypse" level.  
-3. is truly a chilling being, and framed as the true villain, narratively. 
+In the second to last dungeon, Rebus is separated from the party.
+Rebus's role in the story solidifies as antagonistic and monstruous - a real, immediate and high stakes threat scenario. Mass evacuation level. "1999 apocalypse" level.
+Rebus is truly a chilling being, and framed as the true villain, narratively.
 There are hints of the TRUE ending and this not being the case, for the observant player.
-The final boss is 3., with 1. and 2. kill him and close the case.
+The final boss is Rebus, with Julia and Miguel kill him and close the case.
 
 3. TRUE ending: 
-The player unfolds the mystery. The fight with 3. is relentless: 3. is unbeatable and wipes the party. 
-Control switches to 3., the game behaves as if the mission was a success. 
-At this point, 3. Can still return to Base. He will have to deal with explaining the abscence of 1. and 2. when interacting with NPCs.
-One TRUE final dungeon opens up, which the player plays as 3. . Important: THIS MUST BE A REAL PLACE.
-During the dungeon, after a few floors, 1. and 2. rejoin him in preparation for a climactic final battle. 
+The player unfolds the mystery. The fight with Rebus is relentless: Rebus is unbeatable and wipes the party.
+Control switches to Rebus, the game behaves as if the mission was a success.
+At this point, Rebus Can still return to Base. He will have to deal with explaining the abscence of Julia and Miguel when interacting with NPCs.
+One TRUE final dungeon opens up, which the player plays as Rebus . Important: THIS MUST BE A REAL PLACE.
+During the dungeon, after a few floors, Julia and Miguel rejoin him in preparation for a climactic final battle.
 
 4. JOKE Ending: 
 Only attainable on a NG+. Think UFO Ending on Silent Hill.
