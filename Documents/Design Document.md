@@ -175,7 +175,7 @@ Snipe → high-power, single-target shot with good range.
 
 Design Document
 
-Agent-02 (“Analyst”, 36, M)
+Miguel (“Analyst”, 36, M)
 
 Background:
 
@@ -207,7 +207,7 @@ Stun Baton → melee with possible stun status.
 
 Design Document
 
-Subject-03 (“Pattern”, ??, M)
+Rebus (“Pattern”, ??, M)
 
 Ontology:
 
@@ -239,7 +239,7 @@ Key NPC
 
 Olavo (35, M) – Mission Handler
 
-Childhood friend of Agent-02; INTRA’s mission coordinator.
+Childhood friend of Miguel; INTRA’s mission coordinator.
 
 Public face of INTRA, always on the phone, juggling favors and covering tracks.
 
@@ -293,9 +293,9 @@ Missions and case decisions lead toward four outcomes:
 
 Bad Ending: Mystery never really unfolds; final boss is just another “monster of the week.”
 
-Normal Ending: 3 becomes an apparent apocalyptic threat; Julia and Agent-02 kill him.
+Normal Ending: Rebus becomes an apparent apocalyptic threat; Julia and Miguel kill him.
 
-True Ending: 3 wipes the party, becomes playable, and leads a final mission where the party reunites to confront the machinery that decides what is real.
+True Ending: Rebus wipes the party, becomes playable, and leads a final mission where the party reunites to confront the machinery that decides what is real.
 
 Joke Ending (NG+): A playful, UFO-style parody outcome unlocked by absurd play patterns.
 
@@ -319,7 +319,7 @@ Space / WAIT command: pass a turn.
 
 Each step:
 
-Rotates the active member (Julia → Agent-02 → Subject-03 → …).
+Rotates the active member (Julia → Miguel → Rebus → …).
 
 Advances enemies (only those alerted or within “cognitive radius”).
 
@@ -397,7 +397,7 @@ PE is re-interpreted as Parapsychic Emission:
 
 A mix of latent psychic potential and ambient anomaly “pressure.”
 
-Each agent has a personal PE pool; 3’s pool is unusually high because he is an anomaly.
+Each agent has a personal PE pool; Rebus’s pool is unusually high because he is an anomaly.
 
 Skill Data (existing implementation)
 
@@ -419,11 +419,11 @@ Rapid Fire (Julia)
 
 2 shots against enemies in line-of-sight; models a trained agent emptying a clip under pressure.
 
-Drain (Subject-03)
+Drain (Rebus)
 
-Fixed damage + self-heal: 3 momentarily aligns others’ bodily patterns to his own, “siphoning” order.
+Fixed damage + self-heal: Rebus momentarily aligns others’ bodily patterns to his own, “siphoning” order.
 
-Blast / Combust / Nuke (Analyst + 3)
+Blast / Combust / Nuke (Miguel + Rebus)
 
 AoE attacks: grenades and large-scale anomaly discharges.
 
@@ -609,7 +609,7 @@ Affect future enemy behavior and appearance.
 
 Alter how NPCs talk about INTRA.
 
-Gate access to the True Ending and 3’s evolution.
+Gate access to the True Ending and Rebus’s evolution.
 
 The UI thus reinforces the central theme: knowledge production as battleground.
 
@@ -657,4 +657,4 @@ Optional Dungeons
 
 Design 3 thematic optional dungeons that deepen the political and cognitive themes while rewarding exploration.
 
-This document should act as the narrative-aligned spine: mechanics stay lean and tactical, but now every system is anchored to São Paulo 1999, INTRA vs State, and the living pattern that is Subject-03.
+This document should act as the narrative-aligned spine: mechanics stay lean and tactical, but now every system is anchored to São Paulo 1999, INTRA vs State, and the living pattern that is Rebus.
