@@ -67,7 +67,7 @@ const $dataMissions = {
         requirements: {
             minLevel: 1,
             flags: ["INTRO_COMPLETE"], // Must have completed intro
-            party: ["Eve"] // Eve must be in the party
+            party: ["Rebus"] // Rebus must be in the party
         },
 
         // The Dungeon Generator Config
@@ -175,7 +175,7 @@ The World Map is a menu, not a playable space. It acts as the bridge between the
 
 ## 6. Character Decoupling (The "True Ending" Requirement)
 
-The True Ending requires switching control to "Subject-03" (Eve/Pattern) entirely, including in the Hub.
+The True Ending requires switching control to "Subject-03" (Rebus/Pattern) entirely, including in the Hub.
 
 ### 6.1. Separation of Concerns
 
@@ -188,7 +188,7 @@ Currently, the code often assumes "Player" is the "Squad". We must decouple:
 ### 6.2. Implementation
 
 *   **Avatar:** The `Renderer3D` should update the player mesh based on `$gameParty.leader()`'s associated model/color. This is mostly supported but needs to be explicit.
-*   **Solo Mode:** For the True Ending, we simply set `$gameParty.members = [Eve]`. The existing turn-rotation logic needs to handle a single-member party gracefully (i.e., `nextActive()` just returns self).
+*   **Solo Mode:** For the True Ending, we simply set `$gameParty.members = [Rebus]`. The existing turn-rotation logic needs to handle a single-member party gracefully (i.e., `nextActive()` just returns self).
 *   **Persistence:** The active party composition must be saved in `$gameSystem` (or `$gameParty`'s save data) so that when returning to the Hub, the player is still controlling the correct character.
 
 ## 7. Refactoring Roadmap

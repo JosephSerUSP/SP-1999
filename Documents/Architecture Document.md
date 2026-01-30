@@ -56,7 +56,7 @@ Enemy Data ($dataEnemies)
 
 Array of enemies with: id, name, hp, atk, exp, color, scale, ai.
 
-In current build, hp is not used at spawn; HP is derived from floor.
+In current build, the HP defined in $dataEnemies is a base value; actual HP is derived from the floor level.
 
 Loot Table ($dataLootTable)
 
@@ -541,13 +541,6 @@ Equips item, returns previous gear to inventory if present.
 
 Logs.
 
-showTargetSelectModal(callback, itemPreview) (Deprecated):
-
-Simple overlay listing party members.
-
-showConfirmModal(text, onConfirm) (Deprecated):
-
-Yes/No dialog overlay.
 
 showStatusModal(actor):
 
