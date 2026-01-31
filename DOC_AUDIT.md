@@ -3,29 +3,41 @@
 ## Executive Summary
 This report summarizes the findings of a documentation audit performed on the *Stillnight: Eve of the Stack* repository. The audit compared existing documentation (README, Design Docs, Architecture Docs) against the actual codebase (`src/`).
 
-## 1. Character Name Inconsistencies
-**Status:** Drift Identified
+## 1. Character Name Consistency
+**Status:** Resolved
 **Details:**
-*   **Documentation:** `README.md`, `Documents/Architecture Document.md`, and `Documents/Design Document.md` frequently refer to the squad members as "Aya" (Detective), "Kyle" (Trooper), and "Eve" (Subject).
-*   **Code:** `src/data.js` and `src/objects.js` implement these characters as "Julia" (Agent), "Miguel" (Analyst), and "Rebus" (Entity).
-*   **Action:** Documentation will be updated to use the implementation names (Julia, Miguel, Rebus).
+*   Previous reports flagged inconsistencies between "Aya/Kyle/Eve" and "Julia/Miguel/Rebus".
+*   **Action:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` (roadmap) and `Documents/Initial Assessment.md` have been updated to use the implemented names: **Julia**, **Miguel**, and **Rebus**.
+*   **Verification:** `README.md`, `Documents/Design Document.md`, and `Documents/Architecture Document.md` were verified to be consistent with the code.
 
-## 2. Deprecated API
-**Status:** Deprecation Flagged
+## 2. Deprecated API Documentation
+**Status:** Resolved
 **Details:**
-*   The following methods in `src/windows.js` are marked as `@deprecated` in the code but listed as standard methods in `Documents/Architecture Document.md`:
-    *   `UIManager.showTargetSelectModal`
-    *   `UIManager.showConfirmModal`
-*   **Action:** `Documents/Architecture Document.md` will be updated to mark these as deprecated legacy modals.
+*   Legacy imperative modals (`UIManager.showTargetSelectModal`, `showConfirmModal`) are removed from the codebase.
+*   **Verification:** `Documents/Architecture Document.md` correctly notes these as deprecated/removed.
 
-## 3. Architectural Drift
-**Status:** Inconsistencies Identified
+## 3. Architectural Drift: Party Rotation
+**Status:** Verified
 **Details:**
-*   **Party Rotation:** `Documents/Architecture Document.md` describes `Game_Party.rotate()` as the primary method for cycling characters. In the current code (`src/objects.js`), `rotate()` is exclusively used for forced rotation upon death, while `cycleActive()` handles manual swapping.
-*   **Game Modes:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` outlines a "Multi-Modal State Machine" (Dungeon vs. Hub). This is a proposal/roadmap document; the current `src/main.js` implements a single-mode game loop.
-*   **Content:** `Documents/Architecture Document.md` claims `$dataEnemies.hp` is not used at spawn. This is partially correct (it uses a floor-scaled value), but the phrasing could be clearer.
+*   Previous reports flagged a drift regarding `Game_Party.rotate()` vs `cycleActive()`.
+*   **Verification:** `Documents/Architecture Document.md` correctly describes `rotate()` as forced rotation (death) and `cycleActive()` as manual swapping. This matches `src/objects.js`.
 
-## 4. File Structure & Language
-**Status:** Accurate
+## 4. Architectural Drift: Content & HP
+**Status:** Verified
 **Details:**
-*   The project structure (`src/`) and language (JavaScript) match the descriptions in `README.md`.
+*   Previous reports flagged that `$dataEnemies.hp` might be unused/overwritten.
+*   **Verification:** `Documents/Architecture Document.md` describes `$dataEnemies` generically. `Documents/Initial Assessment.md` (historical) noted the overwrite behavior (`10 + floor*2`).
+*   **Code State:** `src/objects.js` confirms `Game_Enemy` uses the passed `hp` argument, which `Game_Map` calculates dynamically. The documentation does not incorrectly claim otherwise.
+
+## 5. Mechanic Implementation Details
+**Status:** Noted
+**Details:**
+*   **PE (Parapsychic Emission):** `Documents/Design Document.md` implies Rebus has "Very High" PE compared to others.
+*   **Code:** In `src/objects.js`, `Game_Actor` hardcodes `mpe` (Max PE) to 100 for all characters, though `pe` (starting value) varies (Rebus: 80, others: 20/40).
+*   **Action:** A comment has been added to `src/objects.js` to clarify that `mpe` is currently a fixed constant.
+
+## 6. Roadmap Clarification
+**Status:** Clarified
+**Details:**
+*   `Documents/ARCHITECTURAL_DEEP_DIVE.md` describes features not yet implemented.
+*   **Action:** A disclaimer was added to the document header.

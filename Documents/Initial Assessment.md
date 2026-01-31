@@ -53,11 +53,11 @@ Party & Progression
 
 Three clearly distinct characters in data:
 
-Aya: mid HP, higher PE, ranged skills (rapid, scan, snipe).
+Julia: mid HP, higher PE, ranged skills (rapid, scan, snipe).
 
-Kyle: tankier, lower PE, explosive / barrier kit (blast, barrier, stun).
+Miguel: tankier, lower PE, explosive / barrier kit (blast, barrier, stun).
 
-Eve: glass cannon PE monster (combust, drain, nuke, heal).
+Rebus: glass cannon PE monster (combust, drain, nuke, heal).
 
 Leveling works:
 
