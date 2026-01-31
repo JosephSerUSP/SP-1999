@@ -1,5 +1,7 @@
 # Architectural Deep Dive: Stillnight - Eve of the Stack
 
+> **NOTE:** This is a forward-looking roadmap document. Features described here (Hub Mode, Mission System) are proposed and not yet implemented in the current codebase.
+
 ## 1. Executive Summary
 
 This document outlines the architectural evolution required to transition *Stillnight* from a linear roguelike prototype into a narrative-driven campaign RPG. The core challenge is shifting from a single "always-in-dungeon" loop to a multi-modal system that supports a Narrative Hub, a World Map, and modular Missions, while retaining the "Logic-First" and "Data-Driven" philosophies of the existing engine.
@@ -67,7 +69,7 @@ const $dataMissions = {
         requirements: {
             minLevel: 1,
             flags: ["INTRO_COMPLETE"], // Must have completed intro
-            party: ["Eve"] // Eve must be in the party
+            party: ["Rebus"] // Rebus must be in the party
         },
 
         // The Dungeon Generator Config
@@ -175,7 +177,7 @@ The World Map is a menu, not a playable space. It acts as the bridge between the
 
 ## 6. Character Decoupling (The "True Ending" Requirement)
 
-The True Ending requires switching control to "Subject-03" (Eve/Pattern) entirely, including in the Hub.
+The True Ending requires switching control to "Subject-03" (Rebus/Pattern) entirely, including in the Hub.
 
 ### 6.1. Separation of Concerns
 
@@ -188,7 +190,7 @@ Currently, the code often assumes "Player" is the "Squad". We must decouple:
 ### 6.2. Implementation
 
 *   **Avatar:** The `Renderer3D` should update the player mesh based on `$gameParty.leader()`'s associated model/color. This is mostly supported but needs to be explicit.
-*   **Solo Mode:** For the True Ending, we simply set `$gameParty.members = [Eve]`. The existing turn-rotation logic needs to handle a single-member party gracefully (i.e., `nextActive()` just returns self).
+*   **Solo Mode:** For the True Ending, we simply set `$gameParty.members = [Rebus]`. The existing turn-rotation logic needs to handle a single-member party gracefully (i.e., `nextActive()` just returns self).
 *   **Persistence:** The active party composition must be saved in `$gameSystem` (or `$gameParty`'s save data) so that when returning to the Hub, the player is still controlling the correct character.
 
 ## 7. Refactoring Roadmap

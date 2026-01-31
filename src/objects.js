@@ -443,6 +443,7 @@ class Game_Actor extends Game_Battler {
         this.name = name;
         this.mhp = d.hp;
         this.hp = this.mhp;
+        // Max PE is currently hardcoded to 100 for all characters.
         this.mpe = 100;
         this.pe = d.pe;
         this.mstamina = 1000;
