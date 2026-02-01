@@ -33,12 +33,12 @@ The codebase has been refactored from a monolithic prototype into a modular arch
 
 *   **`data.js`**: Contains static configuration data (`CONFIG`), game database objects (`$dataSkills`, `$dataClasses`, `$dataEnemies`), and constant definitions (`EFFECT_*`, `TRAIT_*`).
 *   **`core.js`**: Contains core utility classes that define the engine's backbone, such as `EventBus` (for decoupling logic and view), `ConditionSystem`, and `Sequencer`.
-*   **`managers.js`**: Static classes that manage high-level game logic and systems (`SceneManager`, `BattleManager`, `ItemManager`, `BanterManager`).
+*   **`managers.js`**: Static classes that manage high-level game logic and systems (`BattleManager`, `ItemManager`, `BanterManager`, `CutsceneManager`).
 *   **`objects.js`**: The "Model" layer. Classes representing game entities (`Game_Actor`, `Game_Enemy`, `Game_Map`). These hold state and business logic but do not handle rendering.
 *   **`sprites.js`**: The "View" layer for the 3D world. Contains `Renderer3D` (Three.js logic) and `ParticleSystem`.
 *   **`windows.js`**: The "View" layer for the UI. Contains `UIManager`. Specific window classes are now in `src/ui/windows/`.
 *   **`src/ui/`**: Contains the Component-Based UI Framework (`UIComponent`, `UIContainer`, `Window_Base`) and window implementations.
-*   **`main.js`**: The entry point. Bootstraps the application, handles window resizing, and initializes the `SceneManager`.
+*   **`main.js`**: The entry point. Defines `SceneManager`, bootstraps the application, and handles window resizing.
 
 ### Key Design Patterns
 
