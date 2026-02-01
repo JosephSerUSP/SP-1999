@@ -443,7 +443,7 @@ class Game_Actor extends Game_Battler {
         this.name = name;
         this.mhp = d.hp;
         this.hp = this.mhp;
-        this.mpe = 100;
+        this.mpe = d.pe;
         this.pe = d.pe;
         this.mstamina = 1000;
         this.stamina = this.mstamina;
