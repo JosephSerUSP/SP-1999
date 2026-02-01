@@ -426,7 +426,7 @@ class Renderer3D {
     /**
      * Triggers a specific visual animation.
      * @param {string} type - The type of animation (e.g., 'move_switch', 'lunge', 'hit').
-     * @param {Object} data - Parameters for the animation.
+     * @param {Object} data - Parameters for the animation. For 'move_switch', requires {toX, toY, nextColor}.
      */
     playAnimation(type, data) {
         if (type === 'move_switch' || type === 'move') {

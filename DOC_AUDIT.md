@@ -1,31 +1,43 @@
 # Documentation Audit Report
 
-## Executive Summary
-This report summarizes the findings of a documentation audit performed on the *Stillnight: Eve of the Stack* repository. The audit compared existing documentation (README, Design Docs, Architecture Docs) against the actual codebase (`src/`).
+## Overview
+This document summarizes the inconsistencies found between the project documentation and the codebase as of the latest audit.
 
-## 1. Character Name Inconsistencies
-**Status:** Drift Identified
-**Details:**
-*   **Documentation:** `README.md`, `Documents/Architecture Document.md`, and `Documents/Design Document.md` frequently refer to the squad members as "Aya" (Detective), "Kyle" (Trooper), and "Eve" (Subject).
-*   **Code:** `src/data.js` and `src/objects.js` implement these characters as "Julia" (Agent), "Miguel" (Analyst), and "Rebus" (Entity).
-*   **Action:** Documentation will be updated to use the implementation names (Julia, Miguel, Rebus).
+## Discrepancies & Updates
 
-## 2. Deprecated API
-**Status:** Deprecation Flagged
-**Details:**
-*   The following methods in `src/windows.js` are marked as `@deprecated` in the code but listed as standard methods in `Documents/Architecture Document.md`:
-    *   `UIManager.showTargetSelectModal`
-    *   `UIManager.showConfirmModal`
-*   **Action:** `Documents/Architecture Document.md` will be updated to mark these as deprecated legacy modals.
+### 1. Code Architecture & Module Structure
+*   **Documentation**: `Documents/Architecture Document.md` listed `SceneManager` under `src/managers.js`.
+*   **Codebase**: `SceneManager` is defined in `src/main.js`.
+*   **Action**: Updated documentation to reflect accurate location.
 
-## 3. Architectural Drift
-**Status:** Inconsistencies Identified
-**Details:**
-*   **Party Rotation:** `Documents/Architecture Document.md` describes `Game_Party.rotate()` as the primary method for cycling characters. In the current code (`src/objects.js`), `rotate()` is exclusively used for forced rotation upon death, while `cycleActive()` handles manual swapping.
-*   **Game Modes:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` outlines a "Multi-Modal State Machine" (Dungeon vs. Hub). This is a proposal/roadmap document; the current `src/main.js` implements a single-mode game loop.
-*   **Content:** `Documents/Architecture Document.md` claims `$dataEnemies.hp` is not used at spawn. This is partially correct (it uses a floor-scaled value), but the phrasing could be clearer.
+### 2. Game Objects (`src/objects.js`)
+*   **Game_Actor**:
+    *   **Logic**: `mpe` (Max PE) is hardcoded to `100` in the constructor, ignoring any potential data-driven values from `$dataClasses`.
+    *   **Action**: Documented this behavior in `Architecture Document.md` and inline comments.
+*   **Game_Map**:
+    *   **Logic**: `processTurn(dx, dy, action)` allows `dx` and `dy` to be `0` when an external `action` is provided.
+    *   **Action**: Clarified this flexibility in inline documentation.
 
-## 4. File Structure & Language
-**Status:** Accurate
-**Details:**
-*   The project structure (`src/`) and language (JavaScript) match the descriptions in `README.md`.
+### 3. Managers (`src/managers.js`)
+*   **BanterManager**:
+    *   **Logic**: `trigger()` is strictly inhibited when `$gameSystem.isInputBlocked` is true.
+    *   **Triggers**: The code utilizes the following triggers: `kill`, `walk`, `surrounded`, `loot`, `hurt`, `low_hp`, `level_up`, `start`.
+    *   **Action**: Updated documentation to include the full list of triggers and the input blocking condition.
+
+### 4. Sprites & Rendering (`src/sprites.js`)
+*   **Renderer3D**:
+    *   **Logic**: `playAnimation` for type `move_switch` expects a data object containing `nextColor` to handle visual swapping.
+    *   **Action**: Added detail to inline documentation and Architecture document.
+
+### 5. Core Utilities (`src/core.js`)
+*   **Geometry**:
+    *   **Logic**: `getCone` uses Euclidean distance checks (`Math.sqrt`) rather than Manhattan distance for range verification.
+    *   **Action**: Specified this in the Architecture document.
+
+### 6. UI (`src/windows.js` & `src/ui/`)
+*   **Deprecation**: Legacy imperative modals `showTargetSelectModal` and `showConfirmModal` have been removed in favor of component-based approaches or inline targeting logic.
+*   **Status**: Confirmed removal and ensured documentation reflects the current component-based `UIManager`.
+
+## Recommendations
+*   Consider refactoring `Game_Actor` to respect `mpe` from `$dataClasses` if data-driven design is a priority.
+*   Maintain `DOC_AUDIT.md` as a living document for future audits.

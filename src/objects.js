@@ -443,6 +443,7 @@ class Game_Actor extends Game_Battler {
         this.name = name;
         this.mhp = d.hp;
         this.hp = this.mhp;
+        // Hardcoded Max PE. Ignores data.
         this.mpe = 100;
         this.pe = d.pe;
         this.mstamina = 1000;
@@ -1039,8 +1040,8 @@ class Game_Map {
 
     /**
      * Processes a game turn based on player movement or a direct action.
-     * @param {number} dx - Change in x.
-     * @param {number} dy - Change in y.
+     * @param {number} dx - Change in x (can be 0 if action is present).
+     * @param {number} dy - Change in y (can be 0 if action is present).
      * @param {Function} [action] - An optional async callback representing a non-movement action (e.g., skill).
      */
     async processTurn(dx, dy, action) {
