@@ -9,7 +9,7 @@ The codebase utilizes a modular architecture inspired by RPG Maker MZ, residing 
 ### Module Structure (`src/`)
 
 *   **`data.js`**: Contains static configuration data (`CONFIG`), game database objects (`$dataSkills`, `$dataClasses`, `$dataEnemies`), and constant definitions.
-*   **`core.js`**: Core utility classes (`EventBus`, `ConditionSystem`, `Sequencer`, `Geometry`).
+*   **core.js**: Core utility classes (`EventBus`, `ConditionSystem`, `Sequencer`, `Geometry`). `Geometry.getCone` uses Euclidean distance.
 *   **`managers.js`**: Static classes managing high-level systems (`BattleManager`, `ItemManager`, `CutsceneManager`, `BanterManager`).
 *   **`objects.js`**: The Model layer. Game entities (`Game_System`, `Game_Actor`, `Game_Enemy`, `Game_Map`, `Game_Party`).
 *   **`sprites.js`**: The 3D View layer (`Renderer3D`, `ParticleSystem`).
@@ -55,6 +55,7 @@ Represents a party member (Julia, Miguel, Rebus).
     *   `checkExhaustionSwap()`: Forces a swap if the active actor becomes exhausted.
 *   **PE (Parapsychic Emission)**:
     *   Resource for skills. Does *not* regenerate automatically. Restored via items/effects.
+    *   **Note**: `mpe` (Max PE) is currently hardcoded to 100 in the constructor.
 *   **Methods**: `isDead()`, `takeDamage()`, `heal()`, `gainExp()`.
 
 ### Game_Party
@@ -72,7 +73,7 @@ Represents a party member (Julia, Miguel, Rebus).
 ### Game_Map
 Encapsulates grid state, entities, and turn processing.
 *   **Methods**:
-    *   `processTurn(dx, dy, action)`: Async. Handles movement or external actions. Applies `isBusy` lock.
+    *   `processTurn(dx, dy, action)`: Async. Handles movement or external actions (dx/dy can be 0). Applies `isBusy` lock.
     *   `updateEnemies()`: Async. 3-Phase update (Planning, Visualization, Execution).
     *   `startTargeting(skill, callback)`: Enters targeting mode for skills.
     *   `updateTargeting()`: Handles input during targeting (cursor/cycling).
@@ -87,7 +88,7 @@ Encapsulates grid state, entities, and turn processing.
 
 ### BanterManager
 Manages floating text banter with a priority queue system.
-*   `trigger(type, context)`: Attempts to trigger banter based on events (kill, walk, start, etc.).
+*   `trigger(type, context)`: Attempts to trigger banter (inhibited if input is blocked). Triggers: `kill`, `walk`, `surrounded`, `loot`, `hurt`, `low_hp`, `level_up`, `start`.
 *   `queue`: Priority-based queue for lines.
 *   `cooldowns`: Global, per-actor, and per-trigger cooldowns.
 
@@ -117,7 +118,7 @@ Top-level manager.
 
 ### Renderer3D
 Manages Three.js scene.
-*   `playAnimation(type, data)`: Handles visual FX (move_switch, hit, projectile).
+*   `playAnimation(type, data)`: Handles visual FX (`move_switch` uses `nextColor`, `hit`, `projectile`).
 *   `syncEnemies()`: Updates 3D meshes to match `Game_Map` state.
 
 ## 7. Procedural Generation (`src/generators/`)

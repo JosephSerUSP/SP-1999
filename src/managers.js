@@ -465,6 +465,7 @@ class BanterManager {
 
     /**
      * Attempts to trigger banter based on an event type.
+     * Inhibited if input is blocked ($gameSystem.isInputBlocked).
      * @param {string} type - The trigger type (e.g., 'kill', 'walk').
      * @param {Object} [context={}] - Additional context for condition checking.
      */
