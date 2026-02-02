@@ -22,7 +22,6 @@
 *   **Space / Enter**: Open Command Menu / Confirm.
 *   **Tab**: Toggle Minimap.
 *   **Q / E**: Swap Character.
-*   **Shift / V**: Cycle Targets.
 *   **Mouse**: Interact with the UI (select skills, manage inventory, view tooltips).
 
 ## Architecture

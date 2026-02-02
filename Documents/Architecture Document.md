@@ -14,7 +14,7 @@ The codebase utilizes a modular architecture inspired by RPG Maker MZ, residing 
 *   **`objects.js`**: The Model layer. Game entities (`Game_System`, `Game_Actor`, `Game_Enemy`, `Game_Map`, `Game_Party`).
 *   **`sprites.js`**: The 3D View layer (`Renderer3D`, `ParticleSystem`).
 *   **`windows.js`**: The UI Manager and top-level window layout (`UIManager`).
-*   **`ui/`**: Component-based UI framework and specific window implementations (e.g., `Window_Party`, `Window_Tactics`).
+*   **`ui/`**: Component-based UI framework (`core.js`) and specific window implementations in `windows/` (e.g., `Window_Party`, `Window_Tactics`).
 *   **`generators/`**: Procedural generation logic (`GeneratorRegistry`, `DungeonGenerator`).
 *   **`main.js`**: Entry point (`SceneManager`).
 
@@ -52,9 +52,9 @@ Represents a party member (Julia, Miguel, Rebus).
     *   `stamina`: Current stamina (max 1000).
     *   `payStamina(amount)`: Consumes stamina (Movement: 10, Skill: 20). Triggers exhaustion at 0.
     *   `gainStamina(amount)`: Recovers stamina.
-    *   `checkExhaustionSwap()`: Forces a swap if the active actor becomes exhausted.
 *   **PE (Parapsychic Emission)**:
-    *   Resource for skills. Does *not* regenerate automatically. Restored via items/effects.
+    *   Resource for skills. Max PE (`mpe`) is currently fixed at 100.
+    *   Does *not* regenerate automatically. Restored via items/effects.
 *   **Methods**: `isDead()`, `takeDamage()`, `heal()`, `gainExp()`.
 
 ### Game_Party
@@ -62,6 +62,7 @@ Represents a party member (Julia, Miguel, Rebus).
 *   `active()`: Returns the current actor.
 *   `cycleActive(dir)`: Manual character swap (Q/E).
 *   `rotate()`: Forced rotation upon character death.
+*   `checkExhaustionSwap()`: Forces a swap if the active actor becomes exhausted.
 *   `distributeExp(amount)`: Splits EXP (active gets full, others get 50%).
 
 ### Game_Enemy
@@ -75,7 +76,7 @@ Encapsulates grid state, entities, and turn processing.
     *   `processTurn(dx, dy, action)`: Async. Handles movement or external actions. Applies `isBusy` lock.
     *   `updateEnemies()`: Async. 3-Phase update (Planning, Visualization, Execution).
     *   `startTargeting(skill, callback)`: Enters targeting mode for skills.
-    *   `updateTargeting()`: Handles input during targeting (cursor/cycling).
+    *   `updateTargeting()`: Handles input during targeting (Arrows to cycle/move, OK to confirm).
     *   `killEnemy(enemy)`: Handles enemy death sequence.
 
 ## 4. Managers (`src/managers.js`)
