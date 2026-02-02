@@ -228,7 +228,7 @@ class BattleManager {
      * @async
      * @param {Game_Battler} a - The user (Actor or Enemy).
      * @param {string} k - The key/ID of the skill.
-     * @param {Game_Battler} [target=null] - An optional specific target override.
+     * @param {Game_Battler} [target=null] - An optional specific target override. If null, targets are resolved based on skill type.
      * @returns {Promise<boolean>} Resolves to true if skill was executed successfully, false otherwise.
      */
     static async executeSkill(a, k, target = null) {

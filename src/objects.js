@@ -435,6 +435,7 @@ class Game_Actor extends Game_Battler {
     /**
      * Creates a new Game_Actor.
      * @param {string} name - The name of the character (must match a key in $dataClasses).
+     * Note: mpe (Max PE) is currently hardcoded to 100, ignoring data.
      */
     constructor(name) {
         super();
