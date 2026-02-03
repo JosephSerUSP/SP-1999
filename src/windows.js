@@ -222,13 +222,6 @@ class UIManager {
         });
 
         ctx.fillStyle = "#0ff"; ctx.fillRect($gameMap.playerX*ts, $gameMap.playerY*ts, ts, ts);
-
-        // Scroll logic needs container
-        const mm = this.windows.minimap.contentEl;
-        const px = $gameMap.playerX * ts;
-        const py = $gameMap.playerY * ts;
-        mm.scrollTop = py - mm.clientHeight / 2;
-        mm.scrollLeft = px - mm.clientWidth / 2;
     }
 
     refreshLog() {

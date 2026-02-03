@@ -52,6 +52,7 @@ class SceneManager {
         requestAnimationFrame(() => this.loop());
         InputManager.update();
         $gameBanter.update();
+        if (Cutscene) Cutscene.update();
 
         // Delegate Input
         // 0. Global UI Input (Minimap toggle)
