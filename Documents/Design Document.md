@@ -130,7 +130,7 @@ Simple numerically but tense tactically due to resource management (Stamina/PE) 
 *   **Rapid Fire (Julia):** Multi-hit ranged.
 *   **Drain (Rebus):** Damage + Self-heal.
 *   **Blast/Nuke (Rebus/Miguel):** AoE.
-*   **Scan/Barrier/Heal (Planned):** Intel and Support.
+*   **Scan/Barrier/Heal:** Intel and Support.
 
 ## 2.9. Enemies & Anomaly Taxonomy
 
@@ -156,6 +156,6 @@ Procedurally generated based on `$dataFloors`. Themes include Hospitals, Univers
 ## 2.13. Future Scope
 
 *   Expand Intel/Scan systems.
-*   Implement full Status Effects.
+*   Expand Status Effects system (beyond basic Stun/Poison/Barrier).
 *   Flesh out Case File UI and decision mechanics.
 *   Add optional dungeons and narrative flags.

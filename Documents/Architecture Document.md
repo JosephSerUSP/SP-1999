@@ -52,9 +52,9 @@ Represents a party member (Julia, Miguel, Rebus).
     *   `stamina`: Current stamina (max 1000).
     *   `payStamina(amount)`: Consumes stamina (Movement: 10, Skill: 20). Triggers exhaustion at 0.
     *   `gainStamina(amount)`: Recovers stamina.
-    *   `checkExhaustionSwap()`: Forces a swap if the active actor becomes exhausted.
 *   **PE (Parapsychic Emission)**:
     *   Resource for skills. Does *not* regenerate automatically. Restored via items/effects.
+    *   `mpe`: Hardcoded to 100 max PE, while initial `pe` is loaded from data.
 *   **Methods**: `isDead()`, `takeDamage()`, `heal()`, `gainExp()`.
 
 ### Game_Party
@@ -62,10 +62,12 @@ Represents a party member (Julia, Miguel, Rebus).
 *   `active()`: Returns the current actor.
 *   `cycleActive(dir)`: Manual character swap (Q/E).
 *   `rotate()`: Forced rotation upon character death.
+*   `checkExhaustionSwap()`: Forced rotation if active actor is exhausted.
 *   `distributeExp(amount)`: Splits EXP (active gets full, others get 50%).
 
 ### Game_Enemy
 *   `aiConfig`: logic definition for behavior (replacing legacy `ai` tag).
+*   `customState`: Internal state for AI flags (e.g., 'meleeMode').
 *   `decideAction()`: Evaluates `aiConfig` to return a move or skill action.
 *   `cooldowns`: Tracks skill cooldowns.
 
@@ -82,7 +84,7 @@ Encapsulates grid state, entities, and turn processing.
 
 ### BattleManager
 *   `calcDamage(source, target)`: Standard damage formula.
-*   `executeSkill(actor, key, target)`: Async. Handles PE cost, animation, and effect application.
+*   `executeSkill(actor, key, target)`: Async. Handles PE cost, animation, and effect application. Handles targeting resolution internally if `target` is null.
 *   `applyEffect(effect, source, target)`: Handles specific effects (DAMAGE, HEAL, ADD_STATE, RECOVER_PE).
 
 ### BanterManager
@@ -96,6 +98,7 @@ Generates loot based on floor difficulty.
 
 ### CutsceneManager
 Handles scripted cutscenes, blocking input and displaying dialog overlays.
+*   Manages dialog progression via `setInterval` polling for input during blocking states (instead of an `update()` loop).
 
 ## 5. UI Layer (`src/windows.js`, `src/ui/`)
 

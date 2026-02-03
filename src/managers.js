@@ -107,12 +107,10 @@ class CutsceneManager {
                 // Allow mouse click
                 setTimeout(() => document.addEventListener('click', advance), 100);
 
-                // Allow keyboard Input (need to hook into update loop or just poll here?
+                // Allow keyboard Input.
                 // Since this blocks input, SceneManager loop is still running but game map updates are blocked.
-                // But SceneManager.loop calls InputManager.update().
-                // We need a way to check input here.
-                // We can't easily hook into the loop from here without a callback or polling interval.
-                // Let's use a polling interval for this specific blocking state.
+                // InputManager.update() is called by SceneManager.loop.
+                // We use a polling interval here to check for 'OK' input during this specific blocking state.
                 const checkInput = setInterval(() => {
                     if (advanced) { clearInterval(checkInput); return; }
                     // We need to check InputManager state. InputManager updates in SceneManager loop.
