@@ -228,3 +228,12 @@ No explicit scene stack or window manager stack – you’re manually managing o
 Turn logic is distributed between SceneManager.loop, Game_Map.processTurn, BattleManager.executeSkill, UIManager.
 
 The next two sections formalize this into two clean docs you can reuse.
+
+1.5. Current Status (Audited)
+
+Recent audits have addressed several issues identified in the initial assessment:
+
+*   **Character Names**: Standardized to Julia, Miguel, and Rebus across all data and documentation.
+*   **Skill Implementation**: `scan`, `barrier`, and `heal` are now fully implemented via `BattleManager.applyEffect` and `$dataSkills`.
+*   **Status Effects**: Basic support for Barrier, Stun, and Poison has been implemented.
+*   **Turn Logic**: `Game_Map.processTurn` now correctly awaits action callbacks, fixing the "out of band" skill execution and synchronization issues.
