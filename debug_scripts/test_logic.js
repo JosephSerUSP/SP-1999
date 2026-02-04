@@ -1,5 +1,5 @@
 
-const { EventBus } = require('./src/core.js');
+const { EventBus } = require('../src/core.js');
 // Mock other classes
 global.EventBus = { emit: () => {} };
 global.Renderer = { isAnimating: false };
