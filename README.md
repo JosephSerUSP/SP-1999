@@ -14,7 +14,8 @@
 ### Installation & Usage
 
 1.  **Download:** Clone or download this repository.
-2.  **Run:** Open `index.html` in your web browser. No build process or local server is strictly required, though a local server (e.g., VS Code Live Server) is recommended for best performance.
+2.  **Run:** You **must** serve the files using a local web server (e.g., VS Code Live Server, `python3 -m http.server`, or `npm install -g serve`).
+    *   *Note:* Opening `index.html` directly (file:// protocol) will fail to load textures due to browser CORS policies.
 
 ## Game Controls
 

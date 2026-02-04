@@ -61,7 +61,7 @@ Represents a party member (Julia, Miguel, Rebus).
 *   `members`: Array of 3 `Game_Actor` instances.
 *   `active()`: Returns the current actor.
 *   `cycleActive(dir)`: Manual character swap (Q/E).
-*   `rotate()`: Forced rotation upon character death.
+*   `rotate()`: Forced rotation used *only* upon character death to find next living member.
 *   `distributeExp(amount)`: Splits EXP (active gets full, others get 50%).
 
 ### Game_Enemy
@@ -72,7 +72,7 @@ Represents a party member (Julia, Miguel, Rebus).
 ### Game_Map
 Encapsulates grid state, entities, and turn processing.
 *   **Methods**:
-    *   `processTurn(dx, dy, action)`: Async. Handles movement or external actions. Applies `isBusy` lock.
+    *   `processTurn(dx, dy, action)`: Async. Handles movement or external actions. Applies `isBusy` lock and awaits the `action` callback if provided, ensuring correct sequencing before enemy updates.
     *   `updateEnemies()`: Async. 3-Phase update (Planning, Visualization, Execution).
     *   `startTargeting(skill, callback)`: Enters targeting mode for skills.
     *   `updateTargeting()`: Handles input during targeting (cursor/cycling).
