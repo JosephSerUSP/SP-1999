@@ -145,37 +145,28 @@ class Geometry {
      */
     static getCone(ox, oy, dir, range) {
         const points = [];
-        // Cone Logic: 90 degrees (Triangle on grid)
-        // If facing North (0, -1):
-        //  Rows up to range. Width increases by 1 each step away.
-        //  Simple dot product check or relative coordinate check.
 
-        // Iterate bounding box
+        // Iterate bounding box around origin
         for (let x = ox - range; x <= ox + range; x++) {
             for (let y = oy - range; y <= oy + range; y++) {
                 if (x === ox && y === oy) { points.push({x,y}); continue; }
 
                 const dx = x - ox;
                 const dy = y - oy;
-                const dist = Math.abs(dx) + Math.abs(dy); // Manhattan for loop limit check approx
-                if (dist > range * 1.5) continue; // Optimization
 
-                // Exact range check (Euclidean or Chebyshev? Game uses Manhattan often but for cone visual Euclidean is better? Or Grid?)
-                // Let's use Chebyshev (Max(dx, dy)) for square range, or Manhattan.
-                // Standard for this game seems to be Manhattan `dist` used in checks, but let's be generous.
+                // Optimization: Skip tiles far outside the Manhattan distance
+                const distManhattan = Math.abs(dx) + Math.abs(dy);
+                if (distManhattan > range * 1.5) continue;
+
+                // Range Check: Use Euclidean distance for smoother visual edges
                 if (Math.sqrt(dx*dx + dy*dy) > range) continue;
 
-                // Direction Check
-                // Project (dx,dy) onto dir.
-                // Dot Product: dx*dir.x + dy*dir.y
+                // Direction Check: Dot Product > 0 means the point is "in front" of the origin
                 const dot = dx * dir.x + dy * dir.y;
-
-                // If dot > 0, it's in front.
                 if (dot <= 0) continue;
 
-                // Angle check.
-                // For 90 degree cone, the projection on the perpendicular axis should be <= projection on forward axis.
-                // Perpendicular: (-dir.y, dir.x)
+                // Angle Check: 90-degree cone
+                // The projection on the perpendicular axis should be <= projection on the forward axis.
                 const perp = Math.abs(dx * -dir.y + dy * dir.x);
                 if (perp <= dot) {
                     points.push({x, y});
