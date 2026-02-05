@@ -14,8 +14,6 @@ class UIManager {
         this.focusableElements = [];
         this.activeModal = null;
         this.initEvents();
-        // Layout creation is deferred until SceneManager calls init?
-        // No, SceneManager calls new UIManager(), which calls createLayout().
         this.createLayout();
     }
 
@@ -32,10 +30,7 @@ class UIManager {
         this.windows.help = new Window_Help();
         this.windows.minimap = new Window_Minimap();
 
-        // Ensure minimap shell is sized before log creation?
-        // Window_Minimap logic sets its own height on mount.
-        // But Window_Log needs it for top calculation.
-        // We can access el.clientWidth immediately after mount (which happens in constructor of Window_Base).
+        // Calculate width for Log window based on Minimap
         const mmW = this.windows.minimap.el.clientWidth;
 
         this.windows.log = new Window_Log(mmW);
@@ -142,9 +137,9 @@ class UIManager {
         if (this.activeModal) {
             container = this.activeModal;
         } else if (this.focusedWindow === 'cmd') {
-            container = this.windows.cmd.contentEl; // Updated to contentEl
+            container = this.windows.cmd.contentEl;
         } else if (this.focusedWindow === 'status') {
-            container = this.windows.status.contentEl; // Updated to contentEl
+            container = this.windows.status.contentEl;
         }
 
         if (container) {
