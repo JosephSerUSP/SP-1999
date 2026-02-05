@@ -33,7 +33,7 @@ The codebase utilizes a modular architecture inspired by RPG Maker MZ, residing 
 *   **CONFIG**: Base colors and settings.
 *   **$dataSkills**: Skill definitions (costs, ranges, effects).
 *   **$dataClasses**: Character definitions for "Julia", "Miguel", and "Rebus".
-*   **$dataEnemies**: Enemy definitions (`aiConfig` defines behavior).
+*   **$dataEnemies**: Enemy definitions (`aiConfig` defines behavior). Note: The `hp` property in data is currently overridden by a floor-scaled formula (`10 + floor * 2`) during spawn.
 *   **$dataLootTable**: Probabilities for items, weapons, and armors.
 *   **$dataFloors**: Configuration for each floor level.
 

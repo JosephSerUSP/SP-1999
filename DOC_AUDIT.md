@@ -4,28 +4,25 @@
 This report summarizes the findings of a documentation audit performed on the *Stillnight: Eve of the Stack* repository. The audit compared existing documentation (README, Design Docs, Architecture Docs) against the actual codebase (`src/`).
 
 ## 1. Character Name Inconsistencies
-**Status:** Drift Identified
+**Status:** Resolved
 **Details:**
-*   **Documentation:** `README.md`, `Documents/Architecture Document.md`, and `Documents/Design Document.md` frequently refer to the squad members as "Aya" (Detective), "Kyle" (Trooper), and "Eve" (Subject).
+*   **Documentation:** `README.md` and `Documents/Design Document.md` were verified to correctly refer to the squad members as "Julia", "Miguel", and "Rebus". `Documents/Initial Assessment.md` and `Documents/ARCHITECTURAL_DEEP_DIVE.md` were updated in this pass to match.
 *   **Code:** `src/data.js` and `src/objects.js` implement these characters as "Julia" (Agent), "Miguel" (Analyst), and "Rebus" (Entity).
-*   **Action:** Documentation will be updated to use the implementation names (Julia, Miguel, Rebus).
 
 ## 2. Deprecated API
-**Status:** Deprecation Flagged
+**Status:** Resolved
 **Details:**
-*   The following methods in `src/windows.js` are marked as `@deprecated` in the code but listed as standard methods in `Documents/Architecture Document.md`:
-    *   `UIManager.showTargetSelectModal`
-    *   `UIManager.showConfirmModal`
-*   **Action:** `Documents/Architecture Document.md` will be updated to mark these as deprecated legacy modals.
+*   The legacy imperative modals (`showTargetSelectModal`, `showConfirmModal`) were verified as removed from `src/windows.js`.
+*   `Documents/Architecture Document.md` was verified to already contain a note reflecting this removal.
 
 ## 3. Architectural Drift
-**Status:** Inconsistencies Identified
+**Status:** Resolved
 **Details:**
-*   **Party Rotation:** `Documents/Architecture Document.md` describes `Game_Party.rotate()` as the primary method for cycling characters. In the current code (`src/objects.js`), `rotate()` is exclusively used for forced rotation upon death, while `cycleActive()` handles manual swapping.
-*   **Game Modes:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` outlines a "Multi-Modal State Machine" (Dungeon vs. Hub). This is a proposal/roadmap document; the current `src/main.js` implements a single-mode game loop.
-*   **Content:** `Documents/Architecture Document.md` claims `$dataEnemies.hp` is not used at spawn. This is partially correct (it uses a floor-scaled value), but the phrasing could be clearer.
+*   **Party Rotation:** `Documents/Architecture Document.md` was verified to accurately describe `Game_Party.rotate()` (forced on death) and `cycleActive()` (manual swapping).
+*   **Game Modes:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` was updated to include a proposal/roadmap disclaimer.
+*   **Content:** `Documents/Architecture Document.md` was updated to clarify that `$dataEnemies.hp` is overridden by a floor-scaled value at spawn.
 
 ## 4. File Structure & Language
-**Status:** Accurate
+**Status:** Verified
 **Details:**
 *   The project structure (`src/`) and language (JavaScript) match the descriptions in `README.md`.
