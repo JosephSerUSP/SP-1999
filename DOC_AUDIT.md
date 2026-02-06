@@ -1,31 +1,34 @@
 # Documentation Audit Report
 
 ## Executive Summary
-This report summarizes the findings of a documentation audit performed on the *Stillnight: Eve of the Stack* repository. The audit compared existing documentation (README, Design Docs, Architecture Docs) against the actual codebase (`src/`).
+This report summarizes the findings of a documentation audit performed on the *Stillnight: Eve of the Stack* repository. The audit compared existing documentation (`Documents/`, `README.md`) against the actual codebase (`src/`).
 
-## 1. Character Name Inconsistencies
-**Status:** Drift Identified
+## 1. Documentation vs. Codebase Alignment
+**Status:** High Alignment (After Updates)
 **Details:**
-*   **Documentation:** `README.md`, `Documents/Architecture Document.md`, and `Documents/Design Document.md` frequently refer to the squad members as "Aya" (Detective), "Kyle" (Trooper), and "Eve" (Subject).
-*   **Code:** `src/data.js` and `src/objects.js` implement these characters as "Julia" (Agent), "Miguel" (Analyst), and "Rebus" (Entity).
-*   **Action:** Documentation will be updated to use the implementation names (Julia, Miguel, Rebus).
+*   **Characters:** Documentation correctly identifies the squad as Julia (Agent), Miguel (Analyst), and Rebus (Entity).
+*   **Mechanics:**
+    *   **Stamina/PE:** Correctly documented (Stamina regenerates for inactive, PE does not auto-regenerate).
+    *   **Rotation:** Correctly distinguished between manual cycling (`cycleActive`) and forced rotation on death/exhaustion (`rotate`).
+    *   **Combat:** Skill execution logic and targeting shapes in `BattleManager` align with documentation.
+    *   **AI:** `Game_Enemy` correctly uses `aiConfig` as documented.
+*   **Architecture:** The modular structure, including the `src/ui/` component framework, is accurately described.
 
-## 2. Deprecated API
-**Status:** Deprecation Flagged
-**Details:**
-*   The following methods in `src/windows.js` are marked as `@deprecated` in the code but listed as standard methods in `Documents/Architecture Document.md`:
-    *   `UIManager.showTargetSelectModal`
-    *   `UIManager.showConfirmModal`
-*   **Action:** `Documents/Architecture Document.md` will be updated to mark these as deprecated legacy modals.
+## 2. Identified & Resolved Issues
 
-## 3. Architectural Drift
-**Status:** Inconsistencies Identified
-**Details:**
-*   **Party Rotation:** `Documents/Architecture Document.md` describes `Game_Party.rotate()` as the primary method for cycling characters. In the current code (`src/objects.js`), `rotate()` is exclusively used for forced rotation upon death, while `cycleActive()` handles manual swapping.
-*   **Game Modes:** `Documents/ARCHITECTURAL_DEEP_DIVE.md` outlines a "Multi-Modal State Machine" (Dungeon vs. Hub). This is a proposal/roadmap document; the current `src/main.js` implements a single-mode game loop.
-*   **Content:** `Documents/Architecture Document.md` claims `$dataEnemies.hp` is not used at spawn. This is partially correct (it uses a floor-scaled value), but the phrasing could be clearer.
+### 2.1. Historical Artifact Flagging
+**Issue:** `Documents/Initial Assessment.md` contained outdated information (referring to "Aya/Kyle/Eve", unimplemented features, and legacy mechanics).
+**Resolution:** A disclaimer header was added to `Documents/Initial Assessment.md` explicitly marking it as a historical artifact and directing readers to the `Architecture Document` and `Design Document` for current information.
 
-## 4. File Structure & Language
-**Status:** Accurate
-**Details:**
-*   The project structure (`src/`) and language (JavaScript) match the descriptions in `README.md`.
+### 2.2. Directory Structure Clarification
+**Issue:** `Documents/Architecture Document.md` simplified the UI directory structure, omitting the `src/ui/windows/` subdirectory where specific window classes reside.
+**Resolution:** Updated `Documents/Architecture Document.md` to explicitly list `src/ui/windows/`.
+
+### 2.3. Deprecated API Confirmation
+**Issue:** Previous audits flagged `showTargetSelectModal` and `showConfirmModal` as deprecated.
+**Verification:** Confirmed that these methods are absent from `src/windows.js` and that `Documents/Architecture Document.md` correctly notes their removal in favor of inline/component logic.
+
+## 3. Recommendations
+*   Maintain `Documents/Architecture Document.md` as the primary technical reference.
+*   Treat `Documents/Initial Assessment.md` as read-only history.
+*   Ensure any future "Deep Dive" documents (like `ARCHITECTURAL_DEEP_DIVE.md`) retain their status as proposals until implemented.

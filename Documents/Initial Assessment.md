@@ -1,4 +1,9 @@
-1. Thorough Assessment
+> **DISCLAIMER: HISTORICAL DOCUMENT**
+> This document serves as a historical artifact from the initial project analysis. It contains outdated information regarding character names (referring to Aya/Kyle/Eve instead of Julia/Miguel/Rebus), unimplemented features that are now live (e.g., Scan, Heal), and architectural details.
+>
+> Please refer to **`Documents/Architecture Document.md`** and **`Documents/Design Document.md`** for the current, accurate state of the project.
+
+# 1. Thorough Assessment
 1.1. What’s already working really well
 
 Aesthetic & Presentation
