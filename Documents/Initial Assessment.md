@@ -1,3 +1,5 @@
+> **Historical Document**: This file represents an initial assessment. Character names (Aya, Kyle, Eve) and some mechanics may be outdated. Refer to the codebase for the current state.
+
 1. Thorough Assessment
 1.1. What’s already working really well
 
