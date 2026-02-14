@@ -16,8 +16,8 @@ class InputManager {
             RIGHT: ['ArrowRight', 'd', 'D'],
             OK: ['Enter', ' ', 'z', 'Z'],
             CANCEL: ['Escape', 'x', 'X', 'Backspace'],
-            MENU: ['c', 'C'], // Removed 'Tab' from MENU
-            MINIMAP: ['Tab', 'm', 'M'], // Added MINIMAP action
+            MENU: ['c', 'C'],
+            MINIMAP: ['Tab', 'm', 'M'],
             CYCLE: ['Shift', 'v', 'V'],
             PREV_ACTOR: ['q', 'Q', 'PageUp'],
             NEXT_ACTOR: ['e', 'E', 'PageDown']
@@ -35,7 +35,7 @@ class InputManager {
         this.gamepadMap = {
             0: 'OK',      // A / Cross
             1: 'CANCEL',  // B / Circle
-            2: 'MENU',    // X / Square (Using X for menu for now, or Y?)
+            2: 'MENU',    // X / Square
             3: 'MENU',    // Y / Triangle
             4: 'MINIMAP', // L1 / LB
             6: 'PREV_ACTOR', // L2 / LT
