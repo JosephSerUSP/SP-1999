@@ -11,82 +11,82 @@
  * @property {number} colors.fog - Hex color for fog.
  * @property {number} colors.bg - Hex color for background.
  */
-const CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
+var CONFIG = { colors: { floor: 0x333333, wall: 0x1a1a1a, fog: 0x051015, bg: 0x050510 } };
 
 /**
  * Trait code for parameter addition.
  * @constant {number}
  */
-const TRAIT_PARAM_PLUS = 1;
+var TRAIT_PARAM_PLUS = 1;
 /**
  * Trait code for parameter rate (multiplier).
  * @constant {number}
  */
-const TRAIT_PARAM_RATE = 2;
+var TRAIT_PARAM_RATE = 2;
 /**
  * Trait code for restriction (e.g. stunned).
  * @constant {number}
  */
-const TRAIT_RESTRICTION = 3;
+var TRAIT_RESTRICTION = 3;
 /**
  * Trait code for adding an attack skill.
  * @constant {number}
  */
-const TRAIT_ATTACK_SKILL = 4;
+var TRAIT_ATTACK_SKILL = 4;
 
 /**
  * Effect code for dealing damage.
  * @constant {number}
  */
-const EFFECT_DAMAGE = 11;
+var EFFECT_DAMAGE = 11;
 /**
  * Effect code for healing HP.
  * @constant {number}
  */
-const EFFECT_HEAL = 12;
+var EFFECT_HEAL = 12;
 /**
  * Effect code for adding a state.
  * @constant {number}
  */
-const EFFECT_ADD_STATE = 21;
+var EFFECT_ADD_STATE = 21;
 /**
  * Effect code for recovering PE.
  * @constant {number}
  */
-const EFFECT_RECOVER_PE = 31;
+var EFFECT_RECOVER_PE = 31;
 /**
  * Effect code for revealing the map.
  * @constant {number}
  */
-const EFFECT_SCAN_MAP = 41;
+var EFFECT_SCAN_MAP = 41;
 
 /**
  * Parameter ID for Maximum HP.
  * @constant {number}
  */
-const PARAM_MHP = 0;
+var PARAM_MHP = 0;
 /**
  * Parameter ID for Maximum PE.
  * @constant {number}
  */
-const PARAM_MPE = 1;
+var PARAM_MPE = 1;
 /**
  * Parameter ID for Attack.
  * @constant {number}
  */
-const PARAM_ATK = 2;
+var PARAM_ATK = 2;
 /**
  * Parameter ID for Defense.
  * @constant {number}
  */
-const PARAM_DEF = 3;
+var PARAM_DEF = 3;
 
 /**
  * Definitions for game states (buffs/debuffs).
  * @constant
  * @type {Object.<string, Object>}
  */
-const $dataStates = {
+var $dataStates = {
     "barrier": { name: "Barrier", duration: 4, icon: "🛡️", traits: [{ code: TRAIT_PARAM_PLUS, dataId: PARAM_DEF, value: 2 }] },
     "stun": { name: "Stunned", duration: 2, icon: "⚡", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
     "panting": { name: "Panting", duration: 2, icon: "😓", traits: [{ code: TRAIT_RESTRICTION, dataId: 0, value: 0 }] },
@@ -98,7 +98,7 @@ const $dataStates = {
  * @constant
  * @type {Object.<string, Object>}
  */
-const $dataSkills = {
+var $dataSkills = {
     "rapid": { name: "Rapid Fire", cost: 10, range: 6, type: "target", count: 2, effects: [{code: EFFECT_DAMAGE, value: 1.2}], desc: (a) => `2x shots. Est: ${Math.floor(a.atk * 1.2) * 2} DMG.` },
     "scan": { name: "Scan", cost: 5, range: 0, type: "self", effects: [{code: EFFECT_SCAN_MAP}], desc: () => "Map Intel. Reveals sector layout." },
     "blast": { name: "Grenade", cost: 15, range: 100, type: "all_enemies", effects: [{code: EFFECT_DAMAGE, value: 15, fixed: true}], desc: () => "AoE Blast. 15 DMG to all hostiles." },
@@ -126,7 +126,7 @@ const $dataSkills = {
  * @constant
  * @type {Object.<string, Object>}
  */
-const $dataClasses = {
+var $dataClasses = {
     "Julia": {
         job: "Agent", hp: 45, atk: 4, def: 2, pe: 40, color: 0xffff00, skills: ["rapid", "scan", "snipe"],
         portrait: "img/portraits/Julia.png",
@@ -250,7 +250,7 @@ const $dataClasses = {
  * @constant
  * @type {Array<Object>}
  */
-const $dataEnemies = [
+var $dataEnemies = [
     {
         id: 1, name: "Sewer Rat", hp: 12, atk: 3, exp: 5, color: 0x885544, scale: 0.4,
         aiConfig: {
@@ -338,7 +338,7 @@ const $dataEnemies = [
  * @constant
  * @type {Object}
  */
-const $dataLootTable = {
+var $dataLootTable = {
     prefixes: [ { name: "Rusty", atk: -1 }, { name: "Standard", atk: 0 }, { name: "Polished", atk: 1 }, { name: "Violent", atk: 3 }, { name: "Toxic", atk: 2 }, { name: "Ancient", atk: 5 }, { name: "Tech", atk: 2 } ],
     weapons: [ { name: "M92F", baseAtk: 4, icon: "🔫", desc: "Standard issue sidearm.", attackSkill: "gunshot" }, { name: "Tonfa", baseAtk: 3, icon: "⚔️", desc: "Police baton for CQC." }, { name: "Shotgun", baseAtk: 8, icon: "💥", desc: "High damage, loud noise.", attackSkill: "gunshot" }, { name: "Revolver", baseAtk: 6, icon: "🤠", desc: "Reliable six-shooter.", attackSkill: "gunshot" }, { name: "Blade", baseAtk: 5, icon: "🗡️", desc: "Sharp tactical knife." } ],
     armors: [
@@ -356,7 +356,7 @@ const $dataLootTable = {
  * @constant
  * @type {Object}
  */
-const $dataFloors = {
+var $dataFloors = {
     // VELDT Simulation: Green/Matrix aesthetic
     1: {
         width: 30, height: 30, rooms: 12, enemies: 6, loot: 5, cutscene: 'intro', generator: 'dungeon',
@@ -372,7 +372,7 @@ const $dataFloors = {
  * @constant
  * @type {Object}
  */
-const $dataCutscenes = {
+var $dataCutscenes = {
     'intro': [
         { type: 'wait', time: 500 },
         { type: 'log', text: "São Paulo, 1999." },
