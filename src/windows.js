@@ -4,7 +4,8 @@
 
 /**
  * Manages the game's UI windows, layout, and user interactions.
- * Uses the Component-Based architecture (src/ui/). Legacy imperative modals are deprecated.
+ * Uses the Component-Based architecture (src/ui/).
+ * Legacy imperative modals are deprecated, however showStatusModal remains as an active wrapper for Window_Status.
  */
 class UIManager {
     constructor() {
@@ -275,6 +276,11 @@ class UIManager {
     }
 
 
+    /**
+     * Opens the status modal for a specific actor.
+     * Acts as an imperative wrapper for the component-based Window_Status.
+     * @param {Game_Actor} a - The actor to display.
+     */
     showStatusModal(a) {
         $gameSystem.isInputBlocked = true;
 

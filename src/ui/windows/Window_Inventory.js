@@ -247,6 +247,13 @@ class Window_Inventory extends Window_Base {
         }
     }
 
+    /**
+     * Handles consumable usage on an actor.
+     * Replaces UIManager.useConsumable.
+     * @param {Game_Actor} actor
+     * @param {Game_Item} i
+     * @param {number} idx
+     */
     useConsumable(actor, i, idx) {
         if(i.type==='heal') { actor.heal(i.val); $gameSystem.log(`Healed ${actor.name} for ${i.val}.`); }
         if(i.type==='pe') { actor.pe = Math.min(actor.mpe, actor.pe+i.val); $gameSystem.log(`Restored PE for ${actor.name}.`); }
@@ -271,6 +278,13 @@ class Window_Inventory extends Window_Base {
         $gameMap.processTurn(0,0);
     }
 
+    /**
+     * Handles equipment equipping logic.
+     * Replaces UIManager.equipGear.
+     * @param {Game_Actor} actor
+     * @param {Game_Weapon|Game_Armor} i
+     * @param {number} idx
+     */
     equipGear(actor, i, idx) {
         const type = i.category;
         const current = actor.equip[type];
