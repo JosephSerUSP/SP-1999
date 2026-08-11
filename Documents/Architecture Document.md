@@ -14,7 +14,8 @@ The codebase utilizes a modular architecture inspired by RPG Maker MZ, residing 
 *   **`objects.js`**: The Model layer. Game entities (`Game_System`, `Game_Actor`, `Game_Enemy`, `Game_Map`, `Game_Party`).
 *   **`sprites.js`**: The 3D View layer (`Renderer3D`, `ParticleSystem`).
 *   **`windows.js`**: The UI Manager and top-level window layout (`UIManager`).
-*   **`ui/`**: Component-based UI framework and specific window implementations (e.g., `Window_Party`, `Window_Tactics`).
+*   **ui/**: Component-based UI framework (`core.js`, `components.js`).
+*   **ui/windows/**: Specific window implementations (e.g., `Window_Party`, `Window_Tactics`).
 *   **`generators/`**: Procedural generation logic (`GeneratorRegistry`, `DungeonGenerator`).
 *   **`main.js`**: Entry point (`SceneManager`).
 
@@ -97,7 +98,7 @@ Generates loot based on floor difficulty.
 ### CutsceneManager
 Handles scripted cutscenes, blocking input and displaying dialog overlays.
 
-## 5. UI Layer (`src/windows.js`, `src/ui/`)
+## 5. UI Layer (`src/windows.js`, `src/ui/`, `src/ui/windows/`)
 
 ### UIManager
 Top-level manager.
