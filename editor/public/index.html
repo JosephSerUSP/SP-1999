@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Maker Style Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f0f0; }
+        .sidebar { background-color: #333; color: white; height: 100vh; padding: 20px 0; position: fixed; width: 16.666667%; overflow-y: auto;}
+        .sidebar a { color: #ccc; text-decoration: none; padding: 10px 20px; display: block; }
+        .sidebar a:hover, .sidebar a.active { background-color: #555; color: white; }
+        .main-content { padding: 20px; background-color: white; min-height: 100vh; margin-left: 16.666667%; width: 83.333333%; }
+        .list-group-item { cursor: pointer; }
+        .json-editor { width: 100%; height: 400px; font-family: monospace; font-size: 14px; }
+        .header-controls { position: sticky; top: 0; background: white; z-index: 100; padding-bottom: 10px; border-bottom: 1px solid #dee2e6; margin-bottom: 20px; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-md-2 sidebar" id="sidebar">
+                <h4 class="text-center mb-4">Database</h4>
+                <a href="#" class="nav-link active" data-target="classes">Classes / Actors</a>
+                <a href="#" class="nav-link" data-target="skills">Skills</a>
+                <a href="#" class="nav-link" data-target="enemies">Enemies</a>
+                <a href="#" class="nav-link" data-target="states">States</a>
+                <a href="#" class="nav-link" data-target="loot">Loot Table</a>
+                <a href="#" class="nav-link" data-target="floors">Floors</a>
+                <a href="#" class="nav-link" data-target="cutscenes">Cutscenes</a>
+            </div>
+            <div class="col-md-10 main-content">
+                <div class="header-controls d-flex justify-content-between align-items-center">
+                    <h2 id="page-title">Classes / Actors</h2>
+                    <button class="btn btn-primary" onclick="saveData()">Save Changes</button>
+                </div>
+                <div id="editor-container">
+                    <div class="row">
+                        <div class="col-md-3 border-end" style="max-height: calc(100vh - 100px); overflow-y: auto;">
+                            <ul class="list-group" id="item-list">
+                                <!-- List items generated here -->
+                            </ul>
+                            <button class="btn btn-sm btn-success mt-2 w-100" onclick="addNewItem()">+ Add New</button>
+                        </div>
+                        <div class="col-md-9" style="max-height: calc(100vh - 100px); overflow-y: auto;">
+                            <div id="form-container">
+                                <p class="text-muted">Select an item to edit.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameData = {};
+        let currentSection = 'classes';
+        let currentItemKey = null;
+
+        const sectionMap = {
+            'classes': '$dataClasses',
+            'skills': '$dataSkills',
+            'enemies': '$dataEnemies',
+            'states': '$dataStates',
+            'loot': '$dataLootTable',
+            'floors': '$dataFloors',
+            'cutscenes': '$dataCutscenes'
+        };
+
+        async function init() {
+            try {
+                const response = await fetch('/api/data');
+                gameData = await response.json();
+                renderSidebar();
+                loadSection(currentSection);
+            } catch (error) {
+                alert("Failed to load data: " + error.message);
+            }
+        }
+
+        function renderSidebar() {
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentSection = e.target.dataset.target;
+                    document.getElementById('page-title').innerText = e.target.innerText;
+                    loadSection(currentSection);
+                });
+            });
+        }
+
+        function loadSection(section) {
+            const listEl = document.getElementById('item-list');
+            listEl.innerHTML = '';
+            document.getElementById('form-container').innerHTML = '<p class="text-muted">Select an item to edit.</p>';
+            currentItemKey = null;
+
+            const dataKey = sectionMap[section];
+            const sectionData = gameData[dataKey];
+
+            if (section === 'loot') {
+                 listEl.innerHTML = `<li class="list-group-item active">Loot Table</li>`;
+                 renderForm('loot', 'loot');
+                 return;
+            }
+
+            if (Array.isArray(sectionData)) {
+                sectionData.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item list-group-item-action';
+                    li.innerText = String(item.id || item.name || \`Item \${index}\`);
+                    li.onclick = () => {
+                        document.querySelectorAll('#item-list li').forEach(l => l.classList.remove('active'));
+                        li.classList.add('active');
+                        currentItemKey = index;
+                        renderForm(section, index);
+                    };
+                    listEl.appendChild(li);
+                });
+            } else {
+                Object.keys(sectionData).forEach(key => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item list-group-item-action';
+                    li.innerText = key;
+                    li.onclick = () => {
+                        document.querySelectorAll('#item-list li').forEach(l => l.classList.remove('active'));
+                        li.classList.add('active');
+                        currentItemKey = key;
+                        renderForm(section, key);
+                    };
+                    listEl.appendChild(li);
+                });
+            }
+        }
+
+        function renderForm(section, key) {
+            const container = document.getElementById('form-container');
+            const dataKey = sectionMap[section];
+
+            if (section === 'loot') {
+                 let itemData = gameData[dataKey];
+                 container.innerHTML = `
+                    <h4>Edit Loot Table</h4>
+                    <p class="text-muted">Edit prefixes, weapons, armors, and items here.</p>
+                    <textarea id="json-editor" class="json-editor form-control">\${JSON.stringify(itemData, null, 4)}</textarea>
+                    <button class="btn btn-secondary mt-2" onclick="applyJson()">Apply JSON</button>
+                 `;
+                 return;
+            }
+
+            const itemData = gameData[dataKey][key];
+
+            let html = \`<h4>Editing: \${key}</h4>\`;
+
+            if (typeof itemData === 'object' && itemData !== null) {
+                html += '<div class="row">';
+                Object.keys(itemData).forEach(prop => {
+                    const val = itemData[prop];
+                    if (typeof val !== 'object') {
+                        html += \`
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-capitalize">\${prop}</label>
+                            <input type="\${typeof val === 'number' ? 'number' : 'text'}" class="form-control" data-prop="\${prop}" value="\${val}" onchange="updateProp(this)">
+                        </div>\`;
+                    }
+                });
+                html += '</div>';
+
+                html += '<h5 class="mt-4 border-top pt-3">Advanced Properties (JSON)</h5>';
+                html += '<p class="text-muted small">Edit complex properties like arrays, objects, or functions. (Click Apply when done)</p>';
+                const complexData = {};
+                Object.keys(itemData).forEach(prop => {
+                    if (typeof itemData[prop] === 'object' && itemData[prop] !== null) {
+                        complexData[prop] = itemData[prop];
+                    }
+                });
+
+                if (Object.keys(complexData).length > 0) {
+                     html += \`
+                        <textarea id="json-editor" class="json-editor form-control">\${JSON.stringify(complexData, null, 4)}</textarea>
+                        <button class="btn btn-secondary mt-2" onclick="applyJson()">Apply JSON</button>
+                     \`;
+                } else {
+                     html += \`
+                        <textarea id="json-editor" class="json-editor form-control">{}</textarea>
+                        <button class="btn btn-secondary mt-2" onclick="applyJson()">Apply JSON</button>
+                     \`;
+                }
+
+            } else {
+                container.innerHTML = '<p>Cannot edit primitive directly.</p>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateProp(inputEl) {
+            if (currentItemKey === null) return;
+            const prop = inputEl.dataset.prop;
+            let val = inputEl.value;
+            if (inputEl.type === 'number') val = Number(val);
+
+            const dataKey = sectionMap[currentSection];
+            gameData[dataKey][currentItemKey][prop] = val;
+        }
+
+        function applyJson() {
+             if (currentSection === 'loot') {
+                  try {
+                       const parsed = JSON.parse(document.getElementById('json-editor').value);
+                       gameData['$dataLootTable'] = parsed;
+                       alert('JSON Applied to Loot Table. Remember to Save Changes!');
+                  } catch(e) { alert('Invalid JSON: ' + e.message); }
+                  return;
+             }
+
+             if (currentItemKey === null) return;
+             try {
+                 const parsed = JSON.parse(document.getElementById('json-editor').value);
+                 const dataKey = sectionMap[currentSection];
+                 const itemData = gameData[dataKey][currentItemKey];
+
+                 Object.keys(parsed).forEach(k => {
+                     itemData[k] = parsed[k];
+                 });
+
+                 // if user deleted a key from JSON, remove it from itemData
+                 Object.keys(itemData).forEach(k => {
+                     if (typeof itemData[k] === 'object' && itemData[k] !== null) {
+                         if (!(k in parsed)) {
+                             delete itemData[k];
+                         }
+                     }
+                 });
+
+                 alert('JSON Applied. Remember to Save Changes!');
+             } catch(e) {
+                 alert('Invalid JSON: ' + e.message);
+             }
+        }
+
+        function addNewItem() {
+            const dataKey = sectionMap[currentSection];
+            let newKey;
+            let newItem = {};
+
+            if (Array.isArray(gameData[dataKey])) {
+                let maxId = 0;
+                gameData[dataKey].forEach(item => { if(item.id > maxId) maxId = item.id; });
+                newItem.id = maxId + 1;
+                newItem.name = "New Item";
+                newKey = gameData[dataKey].length;
+                gameData[dataKey].push(newItem);
+            } else {
+                newKey = prompt("Enter a unique identifier key for this item (e.g., 'new_skill'):");
+                if (!newKey) return;
+                if (gameData[dataKey][newKey]) {
+                    alert("Key already exists!");
+                    return;
+                }
+                gameData[dataKey][newKey] = { name: "New Item" };
+            }
+            loadSection(currentSection);
+
+            const listItems = document.querySelectorAll('#item-list li');
+            if (listItems.length > 0) {
+                 listItems[listItems.length - 1].click();
+            }
+        }
+
+        async function saveData() {
+            try {
+                const response = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(gameData)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                } else {
+                    alert("Error saving: " + result.error);
+                }
+            } catch (error) {
+                alert("Network error: " + error.message);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
