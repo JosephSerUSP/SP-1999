@@ -118,6 +118,8 @@ class CutsceneManager {
                 const advance = () => {
                     if (advanced) return;
                     advanced = true;
+                    this.waitingForInput = false;
+                    this.advanceCallback = null;
                     this.dialogEl.style.display = 'none';
                     document.removeEventListener('click', advance);
                     this.next();
@@ -146,6 +148,8 @@ class CutsceneManager {
      */
     end() {
         this.active = false;
+        this.waitingForInput = false;
+        this.advanceCallback = null;
         $gameSystem.isInputBlocked = false;
         $gameSystem.log("Command restored.");
     }
